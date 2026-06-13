@@ -9,10 +9,10 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri } from "expo-auth-session";
 import type { UserProfile } from "@lifeplate/shared";
 import { router } from "expo-router";
 import { fetchProfile } from "@/lib/api";
+import { AUTH_REDIRECT_URI } from "@/lib/authRedirect";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
@@ -116,12 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: AUTH_REDIRECT_URI },
+    });
     if (error) throw error;
   }, []);
 
   const signInWithProvider = useCallback(async (provider: "apple" | "google") => {
-    const redirectTo = makeRedirectUri({ scheme: "lifeplate" });
+    const redirectTo = AUTH_REDIRECT_URI;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo, skipBrowserRedirect: true },
@@ -140,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const linkProvider = useCallback(async (provider: "apple" | "google") => {
-    const redirectTo = makeRedirectUri({ scheme: "lifeplate" });
+    const redirectTo = AUTH_REDIRECT_URI;
     // linkIdentity is the supported “connect provider to existing user” flow in supabase-js v2
     // (works similarly to signInWithOAuth, but links instead of creating a new user).
     const { data, error } = await supabase.auth.linkIdentity({

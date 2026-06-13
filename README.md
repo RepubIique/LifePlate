@@ -44,7 +44,8 @@ pnpm dev
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. **Authentication → Providers:** enable Apple and Google.
-3. **Redirect URLs:** add `lifeplate://auth/callback` and your Expo dev URL if needed.
+3. **Redirect URLs:** add `lifeplate://auth/callback`, `lifeplate://**`, and `exp+lifeplate://**`
+4. **Site URL:** set to `lifeplate://auth/callback` (not localhost)
 4. **Storage:** create a public bucket named `meals` (or set `SUPABASE_STORAGE_BUCKET`).
 5. Copy **Project URL**, **anon key** (mobile), and **service role key** (API only — never ship to the app).
 
