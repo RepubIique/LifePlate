@@ -8,3 +8,7 @@ dist
 !.env.example
 coverage
 
+supabase/.temp
+apps/mobile/ios
+apps/mobile/android
+
