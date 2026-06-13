@@ -27,8 +27,13 @@ await app.register(userRoutes);
 
 try {
   await runMigrations();
+  app.log.info("Database migrations applied");
 } catch (err) {
-  app.log.error({ err }, "Database migration failed — profile and meal fields may not persist");
+  app.log.error(
+    { err },
+    "Database migration failed — refusing to start (check DATABASE_URL uses Supabase session or direct connection, not transaction pooler)",
+  );
+  process.exit(1);
 }
 
 await app.listen({ port: config.port, host: "0.0.0.0" });

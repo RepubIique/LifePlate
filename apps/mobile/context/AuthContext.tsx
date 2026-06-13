@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -39,8 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const profileFetchSeq = useRef(0);
 
   const patchProfile = useCallback((patch: Partial<UserProfile>) => {
+    profileFetchSeq.current += 1;
     setProfile((prev) => {
       if (prev) return { ...prev, ...patch };
       if (!session) return prev;
@@ -67,10 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
+    const fetchId = ++profileFetchSeq.current;
     setProfileLoading(true);
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const p = await fetchProfile();
+        if (fetchId !== profileFetchSeq.current) return;
         setProfile(p);
         setProfileLoading(false);
         return;
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+    if (fetchId !== profileFetchSeq.current) return;
     // Keep the last known profile to avoid re-prompting onboarding on transient errors.
     setProfileLoading(false);
   }, [session]);

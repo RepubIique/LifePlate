@@ -15,6 +15,23 @@ export const pool = new pg.Pool({
   ssl: useSsl ? { rejectUnauthorized: false } : undefined,
 });
 
+const REQUIRED_USER_COLUMNS = ["weight_kg", "height_cm", "age", "gender"] as const;
+
+async function verifyUserSchema() {
+  const { rows } = await pool.query<{ column_name: string }>(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'users'`,
+  );
+  const present = new Set(rows.map((r) => r.column_name));
+  const missing = REQUIRED_USER_COLUMNS.filter((c) => !present.has(c));
+  if (missing.length > 0) {
+    throw new Error(
+      `users table is missing columns: ${missing.join(", ")}. Migrations did not apply.`,
+    );
+  }
+}
+
 export async function runMigrations() {
   const files = [
     "001_init.sql",
@@ -26,6 +43,7 @@ export async function runMigrations() {
     const sql = readFileSync(join(__dirname, "../migrations", file), "utf-8");
     await pool.query(sql);
   }
+  await verifyUserSchema();
 }
 
 export async function upsertUser(id: string, email: string, name?: string | null) {

@@ -86,6 +86,19 @@ Host the API on **Render** (free web service) and use **Supabase Postgres** for 
 2. Under **Connection string**, choose **URI** and **Session pooler**
 3. Copy the URL and replace `[YOUR-PASSWORD]` with your database password (reset under **Database password** if needed)
 
+Use the **Session pooler** URI (port 5432), not the transaction pooler (port 6543). DDL migrations run on API startup and need session or direct mode.
+
+If profile body metrics are not saving, open **Supabase → SQL Editor** and run:
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS weight_kg DECIMAL(5, 2);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS height_cm DECIMAL(5, 1);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT;
+```
+
+Then redeploy the API on Render (or run `pnpm db:migrate` locally against your Supabase URI).
+
 ### 2. Render
 
 1. Push this repo to GitHub
