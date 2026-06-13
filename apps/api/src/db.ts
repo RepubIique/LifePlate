@@ -38,6 +38,7 @@ export async function runMigrations() {
     "002_nutrition_details.sql",
     "003_user_body_metrics.sql",
     "004_user_gender.sql",
+    "005_daily_hydration.sql",
     "006_upload_rate_limits.sql",
     "007_refine_rate_limits.sql",
   ];
