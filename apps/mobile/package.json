@@ -40,6 +40,8 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "eas-build-pre-install": "corepack enable",
+    "eas-build-post-install": "cd ../.. && pnpm --filter @lifeplate/shared build",
     "dev": "pnpm --filter @lifeplate/shared build && expo start --port 8082",
     "typecheck": "tsc --noEmit",
     "start": "pnpm --filter @lifeplate/shared build && expo start",
