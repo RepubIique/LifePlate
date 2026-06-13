@@ -2,11 +2,13 @@ import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import Svg, { Circle, G } from "react-native-svg";
+import { DEFAULT_DAILY_FIBRE_G } from "@lifeplate/shared";
 import { computeMacroBreakdown } from "@/lib/macroMath";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
 const MACRO_COLORS = {
+  fibre: "#2D6A4F",
   protein: "#1B4332",
   carbs: "#40916C",
   fat: "#74C69D",
@@ -88,12 +90,14 @@ function MacroBar({
   pct,
   color,
   maxGrams,
+  subtitle,
 }: {
   label: string;
   grams: number;
-  pct: number;
+  pct?: number;
   color: string;
   maxGrams: number;
+  subtitle?: string;
 }) {
   const fill = maxGrams > 0 ? Math.min(1, grams / maxGrams) : 0;
 
@@ -116,9 +120,15 @@ function MacroBar({
           ]}
         />
       </View>
-      <Text variant="bodySmall" style={styles.pctLabel}>
-        {Math.round(pct * 100)}% of macro energy
-      </Text>
+      {subtitle ? (
+        <Text variant="bodySmall" style={styles.pctLabel}>
+          {subtitle}
+        </Text>
+      ) : pct !== undefined ? (
+        <Text variant="bodySmall" style={styles.pctLabel}>
+          {Math.round(pct * 100)}% of macro energy
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -155,6 +165,8 @@ export function MacroNutritionPanel({
   fibre = 0,
   sugar = 0,
   sodium = 0,
+  dailyFibreGoal,
+  personalisedGoal = false,
   confidence,
   showConfidence = false,
 }: {
@@ -165,6 +177,8 @@ export function MacroNutritionPanel({
   fibre?: number;
   sugar?: number;
   sodium?: number;
+  dailyFibreGoal?: number;
+  personalisedGoal?: boolean;
   confidence?: number;
   showConfidence?: boolean;
 }) {
@@ -172,6 +186,12 @@ export function MacroNutritionPanel({
     () => computeMacroBreakdown(calories, protein, carbs, fat),
     [calories, protein, carbs, fat],
   );
+
+  const fibreGoal = dailyFibreGoal ?? DEFAULT_DAILY_FIBRE_G;
+  const fibrePctOfDay = fibreGoal > 0 ? Math.min(100, (fibre / fibreGoal) * 100) : 0;
+  const fibreSubtitle = personalisedGoal
+    ? `${Math.round(fibrePctOfDay)}% of your ${Math.round(fibreGoal)}g daily goal`
+    : `${Math.round(fibrePctOfDay)}% of ${Math.round(fibreGoal)}g daily default · personalise in profile`;
 
   const segments: Segment[] = [
     { pct: data.proteinPct, color: MACRO_COLORS.protein },
@@ -186,12 +206,20 @@ export function MacroNutritionPanel({
       <MacroRing calories={data.calories} segments={segments} />
 
       <View style={styles.legend}>
+        <LegendChip label="Fibre" color={MACRO_COLORS.fibre} />
         <LegendChip label="Protein" color={MACRO_COLORS.protein} />
         <LegendChip label="Carbs" color={MACRO_COLORS.carbs} />
         <LegendChip label="Fat" color={MACRO_COLORS.fat} />
       </View>
 
       <View style={styles.bars}>
+        <MacroBar
+          label="Fibre"
+          grams={fibre}
+          color={MACRO_COLORS.fibre}
+          maxGrams={fibreGoal}
+          subtitle={fibreSubtitle}
+        />
         <MacroBar
           label="Protein"
           grams={data.protein}
@@ -220,7 +248,6 @@ export function MacroNutritionPanel({
           More details
         </Text>
         <View style={styles.detailsGrid}>
-          <DetailStat label="Fibre" value={fibre} unit="g" />
           <DetailStat label="Sugar" value={sugar} unit="g" />
           <DetailStat label="Sodium" value={sodium} unit="mg" />
         </View>
@@ -299,7 +326,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   barFill: { height: "100%", borderRadius: 5 },
-  pctLabel: { opacity: 0.5, fontSize: 12 },
+  pctLabel: { opacity: 0.5, fontSize: 12, lineHeight: 16 },
   detailsSection: {
     paddingTop: spacing.sm,
     borderTopWidth: 1,

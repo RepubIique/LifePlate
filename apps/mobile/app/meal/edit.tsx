@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Image, ScrollView, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -10,9 +10,11 @@ import {
   TextInput,
 } from "react-native-paper";
 import type { MealDetail } from "@lifeplate/shared";
+import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { useAuth } from "@/context/AuthContext";
 import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { premium } from "@/src/theme/premium";
@@ -28,6 +30,7 @@ function normalizeFood(value: string) {
 }
 
 export default function EditMealScreen() {
+  const { profile } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,12 +145,11 @@ export default function EditMealScreen() {
     );
   }
 
+  const dailyFibreGoal = profile?.nutritionTargets?.dailyFibreG;
+  const personalisedFibreGoal = profile?.nutritionTargets != null;
+
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
       <View style={styles.imageWrap}>
         {meal.imageUrl ? (
@@ -191,6 +193,8 @@ export default function EditMealScreen() {
           fibre={toNumber(fibre, 0)}
           sugar={toNumber(sugar, 0)}
           sodium={toNumber(sodium, 0)}
+          dailyFibreGoal={dailyFibreGoal}
+          personalisedGoal={personalisedFibreGoal}
           confidence={meal.confidence ?? undefined}
           showConfidence={meal.confidence != null}
         />
@@ -279,7 +283,7 @@ export default function EditMealScreen() {
       <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
       </Snackbar>
-    </ScrollView>
+    </KeyboardAvoidingScrollView>
   );
 }
 

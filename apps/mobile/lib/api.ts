@@ -61,6 +61,9 @@ export async function fetchProfile(): Promise<UserProfile> {
 export async function updateProfile(body: {
   goal?: string;
   name?: string;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  age?: number | null;
 }): Promise<void> {
   await request("/api/users/me", {
     method: "PATCH",

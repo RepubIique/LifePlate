@@ -1,3 +1,14 @@
+export {
+  DEFAULT_DAILY_FIBRE_G,
+  computeDailyFibreTarget,
+  computeNutritionTargets,
+  estimateDailyCalories,
+  resolveDailyFibreGoal,
+} from "./nutritionTargets.js";
+export type { BodyMetrics, NutritionTargets } from "./nutritionTargets.js";
+
+import type { NutritionTargets } from "./nutritionTargets.js";
+
 export const GOALS = [
   "Better health",
   "Weight management",
@@ -105,6 +116,10 @@ export interface UserProfile {
   email: string;
   name: string | null;
   goal: string | null;
+  weightKg: number | null;
+  heightCm: number | null;
+  age: number | null;
+  nutritionTargets: NutritionTargets | null;
   mealsLogged: number;
   currentStreak: number;
   longestStreak: number;

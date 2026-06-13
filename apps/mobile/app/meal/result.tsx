@@ -1,9 +1,11 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { Image, ScrollView, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
+import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAuth } from "@/context/AuthContext";
 import { confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { premium } from "@/src/theme/premium";
@@ -19,6 +21,7 @@ function normalizeFood(value: string) {
 }
 
 export default function MealResultScreen() {
+  const { profile } = useAuth();
   const params = useLocalSearchParams<{
     draftId: string;
     imageUrl: string;
@@ -71,6 +74,8 @@ export default function MealResultScreen() {
   const macroFibre = toNumber(fibre, 0);
   const macroSugar = toNumber(sugar, 0);
   const macroSodium = toNumber(sodium, 0);
+  const dailyFibreGoal = profile?.nutritionTargets?.dailyFibreG;
+  const personalisedFibreGoal = profile?.nutritionTargets != null;
 
   function addFood() {
     const f = normalizeFood(newFood);
@@ -141,11 +146,7 @@ export default function MealResultScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       {params.imageUrl ? (
         <Image source={{ uri: params.imageUrl }} style={styles.image} />
       ) : null}
@@ -196,6 +197,8 @@ export default function MealResultScreen() {
               fibre={macroFibre}
               sugar={macroSugar}
               sodium={macroSodium}
+              dailyFibreGoal={dailyFibreGoal}
+              personalisedGoal={personalisedFibreGoal}
             />
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Adjust macros
@@ -281,6 +284,8 @@ export default function MealResultScreen() {
             fibre={macroFibre}
             sugar={macroSugar}
             sodium={macroSodium}
+            dailyFibreGoal={dailyFibreGoal}
+            personalisedGoal={personalisedFibreGoal}
             confidence={confidence}
             showConfidence
           />
@@ -331,7 +336,7 @@ export default function MealResultScreen() {
       <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
       </Snackbar>
-    </ScrollView>
+    </KeyboardAvoidingScrollView>
   );
 }
 

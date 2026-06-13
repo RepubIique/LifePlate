@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { UserProfile } from "@lifeplate/shared";
+import { computeNutritionTargets, type UserProfile } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -37,6 +37,39 @@ function computeStreaks(dates: Date[]): { current: number; longest: number } {
   return { current, longest };
 }
 
+function toProfile(
+  userId: string,
+  userEmail: string,
+  row: {
+    email: string;
+    name: string | null;
+    goal: string | null;
+    weight_kg: string | null;
+    height_cm: string | null;
+    age: number | null;
+  },
+  mealsLogged: number,
+  streaks: { current: number; longest: number },
+): UserProfile {
+  const weightKg = row.weight_kg != null ? Number(row.weight_kg) : null;
+  const heightCm = row.height_cm != null ? Number(row.height_cm) : null;
+  const age = row.age;
+
+  return {
+    id: userId,
+    email: row.email ?? userEmail,
+    name: row.name,
+    goal: row.goal,
+    weightKg,
+    heightCm,
+    age,
+    nutritionTargets: computeNutritionTargets({ weightKg, heightCm, age }),
+    mealsLogged,
+    currentStreak: streaks.current,
+    longestStreak: streaks.longest,
+  };
+}
+
 export async function userRoutes(app: FastifyInstance) {
   app.get(
     "/api/users/me",
@@ -49,7 +82,13 @@ export async function userRoutes(app: FastifyInstance) {
         email: string;
         name: string | null;
         goal: string | null;
-      }>(`SELECT id, email, name, goal FROM users WHERE id = $1`, [userId]);
+        weight_kg: string | null;
+        height_cm: string | null;
+        age: number | null;
+      }>(
+        `SELECT id, email, name, goal, weight_kg, height_cm, age FROM users WHERE id = $1`,
+        [userId],
+      );
 
       const user = rows[0];
       const { rows: mealDates } = await pool.query<{ created_at: Date }>(
@@ -57,46 +96,54 @@ export async function userRoutes(app: FastifyInstance) {
         [userId],
       );
 
-      const { current, longest } = computeStreaks(
-        mealDates.map((m) => m.created_at),
+      const streaks = computeStreaks(mealDates.map((m) => m.created_at));
+
+      return toProfile(
+        userId,
+        userEmail,
+        user ?? { email: userEmail, name: null, goal: null, weight_kg: null, height_cm: null, age: null },
+        mealDates.length,
+        streaks,
       );
-
-      const profile: UserProfile = {
-        id: userId,
-        email: user?.email ?? userEmail,
-        name: user?.name ?? null,
-        goal: user?.goal ?? null,
-        mealsLogged: mealDates.length,
-        currentStreak: current,
-        longestStreak: longest,
-      };
-
-      return profile;
     },
   );
 
-  app.patch<{ Body: { goal?: string; name?: string } }>(
+  app.patch<{
+    Body: {
+      goal?: string;
+      name?: string;
+      weightKg?: number | null;
+      heightCm?: number | null;
+      age?: number | null;
+    };
+  }>(
     "/api/users/me",
     { preHandler: requireAuth },
     async (request) => {
       const { userId, userEmail } = request as AuthedRequest;
-      const { goal, name } = request.body ?? {};
+      const { goal, name, weightKg, heightCm, age } = request.body ?? {};
+
+      await pool.query(
+        `INSERT INTO users (id, email)
+         VALUES ($1, $2)
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, userEmail],
+      );
 
       if (goal !== undefined) {
-        await pool.query(
-          `INSERT INTO users (id, email, goal)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO UPDATE SET goal = EXCLUDED.goal`,
-          [userId, userEmail, goal],
-        );
+        await pool.query(`UPDATE users SET goal = $1 WHERE id = $2`, [goal, userId]);
       }
       if (name !== undefined) {
-        await pool.query(
-          `INSERT INTO users (id, email, name)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-          [userId, userEmail, name],
-        );
+        await pool.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId]);
+      }
+      if (weightKg !== undefined) {
+        await pool.query(`UPDATE users SET weight_kg = $1 WHERE id = $2`, [weightKg, userId]);
+      }
+      if (heightCm !== undefined) {
+        await pool.query(`UPDATE users SET height_cm = $1 WHERE id = $2`, [heightCm, userId]);
+      }
+      if (age !== undefined) {
+        await pool.query(`UPDATE users SET age = $1 WHERE id = $2`, [age, userId]);
       }
 
       return { ok: true };
