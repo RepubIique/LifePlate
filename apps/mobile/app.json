@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lifeplate.app"
+      "bundleIdentifier": "com.lifeplate.app",
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {

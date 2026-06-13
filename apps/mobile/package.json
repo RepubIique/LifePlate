@@ -44,8 +44,9 @@
     "typecheck": "tsc --noEmit",
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "ios:device": "expo run:ios --device --configuration Release",
+    "prebuild:ios": "expo prebuild --platform ios --clean",
+    "ios": "expo prebuild --platform ios && expo run:ios",
+    "ios:device": "expo prebuild --platform ios && expo run:ios --device --configuration Release",
     "web": "expo start --web"
   },
   "private": true
