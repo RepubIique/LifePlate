@@ -6,6 +6,8 @@ import type {
   MealRefineResponse,
   MealUploadResponse,
   MealUpdateRequest,
+  NutritionDashboardResponse,
+  PillarProgress,
   UserProfile,
   Gender,
 } from "@lifeplate/shared";
@@ -99,6 +101,17 @@ export async function deleteMeal(id: string): Promise<void> {
 
 export async function fetchInsights(): Promise<InsightsResponse> {
   return request<InsightsResponse>("/api/insights");
+}
+
+export async function fetchNutritionDashboard(): Promise<NutritionDashboardResponse> {
+  return request<NutritionDashboardResponse>("/api/nutrition/dashboard");
+}
+
+export async function updateHydration(glasses: number): Promise<{ hydration: PillarProgress }> {
+  return request<{ hydration: PillarProgress }>("/api/nutrition/hydration", {
+    method: "PATCH",
+    body: JSON.stringify({ glasses }),
+  });
 }
 
 export async function uploadMealImage(input: {

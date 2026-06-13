@@ -23,6 +23,8 @@ export const config = {
   supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   openaiModel: optional("OPENAI_MODEL", "gpt-4o-mini"),
+  uploadRateLimitPerHour: Number(optional("UPLOAD_RATE_LIMIT_PER_HOUR", "10")),
+  refineRateLimitPerHour: Number(optional("REFINE_RATE_LIMIT_PER_HOUR", "100")),
   storageBucket: optional("SUPABASE_STORAGE_BUCKET", "meals"),
   corsOrigin: optional("CORS_ORIGIN", "*"),
 };

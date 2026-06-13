@@ -2,8 +2,12 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type { MealAnalysisResult } from "@lifeplate/shared";
 import { config } from "../config.js";
+import {
+  assertMealAnalysis,
+  rejectNonMealPhoto,
+} from "./mealGuardrails.js";
 
-const analysisSchema = z.object({
+const analysisFieldsSchema = z.object({
   mealName: z.string(),
   foods: z.array(z.string()),
   estimatedCalories: z.number(),
@@ -16,21 +20,45 @@ const analysisSchema = z.object({
   confidence: z.number().min(0).max(1),
 });
 
-const SYSTEM_PROMPT = `You are a nutrition assistant.
+const visionResponseSchema = z.object({
+  isMealPhoto: z.boolean(),
+  rejectReason: z.string().nullable().optional(),
+  mealName: z.string().optional(),
+  foods: z.array(z.string()).optional(),
+  estimatedCalories: z.number().optional(),
+  protein: z.number().optional(),
+  carbs: z.number().optional(),
+  fat: z.number().optional(),
+  fibre: z.number().optional(),
+  sugar: z.number().optional(),
+  sodium: z.number().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+const SYSTEM_PROMPT = `You are a nutrition assistant for LifePlate, a meal-photo journaling app.
 Return JSON only.
-Identify:
-- meal name
-- foods present
-- estimated calories
-- estimated protein (grams)
-- estimated carbs (grams)
-- estimated fats (grams)
-- estimated fibre (grams)
-- estimated sugar (grams)
-- estimated sodium (milligrams)
-Return confidence score between 0 and 1.
-Do not return markdown.
-Output valid JSON with keys: mealName, foods, estimatedCalories, protein, carbs, fat, fibre, sugar, sodium, confidence.`;
+
+First decide if this image is suitable for meal logging.
+ACCEPT: plated meals, bowls, snacks, beverages, packaged food with visible contents, grocery food items, ingredients clearly meant as food.
+REJECT: people/portraits, pets, landscapes, documents, screenshots, memes, logos, random objects with no edible content, empty plates with no food, restaurant menus without visible food on a plate.
+
+Return these keys:
+- isMealPhoto (boolean): true only if the image is suitable for meal logging
+- rejectReason (string|null): brief reason when isMealPhoto is false, otherwise null
+
+When isMealPhoto is true, also return:
+- mealName
+- foods (non-empty array of identifiable food items)
+- estimatedCalories
+- protein (grams)
+- carbs (grams)
+- fat (grams)
+- fibre (grams)
+- sugar (grams)
+- sodium (milligrams)
+- confidence (0 to 1)
+
+Do not return markdown.`;
 
 const MOCK: MealAnalysisResult = {
   mealName: "Chicken Rice Bowl",
@@ -53,12 +81,36 @@ function isPlaceholderKey(key: string): boolean {
   return false;
 }
 
+function parseVisionResponse(parsed: unknown): MealAnalysisResult {
+  const result = visionResponseSchema.parse(parsed);
+
+  if (!result.isMealPhoto) {
+    rejectNonMealPhoto(result.rejectReason);
+  }
+
+  const analysis = analysisFieldsSchema.parse({
+    mealName: result.mealName,
+    foods: result.foods,
+    estimatedCalories: result.estimatedCalories,
+    protein: result.protein,
+    carbs: result.carbs,
+    fat: result.fat,
+    fibre: result.fibre,
+    sugar: result.sugar,
+    sodium: result.sodium,
+    confidence: result.confidence,
+  });
+
+  assertMealAnalysis(analysis);
+  return analysis;
+}
+
 export async function analyzeMealImage(
   buffer: Buffer,
   mimeType: string,
 ): Promise<{ analysis: MealAnalysisResult; raw: unknown }> {
   if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
-    return { analysis: MOCK, raw: MOCK };
+    return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
   }
 
   const client = new OpenAI({ apiKey: config.openaiApiKey });
@@ -78,7 +130,7 @@ export async function analyzeMealImage(
               type: "image_url",
               image_url: { url: dataUrl },
             },
-            { type: "text", text: "Analyze this meal photo." },
+            { type: "text", text: "Classify this image, then analyze the meal if it is food." },
           ],
         },
       ],
@@ -88,22 +140,20 @@ export async function analyzeMealImage(
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error("Empty OpenAI response");
     const parsed = JSON.parse(content);
-    const analysis = analysisSchema.parse(parsed);
+    const analysis = parseVisionResponse(parsed);
     return { analysis, raw: parsed };
   };
 
   try {
     return await run();
   } catch (err: unknown) {
-    // If the key is invalid/misconfigured, fall back to mock in local dev.
-    // (User often copies .env.example placeholder which triggers 401 invalid_api_key.)
     if (
       typeof err === "object" &&
       err !== null &&
       "status" in err &&
       (err as { status?: unknown }).status === 401
     ) {
-      return { analysis: MOCK, raw: MOCK };
+      return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
     }
     try {
       return await run();
@@ -114,7 +164,7 @@ export async function analyzeMealImage(
         "status" in err2 &&
         (err2 as { status?: unknown }).status === 401
       ) {
-        return { analysis: MOCK, raw: MOCK };
+        return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
       }
       throw err2;
     }
@@ -150,11 +200,11 @@ export async function refineMealImage(
   const base64 = buffer.toString("base64");
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
-  const refinePrompt = `Re-analyze this meal photo using the user's correction.
+  const refinePrompt = `Re-analyze this already-validated meal photo using the user's correction.
 Previous analysis JSON: ${JSON.stringify(previous)}
 User correction: "${note}"
 Apply the correction (e.g. sauce type, portion, missing item). Update foods, macros, and confidence accordingly.
-Return JSON only with keys: mealName, foods, estimatedCalories, protein, carbs, fat, fibre, sugar, sodium, confidence.`;
+Keep isMealPhoto true. Return JSON only with keys: isMealPhoto, rejectReason, mealName, foods, estimatedCalories, protein, carbs, fat, fibre, sugar, sodium, confidence.`;
 
   const response = await client.chat.completions.create({
     model: config.openaiModel,
@@ -175,6 +225,6 @@ Return JSON only with keys: mealName, foods, estimatedCalories, protein, carbs, 
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("Empty OpenAI response");
   const parsed = JSON.parse(content);
-  const analysis = analysisSchema.parse(parsed);
+  const analysis = parseVisionResponse(parsed);
   return { analysis, raw: { refined: true, clarification: note, ...parsed } };
 }

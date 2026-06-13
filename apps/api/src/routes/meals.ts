@@ -12,6 +12,9 @@ import { pool } from "../db.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
 import { saveDraft, getDraft, deleteDraft, updateDraftAnalysis } from "../services/drafts.js";
 import { imageUrlToBuffer } from "../services/imageFetch.js";
+import { validateUploadImage } from "../services/imageValidation.js";
+import { MealGuardrailError } from "../services/mealGuardrails.js";
+import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { uploadMealImage } from "../services/storage.js";
 
@@ -29,25 +32,39 @@ export async function mealRoutes(app: FastifyInstance) {
       const buffer = await file.toBuffer();
       const mimeType = file.mimetype || "image/jpeg";
 
-      let imageUrl: string;
       try {
-        imageUrl = await uploadMealImage(userId, buffer, mimeType);
+        await reserveUploadAttempt(userId);
+        validateUploadImage(buffer, mimeType);
+        const { analysis, raw } = await analyzeMealImage(buffer, mimeType);
+
+        let imageUrl: string;
+        try {
+          imageUrl = await uploadMealImage(userId, buffer, mimeType);
+        } catch (err) {
+          request.log.error(err);
+          imageUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+        }
+
+        const draftId = saveDraft(userId, imageUrl, analysis, raw);
+        const coachingContext = await buildCoachingContext(userId);
+        const coachNudge = await generateCoachNudge(coachingContext, analysis);
+
+        return {
+          ...analysis,
+          draftId,
+          imageUrl,
+          coachNudge,
+        };
       } catch (err) {
-        request.log.error(err);
-        imageUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
       }
-
-      const { analysis, raw } = await analyzeMealImage(buffer, mimeType);
-      const draftId = saveDraft(userId, imageUrl, analysis, raw);
-      const coachingContext = await buildCoachingContext(userId);
-      const coachNudge = await generateCoachNudge(coachingContext, analysis);
-
-      return {
-        ...analysis,
-        draftId,
-        imageUrl,
-        coachNudge,
-      };
     },
   );
 
@@ -68,18 +85,30 @@ export async function mealRoutes(app: FastifyInstance) {
       }
 
       const { buffer, mimeType } = await imageUrlToBuffer(draft.imageUrl);
-      const { analysis, raw } = await refineMealImage(
-        buffer,
-        mimeType,
-        draft.analysis,
-        clarification.trim(),
-      );
-      updateDraftAnalysis(draftId, userId, analysis, raw);
+      try {
+        await reserveRefineAttempt(userId);
+        const { analysis, raw } = await refineMealImage(
+          buffer,
+          mimeType,
+          draft.analysis,
+          clarification.trim(),
+        );
+        updateDraftAnalysis(draftId, userId, analysis, raw);
 
-      const coachingContext = await buildCoachingContext(userId);
-      const coachNudge = await generateCoachNudge(coachingContext, analysis);
+        const coachingContext = await buildCoachingContext(userId);
+        const coachNudge = await generateCoachNudge(coachingContext, analysis);
 
-      return { ...analysis, coachNudge };
+        return { ...analysis, coachNudge };
+      } catch (err) {
+        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
     },
   );
 

@@ -8,6 +8,9 @@ export interface BodyMetrics {
 export interface NutritionTargets {
   dailyFibreG: number;
   dailyCalories: number;
+  dailyProteinG: number;
+  dailyPlantServes: number;
+  dailyHydrationGlasses: number;
 }
 
 export const GENDER_OPTIONS = [
@@ -25,6 +28,9 @@ export function genderLabel(gender: Gender | null | undefined): string {
 
 /** Fallback when body metrics are not set. */
 export const DEFAULT_DAILY_FIBRE_G = 30;
+export const DEFAULT_DAILY_PROTEIN_G = 60;
+export const DEFAULT_DAILY_PLANT_SERVES = 7;
+export const DEFAULT_DAILY_HYDRATION_GLASSES = 8;
 
 /** Mifflin–St Jeor BMR, lightly active (×1.375). */
 export function estimateDailyCalories(
@@ -55,6 +61,7 @@ export function computeDailyFibreTarget(
 
 export function computeNutritionTargets(
   metrics: BodyMetrics,
+  goal: string | null = null,
 ): NutritionTargets | null {
   const { weightKg, heightCm, age, gender } = metrics;
   if (
@@ -72,7 +79,22 @@ export function computeNutritionTargets(
 
   const dailyCalories = estimateDailyCalories(weightKg, heightCm, age, gender);
   const dailyFibreG = computeDailyFibreTarget(weightKg, heightCm, age, gender);
-  return { dailyFibreG, dailyCalories };
+  const normalizedGoal = (goal ?? "").toLowerCase();
+  const gramsPerKg =
+    normalizedGoal.includes("protein") || normalizedGoal.includes("weight")
+      ? 1.6
+      : 1.2;
+  const dailyProteinG = Math.round(
+    Math.max(45, Math.min(160, weightKg * gramsPerKg)),
+  );
+
+  return {
+    dailyFibreG,
+    dailyCalories,
+    dailyProteinG,
+    dailyPlantServes: DEFAULT_DAILY_PLANT_SERVES,
+    dailyHydrationGlasses: DEFAULT_DAILY_HYDRATION_GLASSES,
+  };
 }
 
 export function hasBodyMetrics(metrics: BodyMetrics): boolean {
@@ -140,6 +162,15 @@ export function mealTypeLabel(mealType: MealType | string | null | undefined): s
   if (!mealType) return "Meal";
   return MEAL_TYPE_OPTIONS.find((o) => o.value === mealType)?.label ?? mealType;
 }
+
+export const MEAL_GUARDRAIL_CODES = [
+  "INVALID_IMAGE",
+  "NOT_FOOD",
+  "UNCLEAR_PHOTO",
+  "RATE_LIMITED",
+] as const;
+
+export type MealGuardrailCode = (typeof MEAL_GUARDRAIL_CODES)[number];
 
 export interface MealAnalysisResult {
   mealName: string;
@@ -229,6 +260,48 @@ export interface InsightsResponse {
   takeawayPercent: number;
   coachNudge: string;
 }
+
+export type {
+  NutritionDashboardResponse,
+  PillarProgress,
+  EnergyMetric,
+  GutHealthSummary,
+  FoodRecommendation,
+  RecommendationImpact,
+  WeeklyTrendItem,
+  ScoreStatus,
+  PillarStatus,
+  TrendStatus,
+  DailyTotals,
+  ExtendedNutritionTargets,
+  FoodClassification,
+  NutritionGaps,
+} from "./nutrition/index.js";
+
+export {
+  classifyFoods,
+  countProcessedMeals,
+  formatMacroEquivalents,
+  stillNeededForMacro,
+  computeDailyProteinTarget,
+  buildExtendedNutritionTargets,
+  defaultExtendedNutritionTargets,
+  computeNutritionGaps,
+  computeNutritionScore,
+  scoreStatus,
+  scoreStatusEmoji,
+  buildProteinPillar,
+  buildFibrePillar,
+  buildPlantsPillar,
+  buildHydrationPillar,
+  buildEnergyMetrics,
+  buildGutHealthSummary,
+  buildFoodRecommendations,
+  buildCoachSummary,
+  buildLifeplateInsightTemplate,
+  buildWeeklyTrends,
+  weeklyGutScore,
+} from "./nutrition/index.js";
 
 export interface UserProfile {
   id: string;

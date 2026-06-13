@@ -1,5 +1,9 @@
 import OpenAI from "openai";
 import type { MealAnalysisResult } from "@lifeplate/shared";
+import {
+  buildLifeplateInsightTemplate,
+  type ExtendedNutritionTargets,
+} from "@lifeplate/shared";
 import { pool } from "../db.js";
 import { config } from "../config.js";
 
@@ -181,5 +185,81 @@ Be specific to this user and plate.`;
     return text.replace(/^["']|["']$/g, "").slice(0, 160);
   } catch {
     return ruleBasedNudge(ctx, meal);
+  }
+}
+
+export type DailyInsightContext = {
+  goal: string | null;
+  totals: {
+    calories: number;
+    protein: number;
+    fibre: number;
+    carbs: number;
+    fat: number;
+    mealsCount: number;
+  };
+  targets: ExtendedNutritionTargets;
+  plantCount: number;
+  recentFoods: string[];
+  score: number;
+};
+
+export async function generateLifeplateInsight(
+  ctx: DailyInsightContext,
+): Promise<string> {
+  const fallback = buildLifeplateInsightTemplate(
+    {
+      fibre: ctx.totals.fibre,
+      protein: ctx.totals.protein,
+      calories: ctx.totals.calories,
+    },
+    {
+      dailyFibreG: ctx.targets.dailyFibreG,
+      dailyProteinG: ctx.targets.dailyProteinG,
+      dailyCalories: ctx.targets.dailyCalories,
+    },
+    ctx.plantCount,
+  );
+
+  if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
+    return fallback;
+  }
+
+  const fibrePct = ctx.targets.dailyFibreG
+    ? Math.round((ctx.totals.fibre / ctx.targets.dailyFibreG) * 100)
+    : 0;
+
+  const prompt = `You are a calm, evidence-informed nutrition coach for LifePlate.
+Write 2-3 sentences (max 70 words total). No markdown, bullet lists, guilt, or emojis.
+Focus on long-term health impact over calorie obsession.
+
+User goal: ${ctx.goal ?? "General wellbeing"}
+Today's score: ${ctx.score}/100
+Today totals: ${ctx.totals.calories} kcal, ${ctx.totals.protein}g protein, ${ctx.totals.fibre}g fibre (${fibrePct}% of target), ${ctx.plantCount} plant foods
+Targets: ${ctx.targets.dailyCalories} kcal, ${ctx.targets.dailyProteinG}g protein, ${ctx.targets.dailyFibreG}g fibre
+Recent foods: ${ctx.recentFoods.join(", ") || "none yet"}
+
+Give one clear insight about what matters most for this user's day.`;
+
+  try {
+    const client = new OpenAI({ apiKey: config.openaiApiKey });
+    const response = await client.chat.completions.create({
+      model: config.openaiModel,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Reply with a short coaching paragraph only. No quotes around the whole response.",
+        },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 120,
+      temperature: 0.6,
+    });
+    const text = response.choices[0]?.message?.content?.trim();
+    if (!text) return fallback;
+    return text.replace(/^["']|["']$/g, "").slice(0, 320);
+  } catch {
+    return fallback;
   }
 }

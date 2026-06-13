@@ -79,7 +79,10 @@ function toProfile(
     heightCm,
     age,
     gender,
-    nutritionTargets: computeNutritionTargets({ weightKg, heightCm, age, gender }),
+    nutritionTargets: computeNutritionTargets(
+      { weightKg, heightCm, age, gender },
+      row.goal,
+    ),
     mealsLogged,
     currentStreak: streaks.current,
     longestStreak: streaks.longest,

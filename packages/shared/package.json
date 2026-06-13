@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/nutrition.test.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

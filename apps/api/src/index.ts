@@ -6,6 +6,7 @@ import { runMigrations } from "./db.js";
 import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { mealRoutes } from "./routes/meals.js";
 import { insightRoutes } from "./routes/insights.js";
+import { nutritionRoutes } from "./routes/nutrition.js";
 import { userRoutes } from "./routes/users.js";
 
 assertRuntimeConfig();
@@ -23,6 +24,7 @@ app.get("/health", async () => ({ ok: true }));
 
 await app.register(mealRoutes);
 await app.register(insightRoutes);
+await app.register(nutritionRoutes);
 await app.register(userRoutes);
 
 try {
