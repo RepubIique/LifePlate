@@ -8,6 +8,10 @@ dist
 !.env.example
 coverage
 
+# Accidental Expo prebuild at repo root (native app lives in apps/mobile)
+/app.json
+/ios/
+
 supabase/.temp
 apps/mobile/ios
 apps/mobile/android
