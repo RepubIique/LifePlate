@@ -40,14 +40,14 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "dev": "expo start --port 8082",
+    "dev": "pnpm --filter @lifeplate/shared build && expo start --port 8082",
     "typecheck": "tsc --noEmit",
-    "start": "expo start",
-    "android": "expo run:android",
-    "prebuild:ios": "expo prebuild --platform ios --clean",
-    "ios": "expo prebuild --platform ios && expo run:ios",
-    "ios:device": "expo prebuild --platform ios && expo run:ios --device --configuration Release",
-    "web": "expo start --web"
+    "start": "pnpm --filter @lifeplate/shared build && expo start",
+    "android": "pnpm --filter @lifeplate/shared build && expo run:android",
+    "prebuild:ios": "pnpm --filter @lifeplate/shared build && expo prebuild --platform ios --clean",
+    "ios": "pnpm --filter @lifeplate/shared build && expo prebuild --platform ios && expo run:ios",
+    "ios:device": "pnpm --filter @lifeplate/shared build && expo prebuild --platform ios && expo run:ios --device --configuration Release",
+    "web": "pnpm --filter @lifeplate/shared build && expo start --web"
   },
   "private": true
 }

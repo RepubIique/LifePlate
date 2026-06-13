@@ -7,7 +7,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "react-native": "./src/index.ts",
+      "react-native": "./dist/index.js",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
