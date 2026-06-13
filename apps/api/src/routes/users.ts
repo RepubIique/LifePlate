@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { computeNutritionTargets, type UserProfile } from "@lifeplate/shared";
+import {
+  computeNutritionTargets,
+  type Gender,
+  type UserProfile,
+} from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -37,6 +41,13 @@ function computeStreaks(dates: Date[]): { current: number; longest: number } {
   return { current, longest };
 }
 
+function parseGender(value: string | null): Gender | null {
+  if (value === "female" || value === "male" || value === "unspecified") {
+    return value;
+  }
+  return null;
+}
+
 function toProfile(
   userId: string,
   userEmail: string,
@@ -47,6 +58,7 @@ function toProfile(
     weight_kg: string | null;
     height_cm: string | null;
     age: number | null;
+    gender: string | null;
   },
   mealsLogged: number,
   streaks: { current: number; longest: number },
@@ -54,6 +66,7 @@ function toProfile(
   const weightKg = row.weight_kg != null ? Number(row.weight_kg) : null;
   const heightCm = row.height_cm != null ? Number(row.height_cm) : null;
   const age = row.age;
+  const gender = parseGender(row.gender);
 
   return {
     id: userId,
@@ -63,7 +76,8 @@ function toProfile(
     weightKg,
     heightCm,
     age,
-    nutritionTargets: computeNutritionTargets({ weightKg, heightCm, age }),
+    gender,
+    nutritionTargets: computeNutritionTargets({ weightKg, heightCm, age, gender }),
     mealsLogged,
     currentStreak: streaks.current,
     longestStreak: streaks.longest,
@@ -85,8 +99,9 @@ export async function userRoutes(app: FastifyInstance) {
         weight_kg: string | null;
         height_cm: string | null;
         age: number | null;
+        gender: string | null;
       }>(
-        `SELECT id, email, name, goal, weight_kg, height_cm, age FROM users WHERE id = $1`,
+        `SELECT id, email, name, goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
         [userId],
       );
 
@@ -101,7 +116,15 @@ export async function userRoutes(app: FastifyInstance) {
       return toProfile(
         userId,
         userEmail,
-        user ?? { email: userEmail, name: null, goal: null, weight_kg: null, height_cm: null, age: null },
+        user ?? {
+          email: userEmail,
+          name: null,
+          goal: null,
+          weight_kg: null,
+          height_cm: null,
+          age: null,
+          gender: null,
+        },
         mealDates.length,
         streaks,
       );
@@ -115,13 +138,14 @@ export async function userRoutes(app: FastifyInstance) {
       weightKg?: number | null;
       heightCm?: number | null;
       age?: number | null;
+      gender?: Gender | null;
     };
   }>(
     "/api/users/me",
     { preHandler: requireAuth },
     async (request) => {
       const { userId, userEmail } = request as AuthedRequest;
-      const { goal, name, weightKg, heightCm, age } = request.body ?? {};
+      const { goal, name, weightKg, heightCm, age, gender } = request.body ?? {};
 
       await pool.query(
         `INSERT INTO users (id, email)
@@ -144,6 +168,9 @@ export async function userRoutes(app: FastifyInstance) {
       }
       if (age !== undefined) {
         await pool.query(`UPDATE users SET age = $1 WHERE id = $2`, [age, userId]);
+      }
+      if (gender !== undefined) {
+        await pool.query(`UPDATE users SET gender = $1 WHERE id = $2`, [gender, userId]);
       }
 
       return { ok: true };

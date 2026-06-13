@@ -7,6 +7,7 @@ import type {
   MealUploadResponse,
   MealUpdateRequest,
   UserProfile,
+  Gender,
 } from "@lifeplate/shared";
 import { File, UploadType } from "expo-file-system";
 import { supabase } from "./supabase";
@@ -64,6 +65,7 @@ export async function updateProfile(body: {
   weightKg?: number | null;
   heightCm?: number | null;
   age?: number | null;
+  gender?: Gender | null;
 }): Promise<void> {
   await request("/api/users/me", {
     method: "PATCH",

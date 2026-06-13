@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
@@ -25,7 +25,7 @@ export default function GoalScreen() {
     try {
       await updateGoal(goal);
       patchProfile({ goal });
-      router.replace("/(tabs)");
+      router.replace("/onboarding/body" as Href);
       void refreshProfile();
     } catch (err) {
       setError(friendlyErrorMessage(err));

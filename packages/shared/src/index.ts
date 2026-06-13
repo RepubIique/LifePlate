@@ -2,6 +2,7 @@ export interface BodyMetrics {
   weightKg: number | null;
   heightCm: number | null;
   age: number | null;
+  gender: Gender | null;
 }
 
 export interface NutritionTargets {
@@ -9,16 +10,32 @@ export interface NutritionTargets {
   dailyCalories: number;
 }
 
+export const GENDER_OPTIONS = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "unspecified", label: "Prefer not to say" },
+] as const;
+
+export type Gender = (typeof GENDER_OPTIONS)[number]["value"];
+
+export function genderLabel(gender: Gender | null | undefined): string {
+  if (!gender) return "Not set";
+  return GENDER_OPTIONS.find((g) => g.value === gender)?.label ?? gender;
+}
+
 /** Fallback when body metrics are not set. */
 export const DEFAULT_DAILY_FIBRE_G = 30;
 
-/** Mifflin–St Jeor BMR averaged across sexes, lightly active (×1.375). */
+/** Mifflin–St Jeor BMR, lightly active (×1.375). */
 export function estimateDailyCalories(
   weightKg: number,
   heightCm: number,
   age: number,
+  gender: Gender,
 ): number {
-  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 78;
+  const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+  const sexOffset = gender === "male" ? 5 : gender === "female" ? -161 : -78;
+  const bmr = base + sexOffset;
   const tdee = bmr * 1.375;
   return Math.round(Math.max(1200, Math.min(4000, tdee)));
 }
@@ -28,8 +45,9 @@ export function computeDailyFibreTarget(
   weightKg: number,
   heightCm: number,
   age: number,
+  gender: Gender,
 ): number {
-  const calories = estimateDailyCalories(weightKg, heightCm, age);
+  const calories = estimateDailyCalories(weightKg, heightCm, age, gender);
   const fromCalories = Math.round(14 * (calories / 1000));
   const fromWeight = Math.round(weightKg * 0.4);
   return Math.min(40, Math.max(fromCalories, fromWeight, 25));
@@ -38,11 +56,12 @@ export function computeDailyFibreTarget(
 export function computeNutritionTargets(
   metrics: BodyMetrics,
 ): NutritionTargets | null {
-  const { weightKg, heightCm, age } = metrics;
+  const { weightKg, heightCm, age, gender } = metrics;
   if (
     weightKg == null ||
     heightCm == null ||
     age == null ||
+    gender == null ||
     weightKg <= 0 ||
     heightCm <= 0 ||
     age <= 0 ||
@@ -51,9 +70,31 @@ export function computeNutritionTargets(
     return null;
   }
 
-  const dailyCalories = estimateDailyCalories(weightKg, heightCm, age);
-  const dailyFibreG = computeDailyFibreTarget(weightKg, heightCm, age);
+  const dailyCalories = estimateDailyCalories(weightKg, heightCm, age, gender);
+  const dailyFibreG = computeDailyFibreTarget(weightKg, heightCm, age, gender);
   return { dailyFibreG, dailyCalories };
+}
+
+export function hasBodyMetrics(metrics: BodyMetrics): boolean {
+  return computeNutritionTargets(metrics) != null;
+}
+
+export function isOnboardingComplete(profile: {
+  goal: string | null;
+  weightKg: number | null;
+  heightCm: number | null;
+  age: number | null;
+  gender: Gender | null;
+}): boolean {
+  return (
+    !!profile.goal?.trim() &&
+    hasBodyMetrics({
+      weightKg: profile.weightKg,
+      heightCm: profile.heightCm,
+      age: profile.age,
+      gender: profile.gender,
+    })
+  );
 }
 
 export function resolveDailyFibreGoal(metrics: BodyMetrics): number {
@@ -170,6 +211,7 @@ export interface UserProfile {
   weightKg: number | null;
   heightCm: number | null;
   age: number | null;
+  gender: Gender | null;
   nutritionTargets: NutritionTargets | null;
   mealsLogged: number;
   currentStreak: number;

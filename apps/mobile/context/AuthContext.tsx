@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         weightKg: null,
         heightCm: null,
         age: null,
+        gender: null,
         nutritionTargets: null,
         mealsLogged: 0,
         currentStreak: 0,
@@ -90,12 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.replace("/(auth)/welcome");
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    void (async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        // Stale or revoked refresh token — clear local session and send to sign-in.
+        await supabase.auth.signOut();
+        setSession(null);
+      } else {
+        setSession(data.session);
+      }
       setLoading(false);
-    });
+    })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === "SIGNED_OUT") {
+        setSession(null);
+        return;
+      }
       setSession(next);
     });
 

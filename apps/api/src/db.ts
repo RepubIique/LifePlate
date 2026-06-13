@@ -20,6 +20,7 @@ export async function runMigrations() {
     "001_init.sql",
     "002_nutrition_details.sql",
     "003_user_body_metrics.sql",
+    "004_user_gender.sql",
   ];
   for (const file of files) {
     const sql = readFileSync(join(__dirname, "../migrations", file), "utf-8");

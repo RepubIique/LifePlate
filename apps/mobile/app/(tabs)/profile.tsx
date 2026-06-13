@@ -2,7 +2,12 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
-import { computeNutritionTargets } from "@lifeplate/shared";
+import type { Gender } from "@lifeplate/shared";
+import {
+  BodyMetricsForm,
+  toOptionalInt,
+  toOptionalNumber,
+} from "@/components/BodyMetricsForm";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
@@ -11,18 +16,6 @@ import { fetchMeals, updateProfile } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { spacing } from "@/src/theme/lifeplate";
-
-function toOptionalNumber(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function toOptionalInt(value: string): number | null {
-  const n = toOptionalNumber(value);
-  return n == null ? null : Math.round(n);
-}
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
@@ -46,6 +39,7 @@ export default function ProfileScreen() {
     profile?.heightCm != null ? String(profile.heightCm) : "",
   );
   const [age, setAge] = useState(profile?.age != null ? String(profile.age) : "");
+  const [gender, setGender] = useState<Gender | null>(profile?.gender ?? null);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -56,23 +50,15 @@ export default function ProfileScreen() {
     setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : "");
     setHeightCm(profile?.heightCm != null ? String(profile.heightCm) : "");
     setAge(profile?.age != null ? String(profile.age) : "");
+    setGender(profile?.gender ?? null);
   }, [
     profile?.age,
+    profile?.gender,
     profile?.goal,
     profile?.heightCm,
     profile?.name,
     profile?.weightKg,
   ]);
-
-  const draftTargets = useMemo(
-    () =>
-      computeNutritionTargets({
-        weightKg: toOptionalNumber(weightKg),
-        heightCm: toOptionalNumber(heightCm),
-        age: toOptionalInt(age),
-      }),
-    [age, heightCm, weightKg],
-  );
 
   const canSave = useMemo(() => {
     const n = name.trim();
@@ -85,14 +71,17 @@ export default function ProfileScreen() {
       (profile?.goal ?? "") !== g ||
       (profile?.weightKg ?? null) !== w ||
       (profile?.heightCm ?? null) !== h ||
-      (profile?.age ?? null) !== a
+      (profile?.age ?? null) !== a ||
+      (profile?.gender ?? null) !== gender
     );
   }, [
     age,
+    gender,
     goal,
     heightCm,
     name,
     profile?.age,
+    profile?.gender,
     profile?.goal,
     profile?.heightCm,
     profile?.name,
@@ -109,6 +98,7 @@ export default function ProfileScreen() {
         weightKg: toOptionalNumber(weightKg),
         heightCm: toOptionalNumber(heightCm),
         age: toOptionalInt(age),
+        gender,
       });
       await refreshProfile();
       setSnackbar("Profile updated");
@@ -164,48 +154,16 @@ export default function ProfileScreen() {
           <Text variant="bodySmall" style={styles.sectionHint}>
             Used to estimate your daily fibre and calorie targets.
           </Text>
-          <View style={styles.metricsGrid}>
-            <TextInput
-              label="Weight (kg)"
-              value={weightKg}
-              onChangeText={setWeightKg}
-              keyboardType="decimal-pad"
-              mode="outlined"
-              style={styles.metricInput}
-            />
-            <TextInput
-              label="Height (cm)"
-              value={heightCm}
-              onChangeText={setHeightCm}
-              keyboardType="decimal-pad"
-              mode="outlined"
-              style={styles.metricInput}
-            />
-            <TextInput
-              label="Age"
-              value={age}
-              onChangeText={setAge}
-              keyboardType="number-pad"
-              mode="outlined"
-              style={styles.metricInput}
-            />
-          </View>
-          {draftTargets ? (
-            <View style={styles.targetsBox}>
-              <ProfileRow
-                label="Recommended fibre / day"
-                value={`${draftTargets.dailyFibreG}g`}
-              />
-              <ProfileRow
-                label="Estimated calories / day"
-                value={`${draftTargets.dailyCalories} kcal`}
-              />
-            </View>
-          ) : (
-            <Text variant="bodySmall" style={styles.sectionHint}>
-              Enter weight, height, and age to see personalised daily targets.
-            </Text>
-          )}
+          <BodyMetricsForm
+            weightKg={weightKg}
+            heightCm={heightCm}
+            age={age}
+            gender={gender}
+            onWeightKgChange={setWeightKg}
+            onHeightCmChange={setHeightCm}
+            onAgeChange={setAge}
+            onGenderChange={setGender}
+          />
           <Button mode="contained" onPress={handleSave} disabled={!canSave} loading={saving}>
             Save profile
           </Button>
@@ -263,9 +221,6 @@ const styles = StyleSheet.create({
   input: { marginBottom: spacing.sm },
   sectionTitle: { letterSpacing: 0.15, marginBottom: spacing.xs },
   sectionHint: { opacity: 0.65, lineHeight: 18, marginBottom: spacing.sm },
-  metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  metricInput: { flexBasis: "48%", flexGrow: 1 },
-  targetsBox: { marginBottom: spacing.sm },
   row: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
