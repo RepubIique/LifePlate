@@ -117,6 +117,8 @@ export const MEAL_TYPE_OPTIONS = [
   { value: "lunch", label: "Lunch" },
   { value: "dinner", label: "Dinner" },
   { value: "snack", label: "Snack" },
+  { value: "beverage", label: "Beverage" },
+  { value: "dessert", label: "Dessert" },
 ] as const;
 
 export type MealType = (typeof MEAL_TYPE_OPTIONS)[number]["value"];

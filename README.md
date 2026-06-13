@@ -117,6 +117,10 @@ Then redeploy the API on Render (or run `pnpm db:migrate` locally against your S
 
 Migrations run automatically on startup. Health check: `GET /health`.
 
+**Auto-deploy via GitHub Actions:** If Render's built-in auto-deploy is unreliable, this repo includes `.github/workflows/deploy-render.yml`. Copy the **Deploy Hook** URL from Render → `lifeplate-api` → **Settings**, then add it as a GitHub repo secret named `RENDER_DEPLOY_HOOK_URL`. Pushes to `main` that touch the API, shared package, or Docker config will trigger a deploy.
+
+**Render dashboard tip:** Set **Auto-Deploy** to **On Commit** (not "After CI Checks Pass") unless you add CI workflows that run on every push — otherwise deploys never trigger.
+
 **Free tier note:** Render sleeps after ~15 minutes idle; first request after that takes ~30–60s to wake up.
 
 **Keep it awake (optional):** Use [UptimeRobot](https://uptimerobot.com) (free) to ping `https://lifeplate-api.onrender.com/health` every 5 minutes. This reduces cold starts for demos. Render may still spin down occasionally on the free plan.
