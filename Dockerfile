@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/api apps/api
 COPY packages/shared packages/shared
 
-RUN pnpm --filter @lifeplate/api build
+RUN pnpm --filter @lifeplate/shared build && pnpm --filter @lifeplate/api build
 
 WORKDIR /app/apps/api
 
