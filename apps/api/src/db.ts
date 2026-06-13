@@ -41,6 +41,7 @@ export async function runMigrations() {
     "005_daily_hydration.sql",
     "006_upload_rate_limits.sql",
     "007_refine_rate_limits.sql",
+    "008_user_stats_and_daily_insights.sql",
   ];
   for (const file of files) {
     const sql = readFileSync(join(__dirname, "../migrations", file), "utf-8");

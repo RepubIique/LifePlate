@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { assertRuntimeConfig, config } from "./config.js";
 import { runMigrations } from "./db.js";
+import { backfillAllUserMealStats } from "./services/userMealStats.js";
 import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { mealRoutes } from "./routes/meals.js";
 import { insightRoutes } from "./routes/insights.js";
@@ -29,6 +30,7 @@ await app.register(userRoutes);
 
 try {
   await runMigrations();
+  await backfillAllUserMealStats();
   app.log.info("Database migrations applied");
 } catch (err) {
   app.log.error(
