@@ -1,6 +1,6 @@
 import { router, Redirect } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isOnboardingComplete, type Gender } from "@lifeplate/shared";
@@ -36,14 +36,6 @@ export default function BodyMetricsOnboardingScreen() {
     if (profile.gender) setGender(profile.gender);
     prefilledRef.current = true;
   }, [profile]);
-
-  if (profileLoading && !profile) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
 
   if (profile && isOnboardingComplete(profile)) {
     return <Redirect href="/(tabs)" />;
@@ -82,7 +74,7 @@ export default function BodyMetricsOnboardingScreen() {
   }
 
   return (
-    <Screen scroll padded={false}>
+    <Screen scroll padded={false} loading={profileLoading && !profile}>
       <PremiumHeader
         title="About you"
         subtitle="We use this to personalise your daily fibre and nutrition targets."
@@ -130,7 +122,6 @@ export default function BodyMetricsOnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   body: { paddingHorizontal: spacing.lg, gap: spacing.md },
   note: { opacity: 0.65, lineHeight: 18 },
   cta: { marginTop: spacing.sm },

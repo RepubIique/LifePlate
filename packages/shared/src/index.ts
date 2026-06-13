@@ -112,7 +112,32 @@ export const GOALS = [
 
 export type UserGoal = (typeof GOALS)[number];
 
-export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export const MEAL_TYPE_OPTIONS = [
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snack", label: "Snack" },
+] as const;
+
+export type MealType = (typeof MEAL_TYPE_OPTIONS)[number]["value"];
+
+export function isMealType(value: string): value is MealType {
+  return MEAL_TYPE_OPTIONS.some((o) => o.value === value);
+}
+
+/** Infer meal category from local time (device or provided date). */
+export function inferMealType(date = new Date()): MealType {
+  const hour = date.getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 17) return "snack";
+  return "dinner";
+}
+
+export function mealTypeLabel(mealType: MealType | string | null | undefined): string {
+  if (!mealType) return "Meal";
+  return MEAL_TYPE_OPTIONS.find((o) => o.value === mealType)?.label ?? mealType;
+}
 
 export interface MealAnalysisResult {
   mealName: string;

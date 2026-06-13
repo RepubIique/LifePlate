@@ -2,8 +2,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
+import { inferMealType, type MealType } from "@lifeplate/shared";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
+import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { useAuth } from "@/context/AuthContext";
 import { confirmMeal, refineMeal } from "@/lib/api";
@@ -47,6 +49,7 @@ export default function MealResultScreen() {
   }, [params.foods]);
 
   const [editing, setEditing] = useState(false);
+  const [mealType, setMealType] = useState<MealType>(() => inferMealType());
   const [mealName, setMealName] = useState(params.mealName ?? "");
   const [foods, setFoods] = useState<string[]>(initialFoods);
   const [newFood, setNewFood] = useState("");
@@ -127,6 +130,7 @@ export default function MealResultScreen() {
         draftId: params.draftId,
         imageUrl: params.imageUrl,
         mealName,
+        mealType,
         foods,
         estimatedCalories: toNumber(calories, 0),
         protein: toNumber(protein, 0),
@@ -161,6 +165,10 @@ export default function MealResultScreen() {
           </Text>
         </PremiumCard>
       ) : null}
+
+      <PremiumCard>
+        <MealTypePicker value={mealType} onChange={setMealType} />
+      </PremiumCard>
 
       <PremiumCard>
         {editing ? (

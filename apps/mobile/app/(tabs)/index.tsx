@@ -17,6 +17,7 @@ import { prepareMealImage } from "@/lib/imagePrep";
 import { premium } from "@/src/theme/premium";
 import { premiumStyles } from "@/src/theme/premium";
 import { getLastPhotoSource, setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
+import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
 type UploadStage = "idle" | "preparing" | "analyzing";
@@ -137,7 +138,7 @@ export default function HomeScreen() {
   const todayMeals = meals.filter((m) => isToday(m.createdAt));
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} loading={loading}>
       <PremiumHeader
         title="LifePlate"
         subtitle={`${profile?.currentStreak ?? 0} day streak`}
@@ -216,7 +217,6 @@ export default function HomeScreen() {
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Today&apos;s meals
         </Text>
-        {loading && <ActivityIndicator />}
         {!loading && todayMeals.length === 0 ? (
           <Text variant="bodyMedium" style={premiumStyles.empty}>
             No meals yet today. Snap your first plate.
@@ -226,7 +226,7 @@ export default function HomeScreen() {
           <MealRowCard
             key={meal.id}
             mealName={meal.mealName}
-            subtitle={meal.mealType ?? "meal"}
+            subtitle={formatMealTypeLabel(meal.mealType)}
             imageUrl={meal.imageUrl}
             onPress={() => router.push({ pathname: "/meal/edit", params: { id: meal.id } })}
           />

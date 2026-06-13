@@ -5,6 +5,7 @@ import type {
   MealRefineRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
+import { inferMealType } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -13,14 +14,6 @@ import { saveDraft, getDraft, deleteDraft, updateDraftAnalysis } from "../servic
 import { imageUrlToBuffer } from "../services/imageFetch.js";
 import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { uploadMealImage } from "../services/storage.js";
-
-function inferMealType(date = new Date()): string {
-  const hour = date.getHours();
-  if (hour < 11) return "breakfast";
-  if (hour < 15) return "lunch";
-  if (hour < 17) return "snack";
-  return "dinner";
-}
 
 export async function mealRoutes(app: FastifyInstance) {
   app.post(

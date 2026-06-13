@@ -2,16 +2,18 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator,
   Button,
   Chip,
   Snackbar,
   Text,
   TextInput,
 } from "react-native-paper";
-import type { MealDetail } from "@lifeplate/shared";
+import type { MealDetail, MealType } from "@lifeplate/shared";
+import { isMealType } from "@lifeplate/shared";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
+import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { useAuth } from "@/context/AuthContext";
@@ -39,6 +41,7 @@ export default function EditMealScreen() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const [mealName, setMealName] = useState("");
+  const [mealType, setMealType] = useState<MealType>("lunch");
   const [foods, setFoods] = useState<string[]>([]);
   const [newFood, setNewFood] = useState("");
   const [calories, setCalories] = useState("0");
@@ -56,6 +59,8 @@ export default function EditMealScreen() {
       const m = await fetchMeal(id);
       setMeal(m);
       setMealName(m.mealName);
+      const type = m.mealType ?? "";
+      setMealType(isMealType(type) ? type : "lunch");
       setFoods(m.foods ?? []);
       setCalories(String(m.calories ?? 0));
       setProtein(String(m.protein ?? 0));
@@ -98,6 +103,7 @@ export default function EditMealScreen() {
     try {
       await updateMeal(id, {
         mealName,
+        mealType,
         foods,
         calories: toNumber(calories, 0),
         protein: toNumber(protein, 0),
@@ -129,15 +135,7 @@ export default function EditMealScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (!meal) {
+  if (!loading && !meal) {
     return (
       <View style={styles.center}>
         <Text variant="bodyLarge">Meal not found.</Text>
@@ -149,6 +147,8 @@ export default function EditMealScreen() {
   const personalisedFibreGoal = profile?.nutritionTargets != null;
 
   return (
+    <View style={styles.page}>
+      {meal ? (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
       <View style={styles.imageWrap}>
@@ -165,6 +165,8 @@ export default function EditMealScreen() {
           onChangeText={setMealName}
           mode="outlined"
         />
+
+        <MealTypePicker value={mealType} onChange={setMealType} />
 
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Foods
@@ -284,10 +286,14 @@ export default function EditMealScreen() {
         {snackbar}
       </Snackbar>
     </KeyboardAvoidingScrollView>
+      ) : null}
+      <LoadingOverlay visible={loading} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: "#FFFFFF" },
   scroll: { flex: 1, backgroundColor: "#FFFFFF" },
   container: { paddingBottom: spacing.xl, gap: spacing.md },
   imageWrap: { paddingHorizontal: spacing.lg },

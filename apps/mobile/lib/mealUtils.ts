@@ -1,4 +1,4 @@
-import type { MealListItem } from "@lifeplate/shared";
+import { mealTypeLabel, type MealListItem } from "@lifeplate/shared";
 
 export function formatDayLabel(iso: string): string {
   const d = new Date(iso);
@@ -45,4 +45,8 @@ export function formatMealTime(iso: string) {
 
 export function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function formatMealTypeLabel(mealType: string | null | undefined): string {
+  return mealTypeLabel(mealType);
 }

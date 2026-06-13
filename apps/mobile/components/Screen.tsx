@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,11 +10,13 @@ import {
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = ViewProps & {
   scroll?: boolean;
   padded?: boolean;
+  loading?: boolean;
   keyboardVerticalOffset?: number;
 };
 
@@ -59,6 +62,7 @@ export function KeyboardAvoidingScrollView({
 export function Screen({
   scroll,
   padded = true,
+  loading = false,
   style,
   children,
   keyboardVerticalOffset = 0,
@@ -74,21 +78,42 @@ export function Screen({
       }
     : { paddingTop: insets.top };
 
+  const shell = (body: ReactNode) => (
+    <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
+      {body}
+      <LoadingOverlay visible={loading} />
+    </View>
+  );
+
   if (scroll) {
-    return (
+    const scrollBody = (
       <KeyboardAvoidingScrollView
-        style={{ backgroundColor: theme.colors.background }}
+        style={styles.fill}
         contentContainerStyle={[paddingStyle, style]}
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
         {children}
       </KeyboardAvoidingScrollView>
     );
+
+    if (Platform.OS !== "ios") {
+      return shell(scrollBody);
+    }
+
+    return shell(
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior="padding"
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        {scrollBody}
+      </KeyboardAvoidingView>,
+    );
   }
 
   const content = (
     <View
-      style={[styles.fill, { backgroundColor: theme.colors.background }, paddingStyle, style]}
+      style={[styles.fill, paddingStyle, style]}
       {...rest}
     >
       {children}
@@ -96,17 +121,17 @@ export function Screen({
   );
 
   if (Platform.OS !== "ios") {
-    return content;
+    return shell(content);
   }
 
-  return (
+  return shell(
     <KeyboardAvoidingView
-      style={[styles.fill, { backgroundColor: theme.colors.background }]}
+      style={styles.fill}
       behavior="padding"
       keyboardVerticalOffset={keyboardVerticalOffset}
     >
       {content}
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView>,
   );
 }
 

@@ -1,14 +1,14 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Snackbar, Text } from "react-native-paper";
+import { Snackbar, Text } from "react-native-paper";
 import type { MealListItem } from "@lifeplate/shared";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { deleteMeal, fetchMeals } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { capitalize, formatMealTime, groupMealsByDay } from "@/lib/mealUtils";
+import { formatMealTime, formatMealTypeLabel, groupMealsByDay } from "@/lib/mealUtils";
 import { premiumStyles } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -81,7 +81,7 @@ export default function TimelineScreen() {
   const groups = groupMealsByDay(meals);
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} loading={loading && !refreshing}>
       <PremiumHeader
         title="Timeline"
         subtitle={meals.length ? `${meals.length} meals logged` : "Your health story, chronologically"}
@@ -93,7 +93,6 @@ export default function TimelineScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
         }
       >
-        {loading && !refreshing ? <ActivityIndicator style={styles.loader} /> : null}
         {groups.map((group) => (
           <View key={group.day} style={styles.dayGroup}>
             <Text variant="titleSmall" style={styles.dayLabel}>
@@ -103,7 +102,7 @@ export default function TimelineScreen() {
               <MealRowCard
                 key={meal.id}
                 mealName={meal.mealName}
-                subtitle={`${capitalize(meal.mealType ?? "meal")} · ${formatMealTime(meal.createdAt)}`}
+                subtitle={`${formatMealTypeLabel(meal.mealType)} · ${formatMealTime(meal.createdAt)}`}
                 imageUrl={meal.imageUrl}
                 onPress={() => router.push({ pathname: "/meal/edit", params: { id: meal.id } })}
                 onDelete={() => scheduleDelete(meal)}
@@ -137,7 +136,6 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
-  loader: { marginTop: spacing.xl },
   dayGroup: { marginBottom: spacing.lg },
   dayLabel: {
     opacity: 0.65,

@@ -1,27 +1,21 @@
 import { Tabs } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 
-const TAB_BAR_PADDING_TOP = 8;
-const TAB_BAR_CONTENT_HEIGHT = 44;
-
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, 8);
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: lifeplateTheme.colors.primary,
         tabBarInactiveTintColor: "#636E72",
+        tabBarBackground: () => (
+          <View style={[StyleSheet.absoluteFill, styles.tabBarBackground]} />
+        ),
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "transparent",
           borderTopColor: "#F1F3F5",
-          height: TAB_BAR_PADDING_TOP + TAB_BAR_CONTENT_HEIGHT + bottomPadding,
-          paddingBottom: bottomPadding,
-          paddingTop: TAB_BAR_PADDING_TOP,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -68,3 +62,9 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarBackground: {
+    backgroundColor: "#FFFFFF",
+  },
+});

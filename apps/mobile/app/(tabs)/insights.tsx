@@ -1,7 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ActivityIndicator, Snackbar, Text } from "react-native-paper";
+import { Snackbar, Text } from "react-native-paper";
 import type { InsightsResponse } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
@@ -58,13 +58,12 @@ export default function InsightsScreen() {
   );
 
   return (
-    <Screen scroll padded={false}>
+    <Screen scroll padded={false} loading={loading}>
       <PremiumHeader
         title="Insights"
         subtitle={insights?.period ?? "This week at a glance"}
       />
       <View style={styles.body}>
-        {loading ? <ActivityIndicator style={styles.loader} /> : null}
         <View style={styles.miniGrid}>
           <MiniCard label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
           <MiniCard
@@ -108,7 +107,6 @@ export default function InsightsScreen() {
 
 const styles = StyleSheet.create({
   body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
-  loader: { marginVertical: spacing.xl },
   miniGrid: { flexDirection: "row", gap: spacing.md },
   miniLabel: { opacity: 0.65, letterSpacing: 0.2 },
   miniValue: { marginTop: spacing.xs, letterSpacing: 0.2 },

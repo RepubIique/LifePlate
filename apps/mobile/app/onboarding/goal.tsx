@@ -1,6 +1,6 @@
 import { router, Redirect, type Href } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GOALS, isOnboardingComplete, type UserGoal } from "@lifeplate/shared";
@@ -18,14 +18,6 @@ export default function GoalScreen() {
   const [goal, setGoal] = useState<UserGoal>(GOALS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (profileLoading && !profile) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
 
   if (profile && isOnboardingComplete(profile)) {
     return <Redirect href="/(tabs)" />;
@@ -54,7 +46,7 @@ export default function GoalScreen() {
   }
 
   return (
-    <Screen scroll padded={false}>
+    <Screen scroll padded={false} loading={profileLoading && !profile}>
       <PremiumHeader
         title="What is your goal?"
         subtitle="We’ll tailor your experience. You can change this later."
@@ -98,7 +90,6 @@ export default function GoalScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   goalCard: {
     paddingVertical: spacing.md,
