@@ -13,7 +13,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function GoalScreen() {
-  const { patchProfile, refreshProfile, signOut } = useAuth();
+  const { patchProfile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [goal, setGoal] = useState<UserGoal>(GOALS[0]);
   const [saving, setSaving] = useState(false);
@@ -23,10 +23,9 @@ export default function GoalScreen() {
     setSaving(true);
     setError(null);
     try {
-      await updateGoal(goal);
-      patchProfile({ goal });
+      const updated = await updateGoal(goal);
+      patchProfile(updated);
       router.replace("/onboarding/body" as Href);
-      void refreshProfile();
     } catch (err) {
       setError(friendlyErrorMessage(err));
     } finally {

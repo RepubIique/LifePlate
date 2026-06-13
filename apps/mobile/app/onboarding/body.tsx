@@ -3,10 +3,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  computeNutritionTargets,
-  type Gender,
-} from "@lifeplate/shared";
+import { type Gender } from "@lifeplate/shared";
 import {
   BodyMetricsForm,
   isBodyMetricsFormComplete,
@@ -21,7 +18,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function BodyMetricsOnboardingScreen() {
-  const { patchProfile, refreshProfile, signOut } = useAuth();
+  const { patchProfile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
@@ -43,21 +40,14 @@ export default function BodyMetricsOnboardingScreen() {
     setSaving(true);
     setError(null);
     try {
-      await updateProfile({
+      const updated = await updateProfile({
         weightKg: w,
         heightCm: h,
         age: a,
         gender,
       });
-      const nutritionTargets = computeNutritionTargets({
-        weightKg: w,
-        heightCm: h,
-        age: a,
-        gender,
-      });
-      patchProfile({ weightKg: w, heightCm: h, age: a, gender, nutritionTargets });
+      patchProfile(updated);
       router.replace("/(tabs)");
-      void refreshProfile();
     } catch (err) {
       setError(friendlyErrorMessage(err));
     } finally {

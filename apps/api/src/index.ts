@@ -28,7 +28,7 @@ await app.register(userRoutes);
 try {
   await runMigrations();
 } catch (err) {
-  app.log.warn({ err }, "Migration skipped or failed (is Postgres running?)");
+  app.log.error({ err }, "Database migration failed — profile and meal fields may not persist");
 }
 
 await app.listen({ port: config.port, host: "0.0.0.0" });

@@ -8,6 +8,16 @@ import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 
+type UserRow = {
+  email: string;
+  name: string | null;
+  goal: string | null;
+  weight_kg: string | null;
+  height_cm: string | null;
+  age: number | null;
+  gender: string | null;
+};
+
 function computeStreaks(dates: Date[]): { current: number; longest: number } {
   if (dates.length === 0) return { current: 0, longest: 0 };
 
@@ -51,15 +61,7 @@ function parseGender(value: string | null): Gender | null {
 function toProfile(
   userId: string,
   userEmail: string,
-  row: {
-    email: string;
-    name: string | null;
-    goal: string | null;
-    weight_kg: string | null;
-    height_cm: string | null;
-    age: number | null;
-    gender: string | null;
-  },
+  row: UserRow,
   mealsLogged: number,
   streaks: { current: number; longest: number },
 ): UserProfile {
@@ -84,50 +86,56 @@ function toProfile(
   };
 }
 
+async function ensureUser(userId: string, userEmail: string) {
+  await pool.query(
+    `INSERT INTO users (id, email)
+     VALUES ($1, $2)
+     ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email`,
+    [userId, userEmail],
+  );
+}
+
+async function loadUserRow(userId: string): Promise<UserRow | null> {
+  const { rows } = await pool.query<UserRow>(
+    `SELECT email, name, goal, weight_kg, height_cm, age, gender
+     FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0] ?? null;
+}
+
+async function buildProfile(userId: string, userEmail: string): Promise<UserProfile> {
+  const row = await loadUserRow(userId);
+  const { rows: mealDates } = await pool.query<{ created_at: Date }>(
+    `SELECT created_at FROM meals WHERE user_id = $1 ORDER BY created_at DESC`,
+    [userId],
+  );
+  const streaks = computeStreaks(mealDates.map((m) => m.created_at));
+
+  return toProfile(
+    userId,
+    userEmail,
+    row ?? {
+      email: userEmail,
+      name: null,
+      goal: null,
+      weight_kg: null,
+      height_cm: null,
+      age: null,
+      gender: null,
+    },
+    mealDates.length,
+    streaks,
+  );
+}
+
 export async function userRoutes(app: FastifyInstance) {
   app.get(
     "/api/users/me",
     { preHandler: requireAuth },
     async (request) => {
       const { userId, userEmail } = request as AuthedRequest;
-
-      const { rows } = await pool.query<{
-        id: string;
-        email: string;
-        name: string | null;
-        goal: string | null;
-        weight_kg: string | null;
-        height_cm: string | null;
-        age: number | null;
-        gender: string | null;
-      }>(
-        `SELECT id, email, name, goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
-        [userId],
-      );
-
-      const user = rows[0];
-      const { rows: mealDates } = await pool.query<{ created_at: Date }>(
-        `SELECT created_at FROM meals WHERE user_id = $1 ORDER BY created_at DESC`,
-        [userId],
-      );
-
-      const streaks = computeStreaks(mealDates.map((m) => m.created_at));
-
-      return toProfile(
-        userId,
-        userEmail,
-        user ?? {
-          email: userEmail,
-          name: null,
-          goal: null,
-          weight_kg: null,
-          height_cm: null,
-          age: null,
-          gender: null,
-        },
-        mealDates.length,
-        streaks,
-      );
+      return buildProfile(userId, userEmail);
     },
   );
 
@@ -143,37 +151,54 @@ export async function userRoutes(app: FastifyInstance) {
   }>(
     "/api/users/me",
     { preHandler: requireAuth },
-    async (request) => {
+    async (request, reply) => {
       const { userId, userEmail } = request as AuthedRequest;
       const { goal, name, weightKg, heightCm, age, gender } = request.body ?? {};
 
-      await pool.query(
-        `INSERT INTO users (id, email)
-         VALUES ($1, $2)
-         ON CONFLICT (id) DO NOTHING`,
-        [userId, userEmail],
-      );
+      await ensureUser(userId, userEmail);
+
+      const sets: string[] = [];
+      const values: unknown[] = [];
+      let idx = 1;
 
       if (goal !== undefined) {
-        await pool.query(`UPDATE users SET goal = $1 WHERE id = $2`, [goal, userId]);
+        sets.push(`goal = $${idx++}`);
+        values.push(goal);
       }
       if (name !== undefined) {
-        await pool.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId]);
+        sets.push(`name = $${idx++}`);
+        values.push(name);
       }
       if (weightKg !== undefined) {
-        await pool.query(`UPDATE users SET weight_kg = $1 WHERE id = $2`, [weightKg, userId]);
+        sets.push(`weight_kg = $${idx++}`);
+        values.push(weightKg);
       }
       if (heightCm !== undefined) {
-        await pool.query(`UPDATE users SET height_cm = $1 WHERE id = $2`, [heightCm, userId]);
+        sets.push(`height_cm = $${idx++}`);
+        values.push(heightCm);
       }
       if (age !== undefined) {
-        await pool.query(`UPDATE users SET age = $1 WHERE id = $2`, [age, userId]);
+        sets.push(`age = $${idx++}`);
+        values.push(age);
       }
       if (gender !== undefined) {
-        await pool.query(`UPDATE users SET gender = $1 WHERE id = $2`, [gender, userId]);
+        sets.push(`gender = $${idx++}`);
+        values.push(gender);
       }
 
-      return { ok: true };
+      if (sets.length > 0) {
+        values.push(userId);
+        const { rowCount } = await pool.query(
+          `UPDATE users SET ${sets.join(", ")} WHERE id = $${idx}`,
+          values,
+        );
+        if (!rowCount) {
+          request.log.error({ userId }, "Profile update matched no rows");
+          return reply.code(500).send({ error: "Failed to save profile" });
+        }
+      }
+
+      return buildProfile(userId, userEmail);
     },
   );
 }

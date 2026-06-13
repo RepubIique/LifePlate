@@ -66,15 +66,15 @@ export async function updateProfile(body: {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
-}): Promise<void> {
-  await request("/api/users/me", {
+}): Promise<UserProfile> {
+  return request<UserProfile>("/api/users/me", {
     method: "PATCH",
     body: JSON.stringify(body),
   });
 }
 
-export async function updateGoal(goal: string): Promise<void> {
-  await updateProfile({ goal });
+export async function updateGoal(goal: string): Promise<UserProfile> {
+  return updateProfile({ goal });
 }
 
 export async function fetchMeals(): Promise<MealListItem[]> {

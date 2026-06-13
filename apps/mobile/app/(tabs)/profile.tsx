@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
 import type { Gender } from "@lifeplate/shared";
@@ -28,8 +28,14 @@ function ProfileRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function metricEqual(stored: number | null, draft: number | null): boolean {
+  if (stored == null && draft == null) return true;
+  if (stored == null || draft == null) return false;
+  return Math.abs(stored - draft) < 0.01;
+}
+
 export default function ProfileScreen() {
-  const { profile, linkProvider, refreshProfile, signOut } = useAuth();
+  const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -69,8 +75,8 @@ export default function ProfileScreen() {
     return (
       (profile?.name ?? "") !== n ||
       (profile?.goal ?? "") !== g ||
-      (profile?.weightKg ?? null) !== w ||
-      (profile?.heightCm ?? null) !== h ||
+      !metricEqual(profile?.weightKg ?? null, w) ||
+      !metricEqual(profile?.heightCm ?? null, h) ||
       (profile?.age ?? null) !== a ||
       (profile?.gender ?? null) !== gender
     );
@@ -89,10 +95,16 @@ export default function ProfileScreen() {
     weightKg,
   ]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProfile();
+    }, [refreshProfile]),
+  );
+
   async function handleSave() {
     setSaving(true);
     try {
-      await updateProfile({
+      const updated = await updateProfile({
         name: name.trim() || undefined,
         goal: goal.trim() || undefined,
         weightKg: toOptionalNumber(weightKg),
@@ -100,7 +112,7 @@ export default function ProfileScreen() {
         age: toOptionalInt(age),
         gender,
       });
-      await refreshProfile();
+      patchProfile(updated);
       setSnackbar("Profile updated");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
