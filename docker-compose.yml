@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: lifeplate
+      POSTGRES_PASSWORD: lifeplate
+      POSTGRES_DB: lifeplate
+    volumes:
+      - lifeplate_pg:/var/lib/postgresql/data
+
+volumes:
+  lifeplate_pg:

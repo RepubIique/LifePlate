@@ -1,0 +1,23 @@
+# Render Blueprint — free tier web service + your existing Supabase Postgres
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: lifeplate-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: meals
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: CORS_ORIGIN
+        value: "*"

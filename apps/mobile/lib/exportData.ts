@@ -1,0 +1,37 @@
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import { Platform, Share } from "react-native";
+import type { MealListItem, UserProfile } from "@lifeplate/shared";
+
+export async function exportUserData(profile: UserProfile, meals: MealListItem[]) {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    profile,
+    meals,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const filename = `lifeplate-export-${Date.now()}.json`;
+
+  if (Platform.OS === "web") {
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const path = `${FileSystem.cacheDirectory}${filename}`;
+  await FileSystem.writeAsStringAsync(path, json);
+
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(path, {
+      mimeType: "application/json",
+      dialogTitle: "Export LifePlate data",
+    });
+  } else {
+    await Share.share({ message: json, title: "LifePlate export" });
+  }
+}
