@@ -63,7 +63,7 @@ function applyMealToForm(
 
 export default function EditMealScreen() {
   const { profile } = useAuth();
-  const { getMealById, removeMealLocally } = useMeals();
+  const { removeMealLocally } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -87,41 +87,29 @@ export default function EditMealScreen() {
   const load = useCallback(async () => {
     if (!id) return;
 
-    const cached = getMealById(id);
-    const formSetters = {
-      setMealName,
-      setMealType,
-      setFoods,
-      setCalories,
-      setProtein,
-      setCarbs,
-      setFat,
-      setFibre,
-      setSugar,
-      setSodium,
-    };
-
-    if (cached) {
-      setMeal(cached);
-      applyMealToForm(cached, formSetters);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-
+    setLoading(true);
     try {
       const m = await fetchMeal(id);
       setMeal(m);
-      applyMealToForm(m, formSetters);
+      applyMealToForm(m, {
+        setMealName,
+        setMealType,
+        setFoods,
+        setCalories,
+        setProtein,
+        setCarbs,
+        setFat,
+        setFibre,
+        setSugar,
+        setSodium,
+      });
     } catch (e) {
-      if (!cached) {
-        setMeal(null);
-        setSnackbar(friendlyErrorMessage(e));
-      }
+      setMeal(null);
+      setSnackbar(friendlyErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [id, getMealById]);
+  }, [id]);
 
   useFocusEffect(
     useCallback(() => {

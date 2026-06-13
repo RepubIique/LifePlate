@@ -1,9 +1,9 @@
-import type { NutritionDashboardResponse } from "@lifeplate/shared";
+import type { NutritionDashboardApiResponse } from "@lifeplate/shared";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 type DashboardCachePayload = {
-  dashboard: NutritionDashboardResponse;
+  dashboard: NutritionDashboardApiResponse;
   fetchedAt: number;
 };
 
@@ -52,7 +52,9 @@ export async function loadCachedDashboard(
   const raw = await read(cacheKey(userId));
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as DashboardCachePayload;
+    const parsed = JSON.parse(raw) as DashboardCachePayload;
+    if (!parsed.dashboard?.today) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -60,7 +62,7 @@ export async function loadCachedDashboard(
 
 export async function saveCachedDashboard(
   userId: string,
-  dashboard: NutritionDashboardResponse,
+  dashboard: NutritionDashboardApiResponse,
   fetchedAt: number,
 ): Promise<void> {
   const payload: DashboardCachePayload = { dashboard, fetchedAt };

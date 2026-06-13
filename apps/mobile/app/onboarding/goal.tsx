@@ -33,7 +33,8 @@ export default function GoalScreen() {
     try {
       const updated = await updateGoal(goal);
       patchProfile(updated);
-      if (isOnboardingComplete(updated)) {
+      const nextProfile = profile ? { ...profile, ...updated } : null;
+      if (nextProfile && isOnboardingComplete(nextProfile)) {
         router.replace("/(tabs)");
       } else {
         router.replace("/onboarding/body" as Href);

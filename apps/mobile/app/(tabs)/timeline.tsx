@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Snackbar, Text } from "react-native-paper";
-import type { MealListItem } from "@lifeplate/shared";
+import type { MealListSummary } from "@lifeplate/shared";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
@@ -28,7 +28,7 @@ export default function TimelineScreen() {
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const pendingRef = useRef<Map<string, { meal: MealListItem; timer: ReturnType<typeof setTimeout> }>>(
+  const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
 
@@ -38,7 +38,7 @@ export default function TimelineScreen() {
     }, [loadMeals]),
   );
 
-  function scheduleDelete(meal: MealListItem) {
+  function scheduleDelete(meal: MealListSummary) {
     removeMealLocally(meal.id);
 
     const existing = pendingRef.current.get(meal.id);

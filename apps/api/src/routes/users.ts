@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   computeNutritionTargets,
   type Gender,
+  type ProfilePatchResponse,
   type UserProfile,
 } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
@@ -97,6 +98,66 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
   );
 }
 
+const TARGET_AFFECTING_FIELDS = new Set([
+  "goal",
+  "weightKg",
+  "heightCm",
+  "age",
+  "gender",
+]);
+
+async function buildProfilePatchResponse(
+  userId: string,
+  userEmail: string,
+  body: {
+    goal?: string;
+    name?: string;
+    weightKg?: number | null;
+    heightCm?: number | null;
+    age?: number | null;
+    gender?: Gender | null;
+  },
+): Promise<ProfilePatchResponse> {
+  const patch: ProfilePatchResponse = {};
+
+  if (body.goal !== undefined) patch.goal = body.goal;
+  if (body.name !== undefined) patch.name = body.name;
+  if (body.weightKg !== undefined) patch.weightKg = body.weightKg;
+  if (body.heightCm !== undefined) patch.heightCm = body.heightCm;
+  if (body.age !== undefined) patch.age = body.age;
+  if (body.gender !== undefined) patch.gender = body.gender;
+
+  const needsTargets = Object.keys(body).some((key) =>
+    TARGET_AFFECTING_FIELDS.has(key),
+  );
+  if (needsTargets) {
+    const row = await loadUserRow(userId);
+    const weightKg =
+      body.weightKg !== undefined
+        ? body.weightKg
+        : row?.weight_kg != null
+          ? Number(row.weight_kg)
+          : null;
+    const heightCm =
+      body.heightCm !== undefined
+        ? body.heightCm
+        : row?.height_cm != null
+          ? Number(row.height_cm)
+          : null;
+    const age = body.age !== undefined ? body.age : (row?.age ?? null);
+    const gender =
+      body.gender !== undefined ? body.gender : parseGender(row?.gender ?? null);
+    const goal = body.goal !== undefined ? body.goal : (row?.goal ?? null);
+
+    patch.nutritionTargets = computeNutritionTargets(
+      { weightKg, heightCm, age, gender },
+      goal,
+    );
+  }
+
+  return patch;
+}
+
 export async function userRoutes(app: FastifyInstance) {
   app.get(
     "/api/users/me",
@@ -166,7 +227,7 @@ export async function userRoutes(app: FastifyInstance) {
         }
       }
 
-      return buildProfile(userId, userEmail);
+      return buildProfilePatchResponse(userId, userEmail, request.body ?? {});
     },
   );
 }

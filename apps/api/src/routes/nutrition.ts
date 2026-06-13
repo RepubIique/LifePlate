@@ -27,8 +27,8 @@ export async function nutritionRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "glasses is required" });
       }
 
-      const hydration = await updateHydrationGlasses(userId, body.glasses);
-      return { hydration };
+      const glasses = await updateHydrationGlasses(userId, body.glasses);
+      return { glasses };
     },
   );
 }

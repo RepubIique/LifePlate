@@ -1,9 +1,9 @@
-import type { MealListItem } from "@lifeplate/shared";
+import type { MealListSummary } from "@lifeplate/shared";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 type MealsCachePayload = {
-  meals: MealListItem[];
+  meals: MealListSummary[];
   fetchedAt: number;
 };
 
@@ -58,7 +58,7 @@ export async function loadCachedMeals(userId: string): Promise<MealsCachePayload
 
 export async function saveCachedMeals(
   userId: string,
-  meals: MealListItem[],
+  meals: MealListSummary[],
   fetchedAt: number,
 ): Promise<void> {
   const payload: MealsCachePayload = { meals, fetchedAt };

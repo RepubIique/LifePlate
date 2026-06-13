@@ -1,4 +1,4 @@
-import { mealTypeLabel, type MealListItem } from "@lifeplate/shared";
+import { mealTypeLabel, type MealListSummary } from "@lifeplate/shared";
 
 export function formatDayLabel(iso: string): string {
   const d = new Date(iso);
@@ -21,8 +21,8 @@ export function formatDayLabel(iso: string): string {
   });
 }
 
-export function groupMealsByDay(meals: MealListItem[]): { day: string; meals: MealListItem[] }[] {
-  const map = new Map<string, MealListItem[]>();
+export function groupMealsByDay(meals: MealListSummary[]): { day: string; meals: MealListSummary[] }[] {
+  const map = new Map<string, MealListSummary[]>();
 
   for (const meal of meals) {
     const key = new Date(meal.createdAt).toISOString().slice(0, 10);

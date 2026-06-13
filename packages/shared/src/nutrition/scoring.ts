@@ -8,12 +8,14 @@ import type {
   ScoreStatus,
 } from "./types.js";
 import {
+  DEFAULT_DAILY_HYDRATION_GLASSES,
   DEFAULT_PROTEIN_SERVES,
 } from "./types.js";
 import {
   formatMacroEquivalents,
   stillNeededForMacro,
 } from "./equivalents.js";
+import { defaultExtendedNutritionTargets } from "./targets.js";
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -182,6 +184,16 @@ export function buildHydrationPillar(
         ? "Hydration is on track today"
         : "Keep sipping throughout the afternoon",
   };
+}
+
+export function buildHydrationPillarFromGlasses(
+  glasses: number,
+  dailyHydrationGlasses: number = DEFAULT_DAILY_HYDRATION_GLASSES,
+): PillarProgress {
+  return buildHydrationPillar(glasses, {
+    ...defaultExtendedNutritionTargets(),
+    dailyHydrationGlasses,
+  });
 }
 
 export function buildEnergyMetrics(totals: DailyTotals): {

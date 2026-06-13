@@ -1,13 +1,7 @@
 import {
   buildCoachSummary,
-  buildEnergyMetrics,
   buildExtendedNutritionTargets,
-  buildFibrePillar,
   buildFoodRecommendations,
-  buildGutHealthSummary,
-  buildHydrationPillar,
-  buildPlantsPillar,
-  buildProteinPillar,
   buildWeeklyTrends,
   classifyFoods,
   computeNutritionGaps,
@@ -17,8 +11,7 @@ import {
   scoreStatus,
   type DailyTotals,
   type ExtendedNutritionTargets,
-  type NutritionDashboardResponse,
-  type PillarProgress,
+  type NutritionDashboardApiResponse,
   weeklyGutScore,
 } from "@lifeplate/shared";
 import type { Gender } from "@lifeplate/shared";
@@ -241,7 +234,7 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
 
 export async function buildNutritionDashboard(
   userId: string,
-): Promise<NutritionDashboardResponse> {
+): Promise<NutritionDashboardApiResponse> {
   const dateKey = todayDateKey();
 
   const [{ rows: userRows }, weekRows, hydrationGlasses, cachedInsight] = await Promise.all([
@@ -301,14 +294,13 @@ export async function buildNutritionDashboard(
     score,
     scoreStatus: status,
     coachSummary,
-    essentials: {
-      protein: buildProteinPillar(totals, targets),
-      fibre: buildFibrePillar(totals, targets),
-      plants: buildPlantsPillar(classification, targets),
-      hydration: buildHydrationPillar(hydrationGlasses, targets),
+    today: {
+      totals,
+      plants: classification.plants,
+      fermented: classification.fermented,
+      prebiotic: classification.prebiotic,
     },
-    energyBalance: buildEnergyMetrics(totals),
-    gutHealth: buildGutHealthSummary(classification),
+    hydration: { glasses: hydrationGlasses },
     recommendations,
     weeklyTrends: buildWeeklyTrends({
       avgDailyProtein: weeklyMetrics.avgDailyProtein,
@@ -327,7 +319,7 @@ export async function buildNutritionDashboard(
 export async function updateHydrationGlasses(
   userId: string,
   glasses: number,
-): Promise<PillarProgress> {
+): Promise<number> {
   const clamped = Math.max(0, Math.min(24, Math.round(glasses)));
 
   await pool.query(
@@ -338,11 +330,5 @@ export async function updateHydrationGlasses(
     [userId, clamped],
   );
 
-  const { rows: userRows } = await pool.query<UserRow>(
-    `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
-    [userId],
-  );
-  const targets = resolveTargets(userRows[0] ?? { goal: null, weight_kg: null, height_cm: null, age: null, gender: null });
-
-  return buildHydrationPillar(clamped, targets);
+  return clamped;
 }

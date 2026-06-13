@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type {
   MealConfirmRequest,
   MealListItem,
+  MealListSummary,
+  MealPatchResponse,
   MealRefineRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
@@ -164,7 +166,7 @@ export async function mealRoutes(app: FastifyInstance) {
 
         await onMealDataChanged(userId);
 
-        return { id: mealId, mealType, ...body };
+        return { id: mealId };
       } catch (err) {
         await client.query("ROLLBACK");
         throw err;
@@ -174,55 +176,84 @@ export async function mealRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get(
+  app.get<{ Querystring: { view?: string } }>(
     "/api/meals",
     { preHandler: requireAuth },
     async (request) => {
       const { userId } = request as AuthedRequest;
+      const view = request.query.view ?? "summary";
+
+      if (view === "full") {
+        const { rows } = await pool.query<{
+          id: string;
+          meal_type: string | null;
+          meal_name: string;
+          image_url: string;
+          created_at: Date;
+          calories: number | null;
+          protein: number | null;
+          carbs: number | null;
+          fat: number | null;
+          fibre: number | null;
+          sugar: number | null;
+          sodium: number | null;
+          confidence: string | null;
+          foods: string[] | null;
+        }>(
+          `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+                  a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
+                  COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
+           FROM meals m
+           LEFT JOIN meal_analysis a ON a.meal_id = m.id
+           LEFT JOIN foods f ON f.meal_id = m.id
+           WHERE m.user_id = $1
+           GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence
+           ORDER BY m.created_at DESC
+           LIMIT 100`,
+          [userId],
+        );
+
+        const meals: MealListItem[] = rows.map((r) => ({
+          id: r.id,
+          mealType: r.meal_type,
+          mealName: r.meal_name,
+          imageUrl: r.image_url,
+          createdAt: r.created_at.toISOString(),
+          calories: r.calories,
+          protein: r.protein,
+          carbs: r.carbs,
+          fat: r.fat,
+          fibre: r.fibre,
+          sugar: r.sugar,
+          sodium: r.sodium,
+          confidence: r.confidence ? Number(r.confidence) : null,
+          foods: r.foods ?? [],
+        }));
+
+        return { meals };
+      }
+
       const { rows } = await pool.query<{
         id: string;
         meal_type: string | null;
         meal_name: string;
         image_url: string;
         created_at: Date;
-        calories: number | null;
-        protein: number | null;
-        carbs: number | null;
-        fat: number | null;
-        fibre: number | null;
-        sugar: number | null;
-        sodium: number | null;
-        confidence: string | null;
-        foods: string[] | null;
       }>(
-        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
-                a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
-                COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
-         FROM meals m
-         LEFT JOIN meal_analysis a ON a.meal_id = m.id
-         LEFT JOIN foods f ON f.meal_id = m.id
-         WHERE m.user_id = $1
-         GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence
-         ORDER BY m.created_at DESC
+        `SELECT id, meal_type, meal_name, image_url, created_at
+         FROM meals
+         WHERE user_id = $1
+         ORDER BY created_at DESC
          LIMIT 100`,
         [userId],
       );
 
-      const meals: MealListItem[] = rows.map((r) => ({
+      const meals: MealListSummary[] = rows.map((r) => ({
         id: r.id,
         mealType: r.meal_type,
         mealName: r.meal_name,
         imageUrl: r.image_url,
         createdAt: r.created_at.toISOString(),
-        calories: r.calories,
-        protein: r.protein,
-        carbs: r.carbs,
-        fat: r.fat,
-        fibre: r.fibre,
-        sugar: r.sugar,
-        sodium: r.sodium,
-        confidence: r.confidence ? Number(r.confidence) : null,
-        foods: r.foods ?? [],
       }));
 
       return { meals };
@@ -369,7 +400,19 @@ export async function mealRoutes(app: FastifyInstance) {
 
         await client.query("COMMIT");
         await onMealDataChanged(userId, { mealCreatedAt });
-        return { ok: true };
+
+        const patch: MealPatchResponse = { id };
+        if (body.mealName !== undefined) patch.mealName = body.mealName;
+        if (body.mealType !== undefined) patch.mealType = body.mealType;
+        if (body.foods !== undefined) patch.foods = body.foods;
+        if (body.calories !== undefined) patch.calories = body.calories;
+        if (body.protein !== undefined) patch.protein = body.protein;
+        if (body.carbs !== undefined) patch.carbs = body.carbs;
+        if (body.fat !== undefined) patch.fat = body.fat;
+        if (body.fibre !== undefined) patch.fibre = body.fibre;
+        if (body.sugar !== undefined) patch.sugar = body.sugar;
+        if (body.sodium !== undefined) patch.sodium = body.sodium;
+        return patch;
       } catch (err) {
         await client.query("ROLLBACK");
         throw err;

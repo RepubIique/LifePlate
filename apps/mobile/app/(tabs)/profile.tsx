@@ -12,8 +12,7 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
-import { useMeals } from "@/context/MealsContext";
-import { updateProfile } from "@/lib/api";
+import { fetchMealsFull, updateProfile } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { spacing } from "@/src/theme/lifeplate";
@@ -56,7 +55,6 @@ function applyProfileToForm(
 
 export default function ProfileScreen() {
   const { profile, linkProvider, loadProfile, patchProfile, signOut } = useAuth();
-  const { meals } = useMeals();
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -165,14 +163,6 @@ export default function ProfileScreen() {
       });
       setIsDirty(false);
       patchProfile(updated);
-      applyProfileToForm(updated, {
-        setName,
-        setGoal,
-        setWeightKg,
-        setHeightCm,
-        setAge,
-        setGender,
-      });
       setSnackbar("Profile updated");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -185,7 +175,8 @@ export default function ProfileScreen() {
     if (!profile) return;
     setExporting(true);
     try {
-      await exportUserData(profile, meals);
+      const fullMeals = await fetchMealsFull();
+      await exportUserData(profile, fullMeals);
       setSnackbar("Export ready");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));

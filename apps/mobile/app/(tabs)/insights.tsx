@@ -34,8 +34,8 @@ export default function InsightsScreen() {
     if (!dashboard) return;
     setHydrationUpdating(true);
     try {
-      const { hydration } = await updateHydration(nextGlasses);
-      patchHydration(hydration);
+      const { glasses } = await updateHydration(nextGlasses);
+      patchHydration(glasses);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {

@@ -216,12 +216,15 @@ export interface MealConfirmRequest {
   mealType?: MealType;
 }
 
-export interface MealListItem {
+export interface MealListSummary {
   id: string;
   mealType: string | null;
   mealName: string;
   imageUrl: string;
   createdAt: string;
+}
+
+export interface MealListItem extends MealListSummary {
   calories: number | null;
   protein: number | null;
   carbs: number | null;
@@ -263,12 +266,16 @@ export interface InsightsResponse {
 
 export type {
   NutritionDashboardResponse,
+  NutritionDashboardApiResponse,
+  DashboardTodaySummary,
+  MealPatchResponse,
   PillarProgress,
   EnergyMetric,
   GutHealthSummary,
   FoodRecommendation,
   RecommendationImpact,
   WeeklyTrendItem,
+  HydrationSummary,
   ScoreStatus,
   PillarStatus,
   TrendStatus,
@@ -294,6 +301,7 @@ export {
   buildFibrePillar,
   buildPlantsPillar,
   buildHydrationPillar,
+  buildHydrationPillarFromGlasses,
   buildEnergyMetrics,
   buildGutHealthSummary,
   buildFoodRecommendations,
@@ -302,6 +310,17 @@ export {
   buildWeeklyTrends,
   weeklyGutScore,
 } from "./nutrition/index.js";
+
+/** Fields returned from PATCH /api/users/me — only what was edited. */
+export interface ProfilePatchResponse {
+  name?: string | null;
+  goal?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  age?: number | null;
+  gender?: Gender | null;
+  nutritionTargets?: NutritionTargets | null;
+}
 
 export interface UserProfile {
   id: string;

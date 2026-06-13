@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { NutritionDashboardResponse, PillarProgress } from "@lifeplate/shared";
+import type { NutritionDashboardApiResponse } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchNutritionDashboard } from "@/lib/api";
 import {
@@ -17,6 +17,7 @@ import {
   saveCachedDashboard,
   todayDateKey,
 } from "@/lib/dashboardCache";
+import { expandDashboard, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
 
 const STALE_MS = 60_000;
 
@@ -25,30 +26,42 @@ type LoadOptions = {
 };
 
 type NutritionDashboardContextValue = {
-  dashboard: NutritionDashboardResponse | null;
+  dashboard: NutritionDashboardView | null;
   loading: boolean;
   loadDashboard: (options?: LoadOptions) => Promise<void>;
   refreshDashboard: () => Promise<void>;
   invalidateDashboard: () => void;
-  patchHydration: (hydration: PillarProgress) => void;
+  patchHydration: (glasses: number) => void;
 };
 
 const NutritionDashboardContext = createContext<NutritionDashboardContextValue | null>(null);
 
 export function NutritionDashboardProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const userId = session?.user.id;
-  const [dashboard, setDashboard] = useState<NutritionDashboardResponse | null>(null);
+  const [dashboard, setDashboard] = useState<NutritionDashboardView | null>(null);
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const fetchedAtRef = useRef(0);
   const dirtyRef = useRef(false);
   const inflightRef = useRef<Promise<void> | null>(null);
   const dashboardRef = useRef(dashboard);
+  const rawDashboardRef = useRef<NutritionDashboardApiResponse | null>(null);
 
   useEffect(() => {
     dashboardRef.current = dashboard;
   }, [dashboard]);
+
+  const expand = useCallback(
+    (raw: NutritionDashboardApiResponse): NutritionDashboardView =>
+      expandDashboard(raw, profile?.nutritionTargets ?? null),
+    [profile?.nutritionTargets],
+  );
+
+  useEffect(() => {
+    if (!rawDashboardRef.current) return;
+    setDashboard(expand(rawDashboardRef.current));
+  }, [expand]);
 
   useEffect(() => {
     if (!userId) {
@@ -58,6 +71,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
       fetchedAtRef.current = 0;
       dirtyRef.current = false;
       inflightRef.current = null;
+      rawDashboardRef.current = null;
       return;
     }
 
@@ -67,7 +81,8 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
       const cached = await loadCachedDashboard(userId);
       if (cancelled) return;
       if (cached?.dashboard && cached.dashboard.date === todayDateKey()) {
-        setDashboard(cached.dashboard);
+        rawDashboardRef.current = cached.dashboard;
+        setDashboard(expandDashboard(cached.dashboard, profile?.nutritionTargets ?? null));
         fetchedAtRef.current = cached.fetchedAt;
       }
       setHydrated(true);
@@ -79,9 +94,9 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
   }, [userId]);
 
   const persistDashboard = useCallback(
-    (nextDashboard: NutritionDashboardResponse, fetchedAt: number) => {
+    (rawDashboard: NutritionDashboardApiResponse, fetchedAt: number) => {
       if (!userId) return;
-      void saveCachedDashboard(userId, nextDashboard, fetchedAt);
+      void saveCachedDashboard(userId, rawDashboard, fetchedAt);
     },
     [userId],
   );
@@ -99,18 +114,20 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
   }, []);
 
   const patchHydration = useCallback(
-    (hydration: PillarProgress) => {
+    (glasses: number) => {
       setDashboard((prev) => {
-        if (!prev) return prev;
-        const next = {
-          ...prev,
-          essentials: { ...prev.essentials, hydration },
+        if (!prev || !rawDashboardRef.current) return prev;
+        const raw: NutritionDashboardApiResponse = {
+          ...rawDashboardRef.current,
+          hydration: { glasses },
         };
-        persistDashboard(next, fetchedAtRef.current);
+        rawDashboardRef.current = raw;
+        const next = expand(raw);
+        persistDashboard(raw, fetchedAtRef.current);
         return next;
       });
     },
-    [persistDashboard],
+    [expand, persistDashboard],
   );
 
   const loadDashboard = useCallback(
@@ -133,7 +150,8 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
         try {
           const data = await fetchNutritionDashboard();
           const fetchedAt = Date.now();
-          setDashboard(data);
+          rawDashboardRef.current = data;
+          setDashboard(expand(data));
           fetchedAtRef.current = fetchedAt;
           dirtyRef.current = false;
           persistDashboard(data, fetchedAt);
@@ -153,7 +171,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
         }
       }
     },
-    [session, hydrated, isFresh, persistDashboard],
+    [session, hydrated, isFresh, expand, persistDashboard],
   );
 
   const refreshDashboard = useCallback(

@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { MealListItem } from "@lifeplate/shared";
+import type { MealListSummary } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
 import {
@@ -23,15 +23,15 @@ type LoadOptions = {
 };
 
 type MealsContextValue = {
-  meals: MealListItem[];
+  meals: MealListSummary[];
   loading: boolean;
   refreshing: boolean;
   loadMeals: (options?: LoadOptions) => Promise<void>;
   refreshMeals: () => Promise<void>;
   invalidateMeals: () => void;
-  getMealById: (id: string) => MealListItem | undefined;
+  getMealById: (id: string) => MealListSummary | undefined;
   removeMealLocally: (id: string) => void;
-  restoreMealLocally: (meal: MealListItem) => void;
+  restoreMealLocally: (meal: MealListSummary) => void;
 };
 
 const MealsContext = createContext<MealsContextValue | null>(null);
@@ -39,7 +39,7 @@ const MealsContext = createContext<MealsContextValue | null>(null);
 export function MealsProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id;
-  const [meals, setMeals] = useState<MealListItem[]>([]);
+  const [meals, setMeals] = useState<MealListSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -82,7 +82,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   const persistMeals = useCallback(
-    (nextMeals: MealListItem[], fetchedAt: number) => {
+    (nextMeals: MealListSummary[], fetchedAt: number) => {
       if (!userId) return;
       void saveCachedMeals(userId, nextMeals, fetchedAt);
     },
@@ -106,7 +106,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   );
 
   const restoreMealLocally = useCallback(
-    (meal: MealListItem) => {
+    (meal: MealListSummary) => {
       setMeals((prev) => {
         if (prev.some((m) => m.id === meal.id)) return prev;
         const next = [meal, ...prev].sort(

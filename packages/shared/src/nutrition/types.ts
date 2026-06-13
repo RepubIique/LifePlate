@@ -48,6 +48,45 @@ export interface WeeklyTrendItem {
   status: TrendStatus;
 }
 
+export interface HydrationSummary {
+  glasses: number;
+}
+
+/** Fields returned from PATCH /api/meals/:id — only what was edited. */
+export interface MealPatchResponse {
+  id: string;
+  mealType?: string | null;
+  mealName?: string;
+  foods?: string[];
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  fibre?: number | null;
+  sugar?: number | null;
+  sodium?: number | null;
+}
+
+export interface DashboardTodaySummary {
+  totals: DailyTotals;
+  plants: string[];
+  fermented: string[];
+  prebiotic: string[];
+}
+
+/** Wire format for GET /api/nutrition/dashboard — client expands to full view. */
+export interface NutritionDashboardApiResponse {
+  date: string;
+  score: number;
+  scoreStatus: ScoreStatus;
+  coachSummary: string;
+  today: DashboardTodaySummary;
+  hydration: HydrationSummary;
+  recommendations: NutritionDashboardResponse["recommendations"];
+  weeklyTrends: WeeklyTrendItem[];
+  lifeplateInsight: string;
+}
+
 export interface NutritionDashboardResponse {
   date: string;
   score: number;
@@ -57,7 +96,7 @@ export interface NutritionDashboardResponse {
     protein: PillarProgress;
     fibre: PillarProgress;
     plants: PillarProgress;
-    hydration: PillarProgress;
+    hydration: HydrationSummary;
   };
   energyBalance: {
     carbs: EnergyMetric;

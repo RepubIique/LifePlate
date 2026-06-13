@@ -2,12 +2,13 @@ import type {
   InsightsResponse,
   MealConfirmRequest,
   MealListItem,
+  MealListSummary,
   MealDetail,
   MealRefineResponse,
   MealUploadResponse,
   MealUpdateRequest,
-  NutritionDashboardResponse,
-  PillarProgress,
+  NutritionDashboardApiResponse,
+  ProfilePatchResponse,
   UserProfile,
   Gender,
 } from "@lifeplate/shared";
@@ -68,19 +69,24 @@ export async function updateProfile(body: {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
-}): Promise<UserProfile> {
-  return request<UserProfile>("/api/users/me", {
+}): Promise<ProfilePatchResponse> {
+  return request<ProfilePatchResponse>("/api/users/me", {
     method: "PATCH",
     body: JSON.stringify(body),
   });
 }
 
-export async function updateGoal(goal: string): Promise<UserProfile> {
+export async function updateGoal(goal: string): Promise<ProfilePatchResponse> {
   return updateProfile({ goal });
 }
 
-export async function fetchMeals(): Promise<MealListItem[]> {
-  const data = await request<{ meals: MealListItem[] }>("/api/meals");
+export async function fetchMeals(): Promise<MealListSummary[]> {
+  const data = await request<{ meals: MealListSummary[] }>("/api/meals");
+  return data.meals;
+}
+
+export async function fetchMealsFull(): Promise<MealListItem[]> {
+  const data = await request<{ meals: MealListItem[] }>("/api/meals?view=full");
   return data.meals;
 }
 
@@ -103,12 +109,12 @@ export async function fetchInsights(): Promise<InsightsResponse> {
   return request<InsightsResponse>("/api/insights");
 }
 
-export async function fetchNutritionDashboard(): Promise<NutritionDashboardResponse> {
-  return request<NutritionDashboardResponse>("/api/nutrition/dashboard");
+export async function fetchNutritionDashboard(): Promise<NutritionDashboardApiResponse> {
+  return request<NutritionDashboardApiResponse>("/api/nutrition/dashboard");
 }
 
-export async function updateHydration(glasses: number): Promise<{ hydration: PillarProgress }> {
-  return request<{ hydration: PillarProgress }>("/api/nutrition/hydration", {
+export async function updateHydration(glasses: number): Promise<{ glasses: number }> {
+  return request<{ glasses: number }>("/api/nutrition/hydration", {
     method: "PATCH",
     body: JSON.stringify({ glasses }),
   });
