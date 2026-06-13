@@ -1,0 +1,14 @@
+name: API Keepalive
+
+on:
+  schedule:
+    # Ping every 5 minutes to reduce Render free-tier cold starts
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping LifePlate API health endpoint
+        run: curl -fsS --max-time 30 https://lifeplate-api.onrender.com/health
