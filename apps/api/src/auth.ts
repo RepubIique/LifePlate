@@ -20,7 +20,8 @@ async function resolveUserFromToken(token: string): Promise<{
   name: string | null;
 } | null> {
   if (canVerifySupabaseJwtLocally()) {
-    return verifySupabaseAccessToken(token);
+    const local = await verifySupabaseAccessToken(token);
+    if (local) return local;
   }
 
   if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
