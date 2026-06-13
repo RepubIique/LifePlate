@@ -10,6 +10,7 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { useAuth } from "@/context/AuthContext";
 import { confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -24,6 +25,7 @@ function normalizeFood(value: string) {
 
 export default function MealResultScreen() {
   const { profile } = useAuth();
+  const refreshAfterMealChange = useRefreshAfterMealChange();
   const params = useLocalSearchParams<{
     draftId: string;
     imageUrl: string;
@@ -141,6 +143,7 @@ export default function MealResultScreen() {
         sodium: toNumber(sodium, 0),
         confidence,
       });
+      refreshAfterMealChange();
       router.replace("/(tabs)");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));

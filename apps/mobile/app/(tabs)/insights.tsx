@@ -2,7 +2,6 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Snackbar, Text } from "react-native-paper";
-import type { NutritionDashboardResponse } from "@lifeplate/shared";
 import { EnergyBalanceCard } from "@/components/nutrition/EnergyBalanceCard";
 import { EssentialPillarCard } from "@/components/nutrition/EssentialPillarCard";
 import { GutHealthCard } from "@/components/nutrition/GutHealthCard";
@@ -14,34 +13,21 @@ import { WeeklyTrendsCard } from "@/components/nutrition/WeeklyTrendsCard";
 import { WhatToEatNextCard } from "@/components/nutrition/WhatToEatNextCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
-import { fetchNutritionDashboard, updateHydration } from "@/lib/api";
+import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
+import { updateHydration } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { premiumStyles } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function InsightsScreen() {
-  const [dashboard, setDashboard] = useState<NutritionDashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { dashboard, loading, loadDashboard, patchHydration } = useNutritionDashboard();
   const [hydrationUpdating, setHydrationUpdating] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchNutritionDashboard();
-      setDashboard(data);
-    } catch (e) {
-      setDashboard(null);
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadDashboard]),
   );
 
   async function changeHydration(nextGlasses: number) {
@@ -49,16 +35,7 @@ export default function InsightsScreen() {
     setHydrationUpdating(true);
     try {
       const { hydration } = await updateHydration(nextGlasses);
-      setDashboard((prev) =>
-        prev
-          ? {
-              ...prev,
-              essentials: { ...prev.essentials, hydration },
-            }
-          : prev,
-      );
-      const refreshed = await fetchNutritionDashboard();
-      setDashboard(refreshed);
+      patchHydration(hydration);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {

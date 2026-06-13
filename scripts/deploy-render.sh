@@ -42,6 +42,7 @@ echo "Creating/updating Render service lifeplate-api..."
   --env-var "DATABASE_URL=${DATABASE_URL}" \
   --env-var "SUPABASE_URL=${SUPABASE_URL}" \
   --env-var "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" \
+  --env-var "SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}" \
   --env-var "SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-meals}" \
   --env-var "OPENAI_API_KEY=${OPENAI_API_KEY}" \
   --env-var "OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}" \

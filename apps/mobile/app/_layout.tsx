@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
+import { MealsProvider } from "@/context/MealsContext";
+import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 
 SplashScreen.preventAutoHideAsync();
@@ -18,6 +20,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={lifeplateTheme}>
         <AuthProvider>
+          <MealsProvider>
+          <NutritionDashboardProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)/welcome" />
@@ -35,6 +39,8 @@ export default function RootLayout() {
               options={{ presentation: "modal", headerShown: true, title: "Edit meal" }}
             />
           </Stack>
+          </NutritionDashboardProvider>
+          </MealsProvider>
         </AuthProvider>
       </PaperProvider>
     </GestureHandlerRootView>

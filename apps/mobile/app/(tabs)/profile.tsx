@@ -12,7 +12,8 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMeals, updateProfile } from "@/lib/api";
+import { useMeals } from "@/context/MealsContext";
+import { updateProfile } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { spacing } from "@/src/theme/lifeplate";
@@ -54,7 +55,8 @@ function applyProfileToForm(
 }
 
 export default function ProfileScreen() {
-  const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
+  const { profile, linkProvider, loadProfile, patchProfile, signOut } = useAuth();
+  const { meals } = useMeals();
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -99,7 +101,7 @@ export default function ProfileScreen() {
     useCallback(() => {
       setIsDirty(false);
       void (async () => {
-        const latest = await refreshProfile();
+        const latest = await loadProfile();
         if (latest) {
           applyProfileToForm(latest, {
             setName,
@@ -109,11 +111,11 @@ export default function ProfileScreen() {
             setAge,
             setGender,
           });
-        } else {
+        } else if (!profile) {
           setSnackbar("Could not refresh profile — showing last saved data");
         }
       })();
-    }, [refreshProfile]),
+    }, [loadProfile, profile]),
   );
 
   const canSave = useMemo(() => {
@@ -183,7 +185,6 @@ export default function ProfileScreen() {
     if (!profile) return;
     setExporting(true);
     try {
-      const meals = await fetchMeals();
       await exportUserData(profile, meals);
       setSnackbar("Export ready");
     } catch (e) {

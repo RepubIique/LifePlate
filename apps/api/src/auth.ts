@@ -2,11 +2,44 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "./config.js";
 import { upsertUser } from "./db.js";
 import { getSupabaseAdmin } from "./supabase.js";
+import {
+  canVerifySupabaseJwtLocally,
+  verifySupabaseAccessToken,
+} from "./services/jwtAuth.js";
 
 export type AuthedRequest = FastifyRequest & {
   userId: string;
   userEmail: string;
 };
+
+const knownUsers = new Set<string>();
+
+async function resolveUserFromToken(token: string): Promise<{
+  id: string;
+  email: string;
+  name: string | null;
+} | null> {
+  if (canVerifySupabaseJwtLocally()) {
+    return verifySupabaseAccessToken(token);
+  }
+
+  if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
+    return null;
+  }
+
+  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+  if (error || !data.user) return null;
+
+  const user = data.user;
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    name:
+      user.user_metadata?.full_name ??
+      user.user_metadata?.name ??
+      null,
+  };
+}
 
 export async function requireAuth(
   request: FastifyRequest,
@@ -20,24 +53,25 @@ export async function requireAuth(
 
   const token = header.slice("Bearer ".length);
 
-  if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
+  if (
+    !canVerifySupabaseJwtLocally() &&
+    (!config.supabaseUrl || !config.supabaseServiceRoleKey)
+  ) {
     reply.code(500).send({ error: "Auth not configured" });
     return;
   }
 
-  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
-  if (error || !data.user) {
+  const user = await resolveUserFromToken(token);
+  if (!user) {
     reply.code(401).send({ error: "Invalid token" });
     return;
   }
 
-  const user = data.user;
-  await upsertUser(
-    user.id,
-    user.email ?? "",
-    user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
-  );
+  if (!knownUsers.has(user.id)) {
+    await upsertUser(user.id, user.email, user.name);
+    knownUsers.add(user.id);
+  }
 
   (request as AuthedRequest).userId = user.id;
-  (request as AuthedRequest).userEmail = user.email ?? "";
+  (request as AuthedRequest).userEmail = user.email;
 }

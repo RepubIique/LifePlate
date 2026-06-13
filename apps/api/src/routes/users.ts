@@ -16,40 +16,10 @@ type UserRow = {
   height_cm: string | null;
   age: number | null;
   gender: string | null;
+  meals_logged: number;
+  current_streak: number;
+  longest_streak: number;
 };
-
-function computeStreaks(dates: Date[]): { current: number; longest: number } {
-  if (dates.length === 0) return { current: 0, longest: 0 };
-
-  const daySet = new Set(
-    dates.map((d) => d.toISOString().slice(0, 10)),
-  );
-  const sortedDays = [...daySet].sort();
-
-  let longest = 1;
-  let run = 1;
-  for (let i = 1; i < sortedDays.length; i++) {
-    const prev = new Date(sortedDays[i - 1]);
-    const curr = new Date(sortedDays[i]);
-    const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff === 1) {
-      run++;
-      longest = Math.max(longest, run);
-    } else {
-      run = 1;
-    }
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  let current = 0;
-  let cursor = new Date(today);
-  while (daySet.has(cursor.toISOString().slice(0, 10))) {
-    current++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  return { current, longest };
-}
 
 function parseGender(value: string | null): Gender | null {
   if (value === "female" || value === "male" || value === "unspecified") {
@@ -62,8 +32,6 @@ function toProfile(
   userId: string,
   userEmail: string,
   row: UserRow,
-  mealsLogged: number,
-  streaks: { current: number; longest: number },
 ): UserProfile {
   const weightKg = row.weight_kg != null ? Number(row.weight_kg) : null;
   const heightCm = row.height_cm != null ? Number(row.height_cm) : null;
@@ -83,9 +51,9 @@ function toProfile(
       { weightKg, heightCm, age, gender },
       row.goal,
     ),
-    mealsLogged,
-    currentStreak: streaks.current,
-    longestStreak: streaks.longest,
+    mealsLogged: row.meals_logged,
+    currentStreak: row.current_streak,
+    longestStreak: row.longest_streak,
   };
 }
 
@@ -100,7 +68,8 @@ async function ensureUser(userId: string, userEmail: string) {
 
 async function loadUserRow(userId: string): Promise<UserRow | null> {
   const { rows } = await pool.query<UserRow>(
-    `SELECT email, name, goal, weight_kg, height_cm, age, gender
+    `SELECT email, name, goal, weight_kg, height_cm, age, gender,
+            meals_logged, current_streak, longest_streak
      FROM users WHERE id = $1`,
     [userId],
   );
@@ -109,11 +78,6 @@ async function loadUserRow(userId: string): Promise<UserRow | null> {
 
 async function buildProfile(userId: string, userEmail: string): Promise<UserProfile> {
   const row = await loadUserRow(userId);
-  const { rows: mealDates } = await pool.query<{ created_at: Date }>(
-    `SELECT created_at FROM meals WHERE user_id = $1 ORDER BY created_at DESC`,
-    [userId],
-  );
-  const streaks = computeStreaks(mealDates.map((m) => m.created_at));
 
   return toProfile(
     userId,
@@ -126,9 +90,10 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
       height_cm: null,
       age: null,
       gender: null,
+      meals_logged: 0,
+      current_streak: 0,
+      longest_streak: 0,
     },
-    mealDates.length,
-    streaks,
   );
 }
 

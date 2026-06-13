@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
 } from "react-native-paper";
-import type { MealDetail, MealType } from "@lifeplate/shared";
+import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import { isMealType } from "@lifeplate/shared";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
@@ -17,8 +17,10 @@ import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { useAuth } from "@/context/AuthContext";
+import { useMeals } from "@/context/MealsContext";
 import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -31,8 +33,38 @@ function normalizeFood(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function applyMealToForm(
+  m: MealListItem,
+  setters: {
+    setMealName: (v: string) => void;
+    setMealType: (v: MealType) => void;
+    setFoods: (v: string[]) => void;
+    setCalories: (v: string) => void;
+    setProtein: (v: string) => void;
+    setCarbs: (v: string) => void;
+    setFat: (v: string) => void;
+    setFibre: (v: string) => void;
+    setSugar: (v: string) => void;
+    setSodium: (v: string) => void;
+  },
+) {
+  setters.setMealName(m.mealName);
+  const type = m.mealType ?? "";
+  setters.setMealType(isMealType(type) ? type : "lunch");
+  setters.setFoods(m.foods ?? []);
+  setters.setCalories(String(m.calories ?? 0));
+  setters.setProtein(String(m.protein ?? 0));
+  setters.setCarbs(String(m.carbs ?? 0));
+  setters.setFat(String(m.fat ?? 0));
+  setters.setFibre(String(m.fibre ?? 0));
+  setters.setSugar(String(m.sugar ?? 0));
+  setters.setSodium(String(m.sodium ?? 0));
+}
+
 export default function EditMealScreen() {
   const { profile } = useAuth();
+  const { getMealById, removeMealLocally } = useMeals();
+  const refreshAfterMealChange = useRefreshAfterMealChange();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,28 +86,42 @@ export default function EditMealScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+
+    const cached = getMealById(id);
+    const formSetters = {
+      setMealName,
+      setMealType,
+      setFoods,
+      setCalories,
+      setProtein,
+      setCarbs,
+      setFat,
+      setFibre,
+      setSugar,
+      setSodium,
+    };
+
+    if (cached) {
+      setMeal(cached);
+      applyMealToForm(cached, formSetters);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const m = await fetchMeal(id);
       setMeal(m);
-      setMealName(m.mealName);
-      const type = m.mealType ?? "";
-      setMealType(isMealType(type) ? type : "lunch");
-      setFoods(m.foods ?? []);
-      setCalories(String(m.calories ?? 0));
-      setProtein(String(m.protein ?? 0));
-      setCarbs(String(m.carbs ?? 0));
-      setFat(String(m.fat ?? 0));
-      setFibre(String(m.fibre ?? 0));
-      setSugar(String(m.sugar ?? 0));
-      setSodium(String(m.sodium ?? 0));
+      applyMealToForm(m, formSetters);
     } catch (e) {
-      setMeal(null);
-      setSnackbar(friendlyErrorMessage(e));
+      if (!cached) {
+        setMeal(null);
+        setSnackbar(friendlyErrorMessage(e));
+      }
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, getMealById]);
 
   useFocusEffect(
     useCallback(() => {
@@ -113,6 +159,7 @@ export default function EditMealScreen() {
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
       });
+      refreshAfterMealChange();
       setSnackbar("Saved");
       router.back();
     } catch (e) {
@@ -127,6 +174,8 @@ export default function EditMealScreen() {
     setDeleting(true);
     try {
       await deleteMeal(id);
+      removeMealLocally(id);
+      refreshAfterMealChange();
       router.replace("/(tabs)/timeline");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));

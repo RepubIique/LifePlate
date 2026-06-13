@@ -111,6 +111,7 @@ Then redeploy the API on Render (or run `pnpm db:migrate` locally against your S
 | `DATABASE_URL` | Supabase connection URI from step 1 |
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | From Supabase → Settings → API |
+| `SUPABASE_JWT_SECRET` | From Supabase → Settings → API → JWT Secret |
 | `OPENAI_API_KEY` | Your OpenAI key |
 | `SUPABASE_STORAGE_BUCKET` | `meals` |
 | `CORS_ORIGIN` | `*` |

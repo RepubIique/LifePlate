@@ -4,14 +4,14 @@ import * as Haptics from "expo-haptics";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
-import type { MealListItem } from "@lifeplate/shared";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMeals, uploadMealImage } from "@/lib/api";
+import { useMeals } from "@/context/MealsContext";
+import { uploadMealImage } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { premium } from "@/src/theme/premium";
@@ -40,32 +40,18 @@ function stageLabel(stage: UploadStage) {
 
 export default function HomeScreen() {
   const { profile } = useAuth();
-  const [meals, setMeals] = useState<MealListItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { meals, loading, loadMeals } = useMeals();
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const lastAssetRef = useRef<ImagePickerAsset | null>(null);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchMeals();
-      setMeals(data);
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-      setMeals([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      load();
+      void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       getLastPhotoSource().then(setPreferredSource);
-    }, [load]),
+    }, [loadMeals]),
   );
 
   async function processAsset(asset: ImagePickerAsset) {

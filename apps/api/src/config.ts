@@ -35,6 +35,11 @@ export function assertRuntimeConfig() {
       "Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. Auth/storage may fail.",
     );
   }
+  if (config.supabaseUrl && !config.supabaseJwtSecret.trim()) {
+    console.warn(
+      "Warning: SUPABASE_JWT_SECRET not set. Auth will call Supabase on every request.",
+    );
+  }
   if (!config.openaiApiKey) {
     console.warn("Warning: OPENAI_API_KEY not set. Meal analysis will use mock data.");
   }

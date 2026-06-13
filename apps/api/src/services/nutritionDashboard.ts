@@ -24,6 +24,11 @@ import {
 import type { Gender } from "@lifeplate/shared";
 import { computeNutritionTargets } from "@lifeplate/shared";
 import { generateLifeplateInsight } from "./coaching.js";
+import {
+  getCachedDailyInsight,
+  saveDailyInsight,
+} from "./dailyInsightCache.js";
+import { todayDateKey } from "./streaks.js";
 import { pool } from "../db.js";
 
 type MealRow = {
@@ -121,18 +126,7 @@ function collectMealNames(rows: MealRow[]): string[] {
   return [...new Set(rows.map((row) => row.meal_name))];
 }
 
-async function fetchMealRows(
-  userId: string,
-  since: Date,
-  until?: Date,
-): Promise<MealRow[]> {
-  const params: unknown[] = [userId, since];
-  let dateClause = "m.created_at >= $2";
-  if (until) {
-    params.push(until);
-    dateClause += " AND m.created_at < $3";
-  }
-
+async function fetchMealRowsSince(userId: string, since: Date): Promise<MealRow[]> {
   const { rows } = await pool.query<MealRow>(
     `SELECT m.id AS meal_id, m.meal_name, m.created_at,
             a.calories, a.protein, a.carbs, a.fat, a.fibre,
@@ -140,8 +134,8 @@ async function fetchMealRows(
      FROM meals m
      LEFT JOIN meal_analysis a ON a.meal_id = m.id
      LEFT JOIN foods f ON f.meal_id = m.id
-     WHERE m.user_id = $1 AND ${dateClause}`,
-    params,
+     WHERE m.user_id = $1 AND m.created_at >= $2`,
+    [userId, since],
   );
 
   return rows;
@@ -173,18 +167,23 @@ function startOfWeek(): Date {
   return now;
 }
 
-async function computeWeeklyMetrics(
-  userId: string,
-  targets: ExtendedNutritionTargets,
-): Promise<{
+function filterTodayRows(weekRows: MealRow[]): MealRow[] {
+  const todayStart = startOfToday();
+  const todayEnd = startOfTomorrow();
+  return weekRows.filter((row) => {
+    const created = new Date(row.created_at);
+    return created >= todayStart && created < todayEnd;
+  });
+}
+
+function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
   avgDailyProtein: number;
   avgPlantFoods: number;
   gutScore: number;
   processedPercent: number;
   omega3Days: number;
   daysWithMeals: number;
-}> {
-  const weekRows = await fetchMealRows(userId, startOfWeek());
+} {
   const dayMap = new Map<string, MealRow[]>();
 
   for (const row of weekRows) {
@@ -243,19 +242,34 @@ async function computeWeeklyMetrics(
 export async function buildNutritionDashboard(
   userId: string,
 ): Promise<NutritionDashboardResponse> {
-  const { rows: userRows } = await pool.query<UserRow>(
-    `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
-    [userId],
-  );
-  const user = userRows[0];
-  const targets = resolveTargets(user ?? { goal: null, weight_kg: null, height_cm: null, age: null, gender: null });
+  const dateKey = todayDateKey();
 
-  const todayRows = await fetchMealRows(userId, startOfToday(), startOfTomorrow());
+  const [{ rows: userRows }, weekRows, hydrationGlasses, cachedInsight] = await Promise.all([
+    pool.query<UserRow>(
+      `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
+      [userId],
+    ),
+    fetchMealRowsSince(userId, startOfWeek()),
+    fetchHydrationGlasses(userId),
+    getCachedDailyInsight(userId, dateKey),
+  ]);
+
+  const user = userRows[0];
+  const targets = resolveTargets(
+    user ?? {
+      goal: null,
+      weight_kg: null,
+      height_cm: null,
+      age: null,
+      gender: null,
+    },
+  );
+
+  const todayRows = filterTodayRows(weekRows);
   const totals = aggregateTotals(todayRows);
   const foods = collectFoods(todayRows);
   const mealNames = collectMealNames(todayRows);
   const classification = classifyFoods(foods, mealNames);
-  const hydrationGlasses = await fetchHydrationGlasses(userId);
 
   const gaps = computeNutritionGaps(totals, targets, classification, hydrationGlasses);
   const score = computeNutritionScore(
@@ -267,19 +281,23 @@ export async function buildNutritionDashboard(
   const status = scoreStatus(score);
   const coachSummary = buildCoachSummary(gaps, score);
   const recommendations = buildFoodRecommendations(gaps);
-  const weeklyMetrics = await computeWeeklyMetrics(userId, targets);
+  const weeklyMetrics = computeWeeklyMetricsFromRows(weekRows);
 
-  const lifeplateInsight = await generateLifeplateInsight({
-    goal: user?.goal ?? null,
-    totals,
-    targets,
-    plantCount: classification.plants.length,
-    recentFoods: foods.slice(0, 12),
-    score,
-  });
+  let lifeplateInsight = cachedInsight;
+  if (!lifeplateInsight) {
+    lifeplateInsight = await generateLifeplateInsight({
+      goal: user?.goal ?? null,
+      totals,
+      targets,
+      plantCount: classification.plants.length,
+      recentFoods: foods.slice(0, 12),
+      score,
+    });
+    await saveDailyInsight(userId, lifeplateInsight, dateKey);
+  }
 
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: dateKey,
     score,
     scoreStatus: status,
     coachSummary,

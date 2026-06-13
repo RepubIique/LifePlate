@@ -19,17 +19,25 @@ import {
   loadCachedProfile,
   saveCachedProfile,
 } from "@/lib/profileCache";
+import { clearCachedMeals } from "@/lib/mealsCache";
+import { clearCachedDashboard } from "@/lib/dashboardCache";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
+
+type LoadOptions = {
+  force?: boolean;
+};
 
 type AuthContextValue = {
   session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
   profileLoading: boolean;
+  loadProfile: (options?: LoadOptions) => Promise<UserProfile | null>;
   refreshProfile: () => Promise<UserProfile | null>;
+  invalidateProfile: () => void;
   patchProfile: (patch: Partial<UserProfile>) => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
@@ -40,6 +48,8 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const PROFILE_STALE_MS = 60_000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -47,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(false);
   const profileFetchSeq = useRef(0);
   const profileRef = useRef<UserProfile | null>(null);
+  const profileFetchedAtRef = useRef(0);
+  const profileDirtyRef = useRef(false);
+  const profileInflightRef = useRef<Promise<UserProfile | null> | null>(null);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -75,25 +88,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...patch,
         };
       }
-      if (next) void saveCachedProfile(next);
+      if (next) {
+        void saveCachedProfile(next);
+        profileFetchedAtRef.current = Date.now();
+        profileDirtyRef.current = false;
+      }
       return next ?? prev;
     });
   }, [session]);
 
-  const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
+  const invalidateProfile = useCallback(() => {
+    profileDirtyRef.current = true;
+    profileFetchedAtRef.current = 0;
+  }, []);
+
+  const fetchProfileFromApi = useCallback(async (): Promise<UserProfile | null> => {
     if (!session) {
       setProfile(null);
       return null;
     }
     const fetchId = ++profileFetchSeq.current;
-    setProfileLoading(true);
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const p = await fetchProfile();
         if (fetchId !== profileFetchSeq.current) return null;
         setProfile(p);
         void saveCachedProfile(p);
-        setProfileLoading(false);
+        profileFetchedAtRef.current = Date.now();
+        profileDirtyRef.current = false;
         return p;
       } catch {
         if (attempt < 2) {
@@ -102,10 +124,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     if (fetchId !== profileFetchSeq.current) return null;
-    // Keep the last known profile to avoid re-prompting onboarding on transient errors.
-    setProfileLoading(false);
     return profileRef.current;
   }, [session]);
+
+  const loadProfile = useCallback(
+    async (options?: LoadOptions): Promise<UserProfile | null> => {
+      if (!session) {
+        setProfile(null);
+        return null;
+      }
+
+      const force = options?.force ?? false;
+      const hasData = profileRef.current != null;
+      const isFresh =
+        !profileDirtyRef.current &&
+        hasData &&
+        Date.now() - profileFetchedAtRef.current < PROFILE_STALE_MS;
+
+      if (!force && isFresh) return profileRef.current;
+
+      if (profileInflightRef.current) {
+        return profileInflightRef.current;
+      }
+
+      const run = (async () => {
+        if (!hasData) setProfileLoading(true);
+        try {
+          return await fetchProfileFromApi();
+        } finally {
+          setProfileLoading(false);
+        }
+      })();
+
+      profileInflightRef.current = run;
+      try {
+        return await run;
+      } finally {
+        if (profileInflightRef.current === run) {
+          profileInflightRef.current = null;
+        }
+      }
+    },
+    [session, fetchProfileFromApi],
+  );
+
+  const refreshProfile = useCallback(
+    () => loadProfile({ force: true }),
+    [loadProfile],
+  );
 
   useEffect(() => {
     setUnauthorizedHandler(async () => {
@@ -144,6 +210,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) {
       setProfile(null);
       setProfileLoading(false);
+      profileFetchedAtRef.current = 0;
+      profileDirtyRef.current = false;
+      profileInflightRef.current = null;
       return;
     }
 
@@ -152,14 +221,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = await loadCachedProfile(session.user.id);
       if (!cancelled && cached) {
         setProfile(cached);
+        profileRef.current = cached;
       }
-      await refreshProfile();
+      await loadProfile({ force: true });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [session, refreshProfile]);
+  }, [session, loadProfile]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -219,7 +289,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = session?.user.id;
     await supabase.auth.signOut();
     setProfile(null);
-    if (userId) void clearCachedProfile(userId);
+    profileFetchedAtRef.current = 0;
+    profileDirtyRef.current = false;
+    profileInflightRef.current = null;
+    if (userId) {
+      void clearCachedProfile(userId);
+      void clearCachedMeals(userId);
+      void clearCachedDashboard(userId);
+    }
   }, [session]);
 
   const value = useMemo(
@@ -228,7 +305,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       profileLoading,
+      loadProfile,
       refreshProfile,
+      invalidateProfile,
       patchProfile,
       signInWithEmail,
       signUpWithEmail,
@@ -241,7 +320,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       profileLoading,
+      loadProfile,
       refreshProfile,
+      invalidateProfile,
       patchProfile,
       signInWithEmail,
       signUpWithEmail,

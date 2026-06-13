@@ -6,8 +6,10 @@ import type { MealListItem } from "@lifeplate/shared";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
-import { deleteMeal, fetchMeals } from "@/lib/api";
+import { useMeals } from "@/context/MealsContext";
+import { deleteMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { formatMealTime, formatMealTypeLabel, groupMealsByDay } from "@/lib/mealUtils";
 import { premiumStyles } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
@@ -15,36 +17,29 @@ import { spacing } from "@/src/theme/lifeplate";
 const UNDO_MS = 5000;
 
 export default function TimelineScreen() {
-  const [meals, setMeals] = useState<MealListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    meals,
+    loading,
+    refreshing,
+    loadMeals,
+    refreshMeals,
+    removeMealLocally,
+    restoreMealLocally,
+  } = useMeals();
+  const refreshAfterMealChange = useRefreshAfterMealChange();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const pendingRef = useRef<Map<string, { meal: MealListItem; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const data = await fetchMeals();
-      setMeals(data);
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadMeals]),
   );
 
   function scheduleDelete(meal: MealListItem) {
-    setMeals((prev) => prev.filter((m) => m.id !== meal.id));
+    removeMealLocally(meal.id);
 
     const existing = pendingRef.current.get(meal.id);
     if (existing) clearTimeout(existing.timer);
@@ -53,8 +48,9 @@ export default function TimelineScreen() {
       pendingRef.current.delete(meal.id);
       try {
         await deleteMeal(meal.id);
+        refreshAfterMealChange();
       } catch (e) {
-        setMeals((prev) => [meal, ...prev]);
+        restoreMealLocally(meal);
         setSnackbar(friendlyErrorMessage(e));
       }
     }, UNDO_MS);
@@ -69,12 +65,7 @@ export default function TimelineScreen() {
     const last = entries[entries.length - 1];
     clearTimeout(last.timer);
     pendingRef.current.delete(last.meal.id);
-    setMeals((prev) => {
-      if (prev.some((m) => m.id === last.meal.id)) return prev;
-      return [last.meal, ...prev].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-    });
+    restoreMealLocally(last.meal);
     setSnackbar(null);
   }
 
@@ -90,7 +81,12 @@ export default function TimelineScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              void refreshMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+            }}
+          />
         }
       >
         {groups.map((group) => (

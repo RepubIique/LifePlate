@@ -16,6 +16,7 @@ import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, refineMealImage } from "../services/openai.js";
+import { onMealDataChanged } from "../services/mealSideEffects.js";
 import { uploadMealImage } from "../services/storage.js";
 
 export async function mealRoutes(app: FastifyInstance) {
@@ -161,6 +162,8 @@ export async function mealRoutes(app: FastifyInstance) {
         await client.query("COMMIT");
         deleteDraft(body.draftId);
 
+        await onMealDataChanged(userId);
+
         return { id: mealId, mealType, ...body };
       } catch (err) {
         await client.query("ROLLBACK");
@@ -294,14 +297,15 @@ export async function mealRoutes(app: FastifyInstance) {
       try {
         await client.query("BEGIN");
 
-        const owned = await client.query<{ id: string }>(
-          `SELECT id FROM meals WHERE id = $1 AND user_id = $2`,
+        const owned = await client.query<{ id: string; created_at: Date }>(
+          `SELECT id, created_at FROM meals WHERE id = $1 AND user_id = $2`,
           [id, userId],
         );
         if (!owned.rows[0]) {
           await client.query("ROLLBACK");
           return reply.code(404).send({ error: "Not found" });
         }
+        const mealCreatedAt = owned.rows[0].created_at;
 
         if (
           body.mealName !== undefined ||
@@ -364,6 +368,7 @@ export async function mealRoutes(app: FastifyInstance) {
         }
 
         await client.query("COMMIT");
+        await onMealDataChanged(userId, { mealCreatedAt });
         return { ok: true };
       } catch (err) {
         await client.query("ROLLBACK");
@@ -381,12 +386,21 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const { id } = request.params as { id: string };
 
+      const { rows } = await pool.query<{ created_at: Date }>(
+        `SELECT created_at FROM meals WHERE id = $1 AND user_id = $2`,
+        [id, userId],
+      );
+      if (!rows[0]) return reply.code(404).send({ error: "Not found" });
+
+      const mealCreatedAt = rows[0].created_at;
+
       const { rowCount } = await pool.query(
         `DELETE FROM meals WHERE id = $1 AND user_id = $2`,
         [id, userId],
       );
 
       if (!rowCount) return reply.code(404).send({ error: "Not found" });
+      await onMealDataChanged(userId, { mealCreatedAt });
       return { ok: true };
     },
   );
