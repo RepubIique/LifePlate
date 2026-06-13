@@ -5,6 +5,7 @@ import { ActivityIndicator, Snackbar, Text } from "react-native-paper";
 import type { MealListItem } from "@lifeplate/shared";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { Screen } from "@/components/Screen";
 import { deleteMeal, fetchMeals } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { capitalize, formatMealTime, groupMealsByDay } from "@/lib/mealUtils";
@@ -80,12 +81,13 @@ export default function TimelineScreen() {
   const groups = groupMealsByDay(meals);
 
   return (
-    <View style={styles.fill}>
+    <Screen padded={false}>
       <PremiumHeader
         title="Timeline"
         subtitle={meals.length ? `${meals.length} meals logged` : "Your health story, chronologically"}
       />
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />
@@ -128,12 +130,12 @@ export default function TimelineScreen() {
       >
         {snackbar}
       </Snackbar>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: "#FFFFFF" },
+  scroll: { flex: 1 },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   loader: { marginTop: spacing.xl },
   dayGroup: { marginBottom: spacing.lg },

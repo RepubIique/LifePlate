@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
 import { Screen } from "@/components/Screen";
@@ -9,6 +9,7 @@ export default function WelcomeScreen() {
   return (
     <Screen>
       <View style={styles.hero}>
+        <Image source={require("@/assets/images/logo.png")} style={styles.logo} resizeMode="contain" />
         <PremiumCard>
           <Text variant="headlineLarge" style={styles.title}>
             Welcome to LifePlate
@@ -33,7 +34,8 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { flex: 1, justifyContent: "center" },
+  hero: { flex: 1, justifyContent: "center", alignItems: "center", gap: spacing.lg },
+  logo: { width: 96, height: 96 },
   title: { letterSpacing: 0.3, marginBottom: spacing.md },
   subtitle: { opacity: 0.8, lineHeight: 26 },
   actions: { gap: spacing.sm },
