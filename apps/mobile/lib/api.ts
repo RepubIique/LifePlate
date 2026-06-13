@@ -8,6 +8,7 @@ import type {
   MealUpdateRequest,
   UserProfile,
 } from "@lifeplate/shared";
+import { File, UploadType } from "expo-file-system";
 import { supabase } from "./supabase";
 import { Platform } from "react-native";
 import { ApiError, parseApiError } from "./apiErrors";
@@ -107,28 +108,38 @@ export async function uploadMealImage(input: {
     throw new ApiError("Not authenticated", 401);
   }
 
-  const form = new FormData();
   const mimeType = input.mimeType ?? "image/jpeg";
   const fileName = input.fileName ?? (mimeType.includes("png") ? "meal.png" : "meal.jpg");
 
   if (Platform.OS === "web") {
+    const form = new FormData();
     const blob = await (await fetch(input.uri)).blob();
     form.append("file", blob, fileName);
-  } else {
-    form.append("file", {
-      uri: input.uri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+
+    const res = await fetch(`${API_URL}/api/meals/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    return handleResponse<MealUploadResponse>(res);
   }
 
-  const res = await fetch(`${API_URL}/api/meals/upload`, {
-    method: "POST",
+  const file = new File(input.uri);
+  const result = await file.upload(`${API_URL}/api/meals/upload`, {
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType,
     headers: { Authorization: `Bearer ${token}` },
-    body: form,
   });
 
-  return handleResponse<MealUploadResponse>(res);
+  if (result.status < 200 || result.status >= 300) {
+    const err = parseApiError(result.body, result.status);
+    if (err.status === 401) notifyUnauthorized();
+    throw err;
+  }
+
+  return JSON.parse(result.body) as MealUploadResponse;
 }
 
 export async function confirmMeal(body: MealConfirmRequest): Promise<void> {
