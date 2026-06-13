@@ -14,6 +14,11 @@ import type { UserProfile } from "@lifeplate/shared";
 import { router } from "expo-router";
 import { fetchProfile } from "@/lib/api";
 import { AUTH_REDIRECT_URI } from "@/lib/authRedirect";
+import {
+  clearCachedProfile,
+  loadCachedProfile,
+  saveCachedProfile,
+} from "@/lib/profileCache";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
@@ -24,7 +29,7 @@ type AuthContextValue = {
   profile: UserProfile | null;
   loading: boolean;
   profileLoading: boolean;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<UserProfile | null>;
   patchProfile: (patch: Partial<UserProfile>) => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
@@ -41,53 +46,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const profileFetchSeq = useRef(0);
+  const profileRef = useRef<UserProfile | null>(null);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const patchProfile = useCallback((patch: Partial<UserProfile>) => {
     profileFetchSeq.current += 1;
     setProfile((prev) => {
-      if (prev) return { ...prev, ...patch };
-      if (!session) return prev;
-      return {
-        id: session.user.id,
-        email: session.user.email ?? "",
-        name: null,
-        goal: null,
-        weightKg: null,
-        heightCm: null,
-        age: null,
-        gender: null,
-        nutritionTargets: null,
-        mealsLogged: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-        ...patch,
-      };
+      let next: UserProfile | null = null;
+      if (prev) {
+        next = { ...prev, ...patch };
+      } else if (session) {
+        next = {
+          id: session.user.id,
+          email: session.user.email ?? "",
+          name: null,
+          goal: null,
+          weightKg: null,
+          heightCm: null,
+          age: null,
+          gender: null,
+          nutritionTargets: null,
+          mealsLogged: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          ...patch,
+        };
+      }
+      if (next) void saveCachedProfile(next);
+      return next ?? prev;
     });
   }, [session]);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
     if (!session) {
       setProfile(null);
-      return;
+      return null;
     }
     const fetchId = ++profileFetchSeq.current;
     setProfileLoading(true);
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const p = await fetchProfile();
-        if (fetchId !== profileFetchSeq.current) return;
+        if (fetchId !== profileFetchSeq.current) return null;
         setProfile(p);
+        void saveCachedProfile(p);
         setProfileLoading(false);
-        return;
+        return p;
       } catch {
         if (attempt < 2) {
           await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
         }
       }
     }
-    if (fetchId !== profileFetchSeq.current) return;
+    if (fetchId !== profileFetchSeq.current) return null;
     // Keep the last known profile to avoid re-prompting onboarding on transient errors.
     setProfileLoading(false);
+    return profileRef.current;
   }, [session]);
 
   useEffect(() => {
@@ -124,12 +141,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (session) {
-      refreshProfile();
-    } else {
+    if (!session) {
       setProfile(null);
       setProfileLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    void (async () => {
+      const cached = await loadCachedProfile(session.user.id);
+      if (!cancelled && cached) {
+        setProfile(cached);
+      }
+      await refreshProfile();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [session, refreshProfile]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
@@ -187,9 +216,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    const userId = session?.user.id;
     await supabase.auth.signOut();
     setProfile(null);
-  }, []);
+    if (userId) void clearCachedProfile(userId);
+  }, [session]);
 
   const value = useMemo(
     () => ({

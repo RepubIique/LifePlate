@@ -1,9 +1,9 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { router, Redirect } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { type Gender } from "@lifeplate/shared";
+import { isOnboardingComplete, type Gender } from "@lifeplate/shared";
 import {
   BodyMetricsForm,
   isBodyMetricsFormComplete,
@@ -18,7 +18,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function BodyMetricsOnboardingScreen() {
-  const { patchProfile, signOut } = useAuth();
+  const { profile, profileLoading, patchProfile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
@@ -26,6 +26,32 @@ export default function BodyMetricsOnboardingScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prefilledRef = useRef(false);
+
+  useEffect(() => {
+    if (!profile || prefilledRef.current) return;
+    if (profile.weightKg != null) setWeightKg(String(profile.weightKg));
+    if (profile.heightCm != null) setHeightCm(String(profile.heightCm));
+    if (profile.age != null) setAge(String(profile.age));
+    if (profile.gender) setGender(profile.gender);
+    prefilledRef.current = true;
+  }, [profile]);
+
+  if (profileLoading && !profile) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (profile && isOnboardingComplete(profile)) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  if (profile && !profile.goal?.trim()) {
+    return <Redirect href="/onboarding/goal" />;
+  }
 
   const canContinue = isBodyMetricsFormComplete(weightKg, heightCm, age, gender);
 
@@ -104,6 +130,7 @@ export default function BodyMetricsOnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   body: { paddingHorizontal: spacing.lg, gap: spacing.md },
   note: { opacity: 0.65, lineHeight: 18 },
   cta: { marginTop: spacing.sm },

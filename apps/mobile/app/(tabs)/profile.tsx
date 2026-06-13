@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
-import type { Gender } from "@lifeplate/shared";
+import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
   BodyMetricsForm,
   toOptionalInt,
@@ -34,6 +34,25 @@ function metricEqual(stored: number | null, draft: number | null): boolean {
   return Math.abs(stored - draft) < 0.01;
 }
 
+function applyProfileToForm(
+  profile: UserProfile | null | undefined,
+  setters: {
+    setName: (v: string) => void;
+    setGoal: (v: string) => void;
+    setWeightKg: (v: string) => void;
+    setHeightCm: (v: string) => void;
+    setAge: (v: string) => void;
+    setGender: (v: Gender | null) => void;
+  },
+) {
+  setters.setName(profile?.name ?? "");
+  setters.setGoal(profile?.goal ?? "");
+  setters.setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : "");
+  setters.setHeightCm(profile?.heightCm != null ? String(profile.heightCm) : "");
+  setters.setAge(profile?.age != null ? String(profile.age) : "");
+  setters.setGender(profile?.gender ?? null);
+}
+
 export default function ProfileScreen() {
   const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
@@ -49,15 +68,25 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    setName(profile?.name ?? "");
-    setGoal(profile?.goal ?? "");
-    setWeightKg(profile?.weightKg != null ? String(profile.weightKg) : "");
-    setHeightCm(profile?.heightCm != null ? String(profile.heightCm) : "");
-    setAge(profile?.age != null ? String(profile.age) : "");
-    setGender(profile?.gender ?? null);
+    setIsDirty(false);
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (isDirty || !profile) return;
+    applyProfileToForm(profile, {
+      setName,
+      setGoal,
+      setWeightKg,
+      setHeightCm,
+      setAge,
+      setGender,
+    });
   }, [
+    isDirty,
+    profile,
     profile?.age,
     profile?.gender,
     profile?.goal,
@@ -65,6 +94,27 @@ export default function ProfileScreen() {
     profile?.name,
     profile?.weightKg,
   ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsDirty(false);
+      void (async () => {
+        const latest = await refreshProfile();
+        if (latest) {
+          applyProfileToForm(latest, {
+            setName,
+            setGoal,
+            setWeightKg,
+            setHeightCm,
+            setAge,
+            setGender,
+          });
+        } else {
+          setSnackbar("Could not refresh profile — showing last saved data");
+        }
+      })();
+    }, [refreshProfile]),
+  );
 
   const canSave = useMemo(() => {
     const n = name.trim();
@@ -95,13 +145,12 @@ export default function ProfileScreen() {
     weightKg,
   ]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshProfile();
-    }, [refreshProfile]),
-  );
-
   async function handleSave() {
+    if (!canSave) {
+      setSnackbar("No changes to save");
+      return;
+    }
+
     setSaving(true);
     try {
       const updated = await updateProfile({
@@ -112,7 +161,16 @@ export default function ProfileScreen() {
         age: toOptionalInt(age),
         gender,
       });
+      setIsDirty(false);
       patchProfile(updated);
+      applyProfileToForm(updated, {
+        setName,
+        setGoal,
+        setWeightKg,
+        setHeightCm,
+        setAge,
+        setGender,
+      });
       setSnackbar("Profile updated");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -146,14 +204,20 @@ export default function ProfileScreen() {
           <TextInput
             label="Name"
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) => {
+              setIsDirty(true);
+              setName(value);
+            }}
             mode="outlined"
             style={styles.input}
           />
           <TextInput
             label="Goal"
             value={goal}
-            onChangeText={setGoal}
+            onChangeText={(value) => {
+              setIsDirty(true);
+              setGoal(value);
+            }}
             mode="outlined"
             style={styles.input}
           />
@@ -171,12 +235,24 @@ export default function ProfileScreen() {
             heightCm={heightCm}
             age={age}
             gender={gender}
-            onWeightKgChange={setWeightKg}
-            onHeightCmChange={setHeightCm}
-            onAgeChange={setAge}
-            onGenderChange={setGender}
+            onWeightKgChange={(value) => {
+              setIsDirty(true);
+              setWeightKg(value);
+            }}
+            onHeightCmChange={(value) => {
+              setIsDirty(true);
+              setHeightCm(value);
+            }}
+            onAgeChange={(value) => {
+              setIsDirty(true);
+              setAge(value);
+            }}
+            onGenderChange={(value) => {
+              setIsDirty(true);
+              setGender(value);
+            }}
           />
-          <Button mode="contained" onPress={handleSave} disabled={!canSave} loading={saving}>
+          <Button mode="contained" onPress={handleSave} disabled={saving} loading={saving}>
             Save profile
           </Button>
         </PremiumCard>

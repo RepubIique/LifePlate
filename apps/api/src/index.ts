@@ -3,16 +3,16 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { assertRuntimeConfig, config } from "./config.js";
 import { runMigrations } from "./db.js";
+import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { mealRoutes } from "./routes/meals.js";
 import { insightRoutes } from "./routes/insights.js";
 import { userRoutes } from "./routes/users.js";
 
 assertRuntimeConfig();
 
-const app = Fastify({
-  logger: true,
-  bodyLimit: 25 * 1024 * 1024,
-});
+const app = Fastify(fastifyServerOptions());
+
+registerRequestLogging(app);
 
 await app.register(cors, { origin: config.corsOrigin });
 await app.register(multipart, {
@@ -37,4 +37,4 @@ try {
 }
 
 await app.listen({ port: config.port, host: "0.0.0.0" });
-console.log(`API listening on http://localhost:${config.port}`);
+app.log.info({ port: config.port }, "API listening");

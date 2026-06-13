@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function Index() {
   const { session, profile, loading, profileLoading } = useAuth();
 
-  if (loading || (session && profileLoading)) {
+  if (loading || (session && profileLoading && !profile)) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator />
@@ -18,16 +18,18 @@ export default function Index() {
     return <Redirect href="/(auth)/welcome" />;
   }
 
-  if (!profile?.goal) {
+  // Profile fetch failed and no local cache — go to app, not onboarding.
+  if (!profile) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  if (isOnboardingComplete(profile)) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  if (!profile.goal?.trim()) {
     return <Redirect href="/onboarding/goal" />;
   }
 
-  if (
-    !profile ||
-    !isOnboardingComplete(profile)
-  ) {
-    return <Redirect href={"/onboarding/body" as Href} />;
-  }
-
-  return <Redirect href="/(tabs)" />;
+  return <Redirect href={"/onboarding/body" as Href} />;
 }

@@ -1,9 +1,9 @@
-import { router, type Href } from "expo-router";
+import { router, Redirect, type Href } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GOALS, type UserGoal } from "@lifeplate/shared";
+import { GOALS, isOnboardingComplete, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
@@ -13,11 +13,27 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function GoalScreen() {
-  const { patchProfile, signOut } = useAuth();
+  const { profile, profileLoading, patchProfile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [goal, setGoal] = useState<UserGoal>(GOALS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (profileLoading && !profile) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (profile && isOnboardingComplete(profile)) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  if (profile?.goal?.trim()) {
+    return <Redirect href={"/onboarding/body" as Href} />;
+  }
 
   async function handleContinue() {
     setSaving(true);
@@ -25,7 +41,11 @@ export default function GoalScreen() {
     try {
       const updated = await updateGoal(goal);
       patchProfile(updated);
-      router.replace("/onboarding/body" as Href);
+      if (isOnboardingComplete(updated)) {
+        router.replace("/(tabs)");
+      } else {
+        router.replace("/onboarding/body" as Href);
+      }
     } catch (err) {
       setError(friendlyErrorMessage(err));
     } finally {
@@ -78,6 +98,7 @@ export default function GoalScreen() {
 }
 
 const styles = StyleSheet.create({
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   goalCard: {
     paddingVertical: spacing.md,
