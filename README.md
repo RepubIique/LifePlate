@@ -105,6 +105,8 @@ Migrations run automatically on startup. Health check: `GET /health`.
 
 **Free tier note:** Render sleeps after ~15 minutes idle; first request after that takes ~30–60s to wake up.
 
+**Keep it awake (optional):** Use [UptimeRobot](https://uptimerobot.com) (free) to ping `https://lifeplate-api.onrender.com/health` every 5 minutes. This reduces cold starts for demos. Render may still spin down occasionally on the free plan.
+
 ### 3. Point the mobile app at production
 
 In `apps/mobile/.env`:
