@@ -1,26 +1,34 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button, Snackbar, Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GOALS, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { updateGoal } from "@/lib/api";
+import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function GoalScreen() {
-  const { refreshProfile, signOut } = useAuth();
+  const { patchProfile, refreshProfile, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [goal, setGoal] = useState<UserGoal>(GOALS[0]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleContinue() {
     setSaving(true);
+    setError(null);
     try {
       await updateGoal(goal);
-      await refreshProfile();
+      patchProfile({ goal });
       router.replace("/(tabs)");
+      void refreshProfile();
+    } catch (err) {
+      setError(friendlyErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -32,7 +40,7 @@ export default function GoalScreen() {
         title="What is your goal?"
         subtitle="We’ll tailor your experience. You can change this later."
       />
-      <View style={styles.body}>
+      <View style={[styles.body, { paddingBottom: insets.bottom + spacing.xl }]}>
         {GOALS.map((g) => {
           const selected = goal === g;
           return (
@@ -63,12 +71,15 @@ export default function GoalScreen() {
           Sign out
         </Button>
       </View>
+      <Snackbar visible={!!error} onDismiss={() => setError(null)} duration={6000}>
+        {error}
+      </Snackbar>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm },
+  body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   goalCard: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,

@@ -24,6 +24,7 @@ type AuthContextValue = {
   loading: boolean;
   profileLoading: boolean;
   refreshProfile: () => Promise<void>;
+  patchProfile: (patch: Partial<UserProfile>) => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithProvider: (provider: "apple" | "google") => Promise<void>;
@@ -39,18 +40,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
+  const patchProfile = useCallback((patch: Partial<UserProfile>) => {
+    setProfile((prev) => {
+      if (prev) return { ...prev, ...patch };
+      if (!session) return prev;
+      return {
+        id: session.user.id,
+        email: session.user.email ?? "",
+        name: null,
+        goal: null,
+        mealsLogged: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        ...patch,
+      };
+    });
+  }, [session]);
+
   const refreshProfile = useCallback(async () => {
     if (!session) {
       setProfile(null);
       return;
     }
     setProfileLoading(true);
-    try {
-      const p = await fetchProfile();
-      setProfile(p);
-    } catch {
-      // Keep the last known profile to avoid re-prompting onboarding on transient errors.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const p = await fetchProfile();
+        setProfile(p);
+        setProfileLoading(false);
+        return;
+      } catch {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        }
+      }
     }
+    // Keep the last known profile to avoid re-prompting onboarding on transient errors.
     setProfileLoading(false);
   }, [session]);
 
@@ -147,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       profileLoading,
       refreshProfile,
+      patchProfile,
       signInWithEmail,
       signUpWithEmail,
       signInWithProvider,
@@ -159,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       profileLoading,
       refreshProfile,
+      patchProfile,
       signInWithEmail,
       signUpWithEmail,
       signInWithProvider,

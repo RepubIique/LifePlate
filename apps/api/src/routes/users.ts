@@ -79,20 +79,24 @@ export async function userRoutes(app: FastifyInstance) {
     "/api/users/me",
     { preHandler: requireAuth },
     async (request) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const { goal, name } = request.body ?? {};
 
       if (goal !== undefined) {
-        await pool.query(`UPDATE users SET goal = $1 WHERE id = $2`, [
-          goal,
-          userId,
-        ]);
+        await pool.query(
+          `INSERT INTO users (id, email, goal)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (id) DO UPDATE SET goal = EXCLUDED.goal`,
+          [userId, userEmail, goal],
+        );
       }
       if (name !== undefined) {
-        await pool.query(`UPDATE users SET name = $1 WHERE id = $2`, [
-          name,
-          userId,
-        ]);
+        await pool.query(
+          `INSERT INTO users (id, email, name)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+          [userId, userEmail, name],
+        );
       }
 
       return { ok: true };

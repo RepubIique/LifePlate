@@ -28,8 +28,8 @@ export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return "Session expired. Please sign in again.";
     if (err.status === 413) return "Photo is too large. Try a smaller image or crop.";
-    if (err.message.includes("Failed to fetch")) {
-      return "Cannot reach the server. Check API URL and Wi‑Fi.";
+    if (err.message.includes("Failed to fetch") || err.message.includes("Network request failed")) {
+      return "Cannot reach the server. Wait a moment and try again — the API may be waking up.";
     }
     return err.message;
   }
