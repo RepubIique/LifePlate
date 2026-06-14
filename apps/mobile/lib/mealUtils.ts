@@ -21,25 +21,37 @@ export function formatDayLabel(iso: string): string {
   });
 }
 
-export function groupMealsByDay(
+export type TimelineDayGroup = {
+  day: string;
+  subtitle: string;
+  dateKey: string;
+  isToday: boolean;
+  meals: MealListSummary[];
+  hydrationGlasses: number;
+};
+
+export function buildTimelineDayGroups(
   meals: MealListSummary[],
-): { day: string; subtitle: string; dateKey: string; isToday: boolean; meals: MealListSummary[] }[] {
-  const map = new Map<string, MealListSummary[]>();
+  hydrationByDate: Record<string, number>,
+): TimelineDayGroup[] {
+  const mealMap = new Map<string, MealListSummary[]>();
 
   for (const meal of meals) {
     const key = new Date(meal.createdAt).toISOString().slice(0, 10);
-    const list = map.get(key) ?? [];
+    const list = mealMap.get(key) ?? [];
     list.push(meal);
-    map.set(key, list);
+    mealMap.set(key, list);
   }
 
+  const dateKeys = new Set([...mealMap.keys(), ...Object.keys(hydrationByDate)]);
   const today = new Date();
 
-  return [...map.entries()]
-    .sort(([a], [b]) => (a < b ? 1 : -1))
-    .map(([dateKey, dayMeals]) => {
-      const first = dayMeals[0]!;
-      const d = new Date(first.createdAt);
+  return [...dateKeys]
+    .sort((a, b) => (a < b ? 1 : -1))
+    .map((dateKey) => {
+      const dayMeals = mealMap.get(dateKey) ?? [];
+      const anchorIso = dayMeals[0]?.createdAt ?? `${dateKey}T12:00:00.000Z`;
+      const d = new Date(anchorIso);
       const isToday =
         d.getDate() === today.getDate() &&
         d.getMonth() === today.getMonth() &&
@@ -47,16 +59,31 @@ export function groupMealsByDay(
 
       return {
         dateKey,
-        day: formatDayLabel(first.createdAt),
-        subtitle: d.toLocaleDateString(undefined, {
+        day: formatDayLabel(anchorIso),
+        subtitle: new Date(`${dateKey}T12:00:00.000Z`).toLocaleDateString(undefined, {
           weekday: "long",
           month: "long",
           day: "numeric",
         }),
         isToday,
         meals: dayMeals,
+        hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });
+}
+
+export function groupMealsByDay(
+  meals: MealListSummary[],
+): { day: string; subtitle: string; dateKey: string; isToday: boolean; meals: MealListSummary[] }[] {
+  return buildTimelineDayGroups(meals, {}).map(
+    ({ day, subtitle, dateKey, isToday, meals: dayMeals }) => ({
+      day,
+      subtitle,
+      dateKey,
+      isToday,
+      meals: dayMeals,
+    }),
+  );
 }
 
 export function countMealsThisWeek(meals: MealListSummary[]): number {

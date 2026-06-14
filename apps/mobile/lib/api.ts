@@ -11,6 +11,7 @@ import type {
   NutritionDashboardApiResponse,
   ProfilePatchResponse,
   UserProfile,
+  HydrationHistoryResponse,
   Gender,
 } from "@lifeplate/shared";
 import { File, UploadType } from "expo-file-system";
@@ -160,11 +161,18 @@ export async function fetchNutritionDashboard(): Promise<NutritionDashboardApiRe
   return request<NutritionDashboardApiResponse>("/api/nutrition/dashboard");
 }
 
-export async function updateHydration(glasses: number): Promise<{ glasses: number }> {
-  return request<{ glasses: number }>("/api/nutrition/hydration", {
+export async function updateHydration(
+  glasses: number,
+  date?: string,
+): Promise<{ glasses: number; date: string }> {
+  return request<{ glasses: number; date: string }>("/api/nutrition/hydration", {
     method: "PATCH",
-    body: JSON.stringify({ glasses }),
+    body: JSON.stringify({ glasses, date }),
   });
+}
+
+export async function fetchHydrationHistory(days = 60): Promise<HydrationHistoryResponse> {
+  return request<HydrationHistoryResponse>(`/api/nutrition/hydration?days=${days}`);
 }
 
 export async function uploadMealImage(input: {

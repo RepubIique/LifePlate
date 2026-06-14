@@ -1,24 +1,33 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { Snackbar } from "react-native-paper";
+import { Button, Snackbar } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
+import { todayDateKey } from "@lifeplate/shared";
+import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
+import { TimelineDayHydration } from "@/components/timeline/TimelineDayHydration";
 import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
+import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
-import { deleteMeal } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { deleteMeal, fetchHydrationHistory } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { countMealsThisWeek, groupMealsByDay } from "@/lib/mealUtils";
+import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
+import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
+const HYDRATION_TARGET = 8;
 
 export default function TimelineScreen() {
+  const { profile } = useAuth();
+  const { setPendingLogDate } = usePendingLogDate();
   const {
     meals,
     loading,
@@ -30,14 +39,39 @@ export default function TimelineScreen() {
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
+  refreshAfterMealChangeRef.current = refreshAfterMealChange;
+  const {
+    hydrationByDate,
+    syncingDate,
+    replaceFromServer: replaceHydrationFromServer,
+    adjustHydration,
+  } = useDebouncedHydration({
+    onSynced: () => refreshAfterMealChangeRef.current(),
+    onError: (e) => setSnackbar(friendlyErrorMessage(e)),
+  });
+  const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
+  const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
 
+  const hydrationTarget =
+    profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
+
+  const loadTimeline = useCallback(async () => {
+    const [{ days }] = await Promise.all([fetchHydrationHistory(60), loadMeals()]);
+    const map: Record<string, number> = {};
+    for (const day of days) {
+      map[day.date] = day.glasses;
+    }
+    replaceHydrationFromServer(map);
+  }, [loadMeals, replaceHydrationFromServer]);
+
   useFocusEffect(
     useCallback(() => {
-      void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-    }, [loadMeals]),
+      void loadTimeline().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadTimeline]),
   );
 
   function scheduleDelete(meal: MealListSummary) {
@@ -71,8 +105,27 @@ export default function TimelineScreen() {
     setSnackbar(null);
   }
 
-  const groups = groupMealsByDay(meals);
+  function startMealLogForDay(dateKey: string) {
+    setPendingLogDate(dateKey);
+    router.push("/(tabs)");
+  }
+
+  function handlePastDaySelected(dateKey: string) {
+    setPastDayPickerOpen(false);
+    startMealLogForDay(dateKey);
+  }
+
+  function handlePastHydrationSelected(dateKey: string) {
+    setHydrationPickerOpen(false);
+    adjustHydration(dateKey, 1);
+  }
+
+  const groups = useMemo(
+    () => buildTimelineDayGroups(meals, hydrationByDate),
+    [meals, hydrationByDate],
+  );
   const weekMeals = countMealsThisWeek(meals);
+  const hasAnyEntries = groups.length > 0;
 
   return (
     <Screen padded={false} loading={loading && !refreshing && meals.length === 0}>
@@ -81,7 +134,7 @@ export default function TimelineScreen() {
         subtitle="Your health story, chronologically"
       />
 
-      {meals.length > 0 ? (
+      {hasAnyEntries ? (
         <TimelineSummaryBar totalMeals={meals.length} weekMeals={weekMeals} />
       ) : null}
 
@@ -92,7 +145,14 @@ export default function TimelineScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => {
-              void refreshMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+              void refreshMeals()
+                .then(() => fetchHydrationHistory(60))
+                .then(({ days }) => {
+                  const map: Record<string, number> = {};
+                  for (const day of days) map[day.date] = day.glasses;
+                  replaceHydrationFromServer(map);
+                })
+                .catch((e) => setSnackbar(friendlyErrorMessage(e)));
             }}
           />
         }
@@ -105,6 +165,13 @@ export default function TimelineScreen() {
               mealCount={group.meals.length}
               isToday={group.isToday}
             />
+            <TimelineDayHydration
+              glasses={group.hydrationGlasses}
+              target={hydrationTarget}
+              syncing={syncingDate === group.dateKey}
+              onIncrement={() => adjustHydration(group.dateKey, 1)}
+              onDecrement={() => adjustHydration(group.dateKey, -1)}
+            />
             {group.meals.map((meal, index) => (
               <TimelineMealCard
                 key={meal.id}
@@ -114,11 +181,52 @@ export default function TimelineScreen() {
                 onDelete={() => scheduleDelete(meal)}
               />
             ))}
+            <Button
+              mode="text"
+              icon="plus"
+              onPress={() => startMealLogForDay(group.dateKey)}
+              style={styles.addMeal}
+            >
+              Add meal for this day
+            </Button>
           </View>
         ))}
 
-        {!loading && meals.length === 0 ? <TimelineEmptyState /> : null}
+        {!loading && !hasAnyEntries ? (
+          <View style={styles.emptyWrap}>
+            <TimelineEmptyState />
+            <Button mode="outlined" onPress={() => startMealLogForDay(todayDateKey())}>
+              Log today&apos;s first meal
+            </Button>
+            <Button mode="text" onPress={() => setPastDayPickerOpen(true)}>
+              Log a past day
+            </Button>
+          </View>
+        ) : (
+          <View style={styles.pastActions}>
+            <Button mode="text" onPress={() => setPastDayPickerOpen(true)}>
+              Log another past day
+            </Button>
+            <Button mode="text" onPress={() => setHydrationPickerOpen(true)}>
+              Log past hydration
+            </Button>
+          </View>
+        )}
       </ScrollView>
+
+      <LogDatePickerModal
+        visible={pastDayPickerOpen}
+        selectedDateKey={todayDateKey()}
+        onSelect={handlePastDaySelected}
+        onClose={() => setPastDayPickerOpen(false)}
+      />
+
+      <LogDatePickerModal
+        visible={hydrationPickerOpen}
+        selectedDateKey={todayDateKey()}
+        onSelect={handlePastHydrationSelected}
+        onClose={() => setHydrationPickerOpen(false)}
+      />
 
       <Snackbar
         visible={!!snackbar}
@@ -144,5 +252,18 @@ const styles = StyleSheet.create({
   },
   dayGroup: {
     marginBottom: spacing.lg,
+  },
+  addMeal: {
+    alignSelf: "flex-start",
+    marginTop: -spacing.xs,
+  },
+  emptyWrap: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  pastActions: {
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    alignItems: "center",
   },
 });

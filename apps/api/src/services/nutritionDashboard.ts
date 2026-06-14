@@ -10,6 +10,7 @@ import {
   computeNutritionScore,
   countProcessedMeals,
   defaultExtendedNutritionTargets,
+  isValidLogDateKey,
   scoreStatus,
   type DailyTotals,
   type ExtendedNutritionTargets,
@@ -359,16 +360,37 @@ export async function buildNutritionDashboard(
 export async function updateHydrationGlasses(
   userId: string,
   glasses: number,
-): Promise<number> {
+  logDate?: string,
+): Promise<{ glasses: number; date: string }> {
+  const dateKey = logDate ?? todayDateKey();
+  if (!isValidLogDateKey(dateKey)) {
+    throw new Error("Invalid log date");
+  }
   const clamped = Math.max(0, Math.min(24, Math.round(glasses)));
 
   await pool.query(
     `INSERT INTO daily_hydration (user_id, log_date, glasses)
-     VALUES ($1, CURRENT_DATE, $2)
+     VALUES ($1, $2::date, $3)
      ON CONFLICT (user_id, log_date)
      DO UPDATE SET glasses = EXCLUDED.glasses`,
-    [userId, clamped],
+    [userId, dateKey, clamped],
   );
 
-  return clamped;
+  return { glasses: clamped, date: dateKey };
+}
+
+export async function fetchHydrationHistory(
+  userId: string,
+  days = 60,
+): Promise<Array<{ date: string; glasses: number }>> {
+  const span = Math.max(1, Math.min(90, Math.round(days)));
+  const { rows } = await pool.query<{ date: string; glasses: number }>(
+    `SELECT log_date::text AS date, glasses
+     FROM daily_hydration
+     WHERE user_id = $1
+       AND log_date >= CURRENT_DATE - ($2::int - 1)
+     ORDER BY log_date DESC`,
+    [userId, span],
+  );
+  return rows;
 }

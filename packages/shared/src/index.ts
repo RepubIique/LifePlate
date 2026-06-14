@@ -214,6 +214,8 @@ export interface MealConfirmRequest {
   sodium: number;
   confidence: number;
   mealType?: MealType;
+  /** ISO timestamp — log the meal on a prior day. */
+  loggedAt?: string;
 }
 
 export interface MealListSummary {
@@ -253,6 +255,17 @@ export interface MealUpdateRequest {
   fibre?: number | null;
   sugar?: number | null;
   sodium?: number | null;
+  /** ISO timestamp — move the meal to another day. */
+  loggedAt?: string;
+}
+
+export interface HydrationDayRecord {
+  date: string;
+  glasses: number;
+}
+
+export interface HydrationHistoryResponse {
+  days: HydrationDayRecord[];
 }
 
 export interface InsightsResponse {
@@ -325,6 +338,16 @@ export {
   pillarDelta,
   COMPARISON_PERIODS,
 } from "./nutrition/index.js";
+
+export {
+  MAX_LOG_PAST_DAYS,
+  todayDateKey,
+  dateKeyFromIso,
+  isValidLogDateKey,
+  loggedAtForDateKey,
+  recentLogDateKeys,
+  formatLogDateLabel,
+} from "./logDate.js";
 
 /** Fields returned from PATCH /api/users/me — only what was edited. */
 export interface ProfilePatchResponse {
