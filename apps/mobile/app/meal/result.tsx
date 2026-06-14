@@ -1,12 +1,21 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
-import { inferMealType, loggedAtForDateKey, type MealType } from "@lifeplate/shared";
+import {
+  clampMealPortions,
+  inferMealType,
+  isLikelySharedMeal,
+  loggedAtForDateKey,
+  scaleMealForPortions,
+  type MealMacroTotals,
+  type MealType,
+} from "@lifeplate/shared";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
+import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
@@ -41,6 +50,7 @@ export default function MealResultScreen() {
     confidence: string;
     coachNudge: string;
     logDate?: string;
+    estimatedServings?: string;
   }>();
 
   const initialFoods = useMemo(() => {
@@ -51,26 +61,86 @@ export default function MealResultScreen() {
     }
   }, [params.foods]);
 
+  const initialEstimatedServings = toNumber(params.estimatedServings, 1);
+  const initialBaseMacros: MealMacroTotals = {
+    estimatedCalories: toNumber(params.estimatedCalories, 0),
+    protein: toNumber(params.protein, 0),
+    carbs: toNumber(params.carbs, 0),
+    fat: toNumber(params.fat, 0),
+    fibre: toNumber(params.fibre, 0),
+    sugar: toNumber(params.sugar, 0),
+    sodium: toNumber(params.sodium, 0),
+  };
+  const initialTotalPortions = clampMealPortions(
+    Math.max(2, Math.round(initialEstimatedServings)),
+  );
+  const initialLikelyShared = isLikelySharedMeal(
+    {
+      estimatedCalories: initialBaseMacros.estimatedCalories,
+      estimatedServings: initialEstimatedServings,
+    },
+    profile?.nutritionTargets?.dailyCalories,
+  );
+  const initialDisplayedMacros = initialLikelyShared
+    ? scaleMealForPortions(initialBaseMacros, initialTotalPortions, 1)
+    : initialBaseMacros;
+
+  const [baseMacros, setBaseMacros] = useState<MealMacroTotals>(initialBaseMacros);
+  const [estimatedServings, setEstimatedServings] = useState(initialEstimatedServings);
   const [editing, setEditing] = useState(false);
   const [mealType, setMealType] = useState<MealType>(() => inferMealType());
   const [mealName, setMealName] = useState(params.mealName ?? "");
   const [foods, setFoods] = useState<string[]>(initialFoods);
   const [newFood, setNewFood] = useState("");
   const [calories, setCalories] = useState(
-    String(toNumber(params.estimatedCalories, 0)),
+    String(initialDisplayedMacros.estimatedCalories),
   );
-  const [protein, setProtein] = useState(String(toNumber(params.protein, 0)));
-  const [carbs, setCarbs] = useState(String(toNumber(params.carbs, 0)));
-  const [fat, setFat] = useState(String(toNumber(params.fat, 0)));
-  const [fibre, setFibre] = useState(String(toNumber(params.fibre, 0)));
-  const [sugar, setSugar] = useState(String(toNumber(params.sugar, 0)));
-  const [sodium, setSodium] = useState(String(toNumber(params.sodium, 0)));
+  const [protein, setProtein] = useState(String(initialDisplayedMacros.protein));
+  const [carbs, setCarbs] = useState(String(initialDisplayedMacros.carbs));
+  const [fat, setFat] = useState(String(initialDisplayedMacros.fat));
+  const [fibre, setFibre] = useState(String(initialDisplayedMacros.fibre));
+  const [sugar, setSugar] = useState(String(initialDisplayedMacros.sugar));
+  const [sodium, setSodium] = useState(String(initialDisplayedMacros.sodium));
   const [confidence, setConfidence] = useState(toNumber(params.confidence, 0));
   const [coachNudge, setCoachNudge] = useState(params.coachNudge ?? "");
+  const [totalPortions, setTotalPortions] = useState(initialTotalPortions);
+  const [portionsEaten, setPortionsEaten] = useState(1);
   const [clarification, setClarification] = useState("");
   const [refining, setRefining] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+
+  const likelySharedMeal = useMemo(
+    () =>
+      isLikelySharedMeal(
+        {
+          estimatedCalories: baseMacros.estimatedCalories,
+          estimatedServings,
+        },
+        profile?.nutritionTargets?.dailyCalories,
+      ),
+    [baseMacros.estimatedCalories, estimatedServings, profile?.nutritionTargets?.dailyCalories],
+  );
+
+  function applyPortionScaling(
+    macros: MealMacroTotals,
+    total: number,
+    eaten: number,
+  ) {
+    const scaled = scaleMealForPortions(macros, total, eaten);
+    setCalories(String(scaled.estimatedCalories));
+    setProtein(String(scaled.protein));
+    setCarbs(String(scaled.carbs));
+    setFat(String(scaled.fat));
+    setFibre(String(scaled.fibre));
+    setSugar(String(scaled.sugar));
+    setSodium(String(scaled.sodium));
+  }
+
+  useEffect(() => {
+    if (!likelySharedMeal) return;
+    applyPortionScaling(baseMacros, totalPortions, portionsEaten);
+  }, [likelySharedMeal, totalPortions, portionsEaten, baseMacros]);
 
   const lowConfidence = confidence < 0.6;
   const macroCalories = toNumber(calories, 0);
@@ -108,13 +178,50 @@ export default function MealResultScreen() {
       const result = await refineMeal(params.draftId, note);
       setMealName(result.mealName);
       setFoods(result.foods);
-      setCalories(String(result.estimatedCalories));
-      setProtein(String(result.protein));
-      setCarbs(String(result.carbs));
-      setFat(String(result.fat));
-      setFibre(String(result.fibre));
-      setSugar(String(result.sugar));
-      setSodium(String(result.sodium));
+      const nextServings = result.estimatedServings ?? 1;
+      setEstimatedServings(nextServings);
+      const nextTotal =
+        nextServings >= 2
+          ? clampMealPortions(Math.max(2, Math.round(nextServings)))
+          : totalPortions;
+      if (nextServings >= 2) {
+        setTotalPortions(nextTotal);
+      }
+      const nextBase: MealMacroTotals = {
+        estimatedCalories: result.estimatedCalories,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        fibre: result.fibre,
+        sugar: result.sugar,
+        sodium: result.sodium,
+      };
+      setBaseMacros(nextBase);
+      const shared = isLikelySharedMeal(
+        {
+          estimatedCalories: nextBase.estimatedCalories,
+          estimatedServings: nextServings,
+        },
+        profile?.nutritionTargets?.dailyCalories,
+      );
+      if (shared) {
+        const scaled = scaleMealForPortions(nextBase, nextTotal, portionsEaten);
+        setCalories(String(scaled.estimatedCalories));
+        setProtein(String(scaled.protein));
+        setCarbs(String(scaled.carbs));
+        setFat(String(scaled.fat));
+        setFibre(String(scaled.fibre));
+        setSugar(String(scaled.sugar));
+        setSodium(String(scaled.sodium));
+      } else {
+        setCalories(String(nextBase.estimatedCalories));
+        setProtein(String(nextBase.protein));
+        setCarbs(String(nextBase.carbs));
+        setFat(String(nextBase.fat));
+        setFibre(String(nextBase.fibre));
+        setSugar(String(nextBase.sugar));
+        setSodium(String(nextBase.sodium));
+      }
       setConfidence(result.confidence);
       setCoachNudge(result.coachNudge);
       setClarification("");
@@ -171,6 +278,16 @@ export default function MealResultScreen() {
             {coachNudge}
           </Text>
         </PremiumCard>
+      ) : null}
+
+      {likelySharedMeal ? (
+        <SharedMealPortionsCard
+          totalPortions={totalPortions}
+          portionsEaten={portionsEaten}
+          estimatedServings={estimatedServings}
+          onTotalPortionsChange={setTotalPortions}
+          onPortionsEatenChange={setPortionsEaten}
+        />
       ) : null}
 
       <PremiumCard>

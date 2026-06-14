@@ -204,19 +204,10 @@ export type DailyInsightContext = {
   score: number;
 };
 
-const MAX_INSIGHT_WORDS = 35;
-const MAX_INSIGHT_CHARS = 200;
+const MAX_INSIGHT_SENTENCES = 3;
 
-export function normalizeLifeplateInsight(text: string, maxChars = MAX_INSIGHT_CHARS): string {
-  const cleaned = text.replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-  if (cleaned.length <= maxChars) return cleaned;
-
-  const slice = cleaned.slice(0, maxChars);
-  const lastSpace = slice.lastIndexOf(" ");
-  const truncated =
-    lastSpace > maxChars * 0.55 ? slice.slice(0, lastSpace) : slice.trimEnd();
-
-  return `${truncated.replace(/[,;:\s]+$/, "")}…`;
+export function normalizeLifeplateInsight(text: string): string {
+  return text.replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
 }
 
 export async function generateLifeplateInsight(
@@ -245,9 +236,8 @@ export async function generateLifeplateInsight(
     : 0;
 
   const prompt = `You are a calm, evidence-informed nutrition coach for LifePlate.
-Summarize today's nutrition in 1-2 short sentences only (maximum ${MAX_INSIGHT_WORDS} words total).
-One clear takeaway — no lists, no second topic, no trailing clauses.
-The reply must be a complete thought that fits on a mobile card.
+Summarize today's nutrition in at most ${MAX_INSIGHT_SENTENCES} complete sentences.
+Keep each sentence concise. End on a finished thought — no trailing clauses or lists.
 No markdown, bullet lists, guilt, emojis, or quotation marks.
 
 User goal: ${ctx.goal ?? "General wellbeing"}
@@ -256,7 +246,7 @@ Today totals: ${ctx.totals.calories} kcal, ${ctx.totals.protein}g protein, ${ctx
 Targets: ${ctx.targets.dailyCalories} kcal, ${ctx.targets.dailyProteinG}g protein, ${ctx.targets.dailyFibreG}g fibre
 Recent foods: ${ctx.recentFoods.join(", ") || "none yet"}
 
-Give the single most useful insight for this user's day.`;
+Give the most useful insight for this user's day.`;
 
   try {
     const client = new OpenAI({ apiKey: config.openaiApiKey });
@@ -266,11 +256,11 @@ Give the single most useful insight for this user's day.`;
         {
           role: "system",
           content:
-            `Reply with one brief coaching summary only. Maximum ${MAX_INSIGHT_WORDS} words. End on a complete sentence.`,
+            `Reply with a brief coaching summary only. Maximum ${MAX_INSIGHT_SENTENCES} complete sentences.`,
         },
         { role: "user", content: prompt },
       ],
-      max_tokens: 70,
+      max_tokens: 150,
       temperature: 0.5,
     });
     const text = response.choices[0]?.message?.content?.trim();

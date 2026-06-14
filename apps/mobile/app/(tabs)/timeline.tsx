@@ -11,6 +11,7 @@ import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Screen } from "@/components/Screen";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
@@ -19,6 +20,7 @@ import { deleteMeal, fetchHydrationHistory } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
+import { useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -38,6 +40,7 @@ export default function TimelineScreen() {
     restoreMealLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
+  const { uploading, pickAndAnalyze } = useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
   refreshAfterMealChangeRef.current = refreshAfterMealChange;
@@ -106,8 +109,13 @@ export default function TimelineScreen() {
   }
 
   function startMealLogForDay(dateKey: string) {
-    setPendingLogDate(dateKey);
-    router.push("/(tabs)");
+    if (dateKey === todayDateKey()) {
+      setPendingLogDate(dateKey);
+      router.push("/(tabs)");
+      return;
+    }
+
+    void pickAndAnalyze(false, dateKey);
   }
 
   function handlePastDaySelected(dateKey: string) {
@@ -240,6 +248,8 @@ export default function TimelineScreen() {
       >
         {snackbar}
       </Snackbar>
+
+      <LoadingOverlay visible={uploading} />
     </Screen>
   );
 }

@@ -1,10 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import * as Haptics from "expo-haptics";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Chip, IconButton, Snackbar, Text } from "react-native-paper";
-import type { ImagePickerAsset } from "expo-image-picker";
 import { formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
@@ -17,16 +14,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
-import { uploadMealImage, updateHydration } from "@/lib/api";
+import { updateHydration } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { prepareMealImage } from "@/lib/imagePrep";
-import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { premium } from "@/src/theme/premium";
-import { getLastPhotoSource, setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
+import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
+import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
-
-type UploadStage = "idle" | "preparing" | "analyzing";
 
 function isToday(iso: string) {
   const d = new Date(iso);
@@ -38,108 +32,37 @@ function isToday(iso: string) {
   );
 }
 
-function stageLabel(stage: UploadStage) {
-  if (stage === "preparing") return "Preparing photo…";
-  if (stage === "analyzing") return "Analyzing your meal…";
-  return "";
-}
-
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading, loadMeals } = useMeals();
   const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
-  const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const {
+    uploadStage,
+    error,
+    uploading,
+    setLogDate,
+    pickAndAnalyze,
+    retryLastAsset,
+    lastAssetRef,
+  } = useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [hydrationUpdating, setHydrationUpdating] = useState(false);
   const [logDateKey, setLogDateKey] = useState<string | null>(null);
-  const logDateRef = useRef<string | null>(null);
-  const lastAssetRef = useRef<ImagePickerAsset | null>(null);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (pendingLogDate) {
         setLogDateKey(pendingLogDate);
-        logDateRef.current = pendingLogDate;
+        setLogDate(pendingLogDate);
         setPendingLogDate(null);
       }
       void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       getLastPhotoSource().then(setPreferredSource);
-    }, [loadMeals, loadDashboard, pendingLogDate, setPendingLogDate]),
+    }, [loadMeals, loadDashboard, pendingLogDate, setPendingLogDate, setLogDate]),
   );
-
-  async function processAsset(asset: ImagePickerAsset) {
-    setError(null);
-    setUploadStage("preparing");
-    try {
-      const prepared = await prepareMealImage(asset.uri);
-      setUploadStage("analyzing");
-      const analysis = await uploadMealImage(prepared);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.push({
-        pathname: "/meal/result",
-        params: {
-          draftId: analysis.draftId,
-          imageUrl: analysis.imageUrl,
-          mealName: analysis.mealName,
-          foods: JSON.stringify(analysis.foods),
-          estimatedCalories: String(analysis.estimatedCalories),
-          protein: String(analysis.protein),
-          carbs: String(analysis.carbs),
-          fat: String(analysis.fat),
-          fibre: String(analysis.fibre),
-          sugar: String(analysis.sugar),
-          sodium: String(analysis.sodium),
-          confidence: String(analysis.confidence),
-          coachNudge: analysis.coachNudge,
-          logDate: logDateRef.current ?? "",
-        },
-      });
-    } catch (e) {
-      setError(friendlyErrorMessage(e));
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setUploadStage("idle");
-    }
-  }
-
-  async function pickAndAnalyze(useCamera: boolean) {
-    const source: PhotoSource = useCamera ? "camera" : "library";
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Permission required to access photos or camera.");
-      return;
-    }
-
-    await setLastPhotoSource(source);
-    setPreferredSource(source);
-
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({
-          quality: 0.85,
-          allowsEditing: true,
-          aspect: [4, 3],
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          quality: 0.85,
-          allowsEditing: true,
-          aspect: [4, 3],
-        });
-
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    lastAssetRef.current = asset;
-    if (useCamera) {
-      await saveToCameraRoll(asset.uri);
-    }
-    await processAsset(asset);
-  }
 
   async function changeHydration(nextGlasses: number) {
     if (!dashboard) return;
@@ -154,7 +77,6 @@ export default function HomeScreen() {
     }
   }
 
-  const uploading = uploadStage !== "idle";
   const todayMeals = meals.filter((m) => isToday(m.createdAt));
 
   return (
@@ -178,7 +100,7 @@ export default function HomeScreen() {
                 icon="calendar"
                 onClose={() => {
                   setLogDateKey(null);
-                  logDateRef.current = null;
+                  setLogDate(null);
                 }}
               >
                 Logging for {formatLogDateLabel(logDateKey)}
@@ -200,7 +122,10 @@ export default function HomeScreen() {
             <Button
               mode="contained"
               icon="camera"
-              onPress={() => pickAndAnalyze(true)}
+              onPress={() => {
+                setPreferredSource("camera");
+                void pickAndAnalyze(true);
+              }}
               disabled={uploading}
             >
               Take Photo
@@ -208,7 +133,10 @@ export default function HomeScreen() {
             <Button
               mode="outlined"
               icon="image"
-              onPress={() => pickAndAnalyze(false)}
+              onPress={() => {
+                setPreferredSource("library");
+                void pickAndAnalyze(false);
+              }}
               disabled={uploading}
             >
               Upload
@@ -219,7 +147,7 @@ export default function HomeScreen() {
             <View style={styles.uploading}>
               <ActivityIndicator />
               <Text variant="bodySmall" style={styles.stageText}>
-                {stageLabel(uploadStage)}
+                {uploadStageLabel(uploadStage)}
               </Text>
             </View>
           ) : null}
@@ -233,10 +161,7 @@ export default function HomeScreen() {
                 <Button
                   mode="text"
                   compact
-                  onPress={() => {
-                    const asset = lastAssetRef.current;
-                    if (asset) processAsset(asset);
-                  }}
+                  onPress={() => void retryLastAsset()}
                 >
                   Retry
                 </Button>

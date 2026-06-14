@@ -18,6 +18,7 @@ const analysisFieldsSchema = z.object({
   sugar: z.number(),
   sodium: z.number(),
   confidence: z.number().min(0).max(1),
+  estimatedServings: z.number().min(1).max(12).optional(),
 });
 
 const visionResponseSchema = z.object({
@@ -33,6 +34,7 @@ const visionResponseSchema = z.object({
   sugar: z.number().optional(),
   sodium: z.number().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  estimatedServings: z.number().min(1).max(12).optional(),
 });
 
 const SYSTEM_PROMPT = `You are a nutrition assistant for LifePlate, a meal-photo journaling app.
@@ -57,6 +59,7 @@ When isMealPhoto is true, also return:
 - sugar (grams)
 - sodium (milligrams)
 - confidence (0 to 1)
+- estimatedServings (number ≥ 1): how many portions/servings the visible food would feed (1 for a single plate, 2+ for shared trays, family-style dishes, or multiple plates)
 
 Do not return markdown.`;
 
@@ -71,6 +74,7 @@ const MOCK: MealAnalysisResult = {
   sugar: 4,
   sodium: 520,
   confidence: 0.82,
+  estimatedServings: 1,
 };
 
 function isPlaceholderKey(key: string): boolean {
@@ -99,6 +103,7 @@ function parseVisionResponse(parsed: unknown): MealAnalysisResult {
     sugar: result.sugar,
     sodium: result.sodium,
     confidence: result.confidence,
+    estimatedServings: result.estimatedServings ?? 1,
   });
 
   assertMealAnalysis(analysis);
@@ -204,7 +209,7 @@ export async function refineMealImage(
 Previous analysis JSON: ${JSON.stringify(previous)}
 User correction: "${note}"
 Apply the correction (e.g. sauce type, portion, missing item). Update foods, macros, and confidence accordingly.
-Keep isMealPhoto true. Return JSON only with keys: isMealPhoto, rejectReason, mealName, foods, estimatedCalories, protein, carbs, fat, fibre, sugar, sodium, confidence.`;
+Keep isMealPhoto true. Return JSON only with keys: isMealPhoto, rejectReason, mealName, foods, estimatedCalories, protein, carbs, fat, fibre, sugar, sodium, confidence, estimatedServings.`;
 
   const response = await client.chat.completions.create({
     model: config.openaiModel,

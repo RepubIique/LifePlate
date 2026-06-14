@@ -172,9 +172,7 @@ export const MEAL_GUARDRAIL_CODES = [
 
 export type MealGuardrailCode = (typeof MEAL_GUARDRAIL_CODES)[number];
 
-export interface MealAnalysisResult {
-  mealName: string;
-  foods: string[];
+export interface MealMacroTotals {
   estimatedCalories: number;
   protein: number;
   carbs: number;
@@ -182,7 +180,51 @@ export interface MealAnalysisResult {
   fibre: number;
   sugar: number;
   sodium: number;
+}
+
+export interface MealAnalysisResult extends MealMacroTotals {
+  mealName: string;
+  foods: string[];
   confidence: number;
+  /** AI estimate of how many portions are visible in the photo (≥ 1). */
+  estimatedServings?: number;
+}
+
+/** True when the photo likely shows more food than one person would eat. */
+export function isLikelySharedMeal(
+  analysis: Pick<MealAnalysisResult, "estimatedCalories" | "estimatedServings">,
+  dailyCalories?: number | null,
+): boolean {
+  const servings = analysis.estimatedServings;
+  if (servings != null && servings >= 2) return true;
+  const threshold = dailyCalories
+    ? Math.round(dailyCalories * 0.55)
+    : 900;
+  return analysis.estimatedCalories >= threshold;
+}
+
+export function clampMealPortions(value: number, min = 1, max = 12): number {
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+/** Scale total photo macros to what the user actually ate. */
+export function scaleMealForPortions(
+  macros: MealMacroTotals,
+  totalServings: number,
+  portionsEaten = 1,
+): MealMacroTotals {
+  const servings = clampMealPortions(totalServings);
+  const eaten = clampMealPortions(portionsEaten, 1, servings);
+  const factor = eaten / servings;
+  return {
+    estimatedCalories: Math.round(macros.estimatedCalories * factor),
+    protein: Math.round(macros.protein * factor),
+    carbs: Math.round(macros.carbs * factor),
+    fat: Math.round(macros.fat * factor),
+    fibre: Math.round(macros.fibre * factor),
+    sugar: Math.round(macros.sugar * factor),
+    sodium: Math.round(macros.sodium * factor),
+  };
 }
 
 export interface MealUploadResponse extends MealAnalysisResult {
