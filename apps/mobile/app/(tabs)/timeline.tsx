@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { Button, Snackbar } from "react-native-paper";
+import { ActivityIndicator, Button, Snackbar, Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
 import { todayDateKey } from "@lifeplate/shared";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
@@ -10,8 +10,8 @@ import { TimelineDayHydration } from "@/components/timeline/TimelineDayHydration
 import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
+import { TimelineSkeleton } from "@/components/skeletons/TimelineSkeleton";
 import { PremiumHeader } from "@/components/PremiumHeader";
-import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Screen } from "@/components/Screen";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
@@ -21,7 +21,7 @@ import { deleteMeal } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
+import { useMealPhotoUpload, uploadStageLabel } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
@@ -42,7 +42,8 @@ export default function TimelineScreen() {
     restoreMealLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
-  const { uploading, pickAndAnalyze } = useMealPhotoUpload();
+  const { uploading, uploadStage, pickAndAnalyze, error, setError, retryLastAsset, lastAssetRef } =
+    useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
   refreshAfterMealChangeRef.current = refreshAfterMealChange;
@@ -135,9 +136,10 @@ export default function TimelineScreen() {
   );
   const weekMeals = countMealsThisWeek(meals);
   const hasAnyEntries = groups.length > 0;
+  const showSkeleton = loading && !refreshing && meals.length === 0;
 
   return (
-    <Screen padded={false} loading={loading && !refreshing && meals.length === 0}>
+    <Screen padded={false}>
       <PremiumHeader
         title="Timeline"
         subtitle="Your health story, chronologically"
@@ -145,6 +147,15 @@ export default function TimelineScreen() {
 
       {hasAnyEntries ? (
         <TimelineSummaryBar totalMeals={meals.length} weekMeals={weekMeals} />
+      ) : null}
+
+      {uploading ? (
+        <View style={styles.uploadBanner}>
+          <ActivityIndicator size="small" />
+          <Text variant="bodySmall" style={styles.uploadText}>
+            {uploadStageLabel(uploadStage)}
+          </Text>
+        </View>
       ) : null}
 
       <ScrollView
@@ -161,7 +172,10 @@ export default function TimelineScreen() {
           />
         }
       >
-        {groups.map((group) => (
+        {showSkeleton ? <TimelineSkeleton /> : null}
+
+        {!showSkeleton
+          ? groups.map((group) => (
           <View key={group.dateKey} style={styles.dayGroup}>
             <TimelineDayHeader
               day={group.day}
@@ -194,9 +208,10 @@ export default function TimelineScreen() {
               Add meal for this day
             </Button>
           </View>
-        ))}
+        ))
+          : null}
 
-        {!loading && !hasAnyEntries ? (
+        {!showSkeleton && !loading && !hasAnyEntries ? (
           <View style={styles.emptyWrap}>
             <TimelineEmptyState />
             <Button mode="outlined" onPress={() => startMealLogForDay(todayDateKey())}>
@@ -206,7 +221,7 @@ export default function TimelineScreen() {
               Log a past day
             </Button>
           </View>
-        ) : (
+        ) : !showSkeleton ? (
           <View style={styles.pastActions}>
             <Button mode="text" onPress={() => setPastDayPickerOpen(true)}>
               Log another past day
@@ -215,7 +230,7 @@ export default function TimelineScreen() {
               Log past hydration
             </Button>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       <LogDatePickerModal
@@ -233,25 +248,40 @@ export default function TimelineScreen() {
       />
 
       <Snackbar
-        visible={!!snackbar}
-        onDismiss={() => setSnackbar(null)}
-        duration={UNDO_MS}
+        visible={!!error || !!snackbar}
+        onDismiss={() => {
+          setError(null);
+          setSnackbar(null);
+        }}
+        duration={error ? 6000 : UNDO_MS}
         action={
-          pendingRef.current.size > 0
-            ? { label: "Undo", onPress: undoDelete }
-            : undefined
+          error && lastAssetRef.current
+            ? { label: "Retry", onPress: () => void retryLastAsset() }
+            : pendingRef.current.size > 0 && !error
+              ? { label: "Undo", onPress: undoDelete }
+              : undefined
         }
       >
-        {snackbar}
+        {error ?? snackbar}
       </Snackbar>
-
-      <LoadingOverlay visible={uploading} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
+  uploadBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: "#F8FBF9",
+  },
+  uploadText: { opacity: 0.75 },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,

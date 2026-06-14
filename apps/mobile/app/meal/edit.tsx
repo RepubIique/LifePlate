@@ -18,7 +18,7 @@ import {
   type MealMacroTotals,
 } from "@lifeplate/shared";
 import { MealLogDateField, mealDateKeyFromIso } from "@/components/meal/MealLogDateField";
-import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { EditMealSkeleton } from "@/components/skeletons/EditMealSkeleton";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
@@ -262,7 +262,12 @@ export default function EditMealScreen() {
 
   return (
     <View style={styles.page}>
-      {meal ? (
+      {loading ? (
+        <>
+          <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
+          <EditMealSkeleton />
+        </>
+      ) : meal ? (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
       <View style={styles.imageWrap}>
@@ -418,7 +423,6 @@ export default function EditMealScreen() {
       </Snackbar>
     </KeyboardAvoidingScrollView>
       ) : null}
-      <LoadingOverlay visible={loading} />
     </View>
   );
 }

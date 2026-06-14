@@ -6,6 +6,7 @@ import type { ComparisonPeriod } from "@lifeplate/shared";
 import { PeriodComparisonCard } from "@/components/insights/PeriodComparisonCard";
 import { PeriodSelector } from "@/components/insights/PeriodSelector";
 import { LifePlateInsightCard } from "@/components/nutrition/LifePlateInsightCard";
+import { InsightsSkeleton } from "@/components/skeletons/InsightsSkeleton";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
@@ -24,13 +25,15 @@ export default function InsightsScreen() {
   );
 
   return (
-    <Screen scroll padded={false} loading={loading && !dashboard}>
+    <Screen scroll padded={false}>
       <PremiumHeader
         title="Insights"
         subtitle="See how you're tracking over time"
       />
       <View style={styles.body}>
-        {dashboard ? (
+        {loading && !dashboard ? (
+          <InsightsSkeleton />
+        ) : dashboard ? (
           <>
             <PeriodSelector value={period} onChange={setPeriod} />
 

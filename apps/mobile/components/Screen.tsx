@@ -10,13 +10,11 @@ import {
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = ViewProps & {
   scroll?: boolean;
   padded?: boolean;
-  loading?: boolean;
   keyboardVerticalOffset?: number;
 };
 
@@ -62,7 +60,6 @@ export function KeyboardAvoidingScrollView({
 export function Screen({
   scroll,
   padded = true,
-  loading = false,
   style,
   children,
   keyboardVerticalOffset = 0,
@@ -81,7 +78,6 @@ export function Screen({
   const shell = (body: ReactNode) => (
     <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
       {body}
-      <LoadingOverlay visible={loading} />
     </View>
   );
 

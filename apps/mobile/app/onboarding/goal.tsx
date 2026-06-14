@@ -7,6 +7,7 @@ import { GOALS, isOnboardingComplete, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { updateGoal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
@@ -47,13 +48,22 @@ export default function GoalScreen() {
   }
 
   return (
-    <Screen scroll padded={false} loading={profileLoading && !profile}>
+    <Screen scroll padded={false}>
       <PremiumHeader
         title="What is your goal?"
         subtitle="We’ll tailor your experience. You can change this later."
       />
       <View style={[styles.body, { paddingBottom: insets.bottom + spacing.xl }]}>
-        {GOALS.map((g) => {
+        {profileLoading && !profile ? (
+          <>
+            {[0, 1, 2].map((index) => (
+              <PremiumCard key={index} noBlur style={styles.goalCard}>
+                <Skeleton width="70%" height={22} />
+              </PremiumCard>
+            ))}
+          </>
+        ) : (
+          GOALS.map((g) => {
           const selected = goal === g;
           return (
             <Pressable key={g} onPress={() => setGoal(g)}>
@@ -67,7 +77,8 @@ export default function GoalScreen() {
               </PremiumCard>
             </Pressable>
           );
-        })}
+        })
+        )}
         <Button mode="contained" onPress={handleContinue} loading={saving} style={styles.cta}>
           Continue
         </Button>

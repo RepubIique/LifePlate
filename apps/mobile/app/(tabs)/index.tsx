@@ -9,6 +9,7 @@ import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
@@ -17,7 +18,6 @@ import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { premium } from "@/src/theme/premium";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
@@ -30,8 +30,9 @@ function isToday(iso: string) {
 
 export default function HomeScreen() {
   const { profile } = useAuth();
-  const { meals, loading, loadMeals } = useMeals();
-  const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
+  const { meals, loading: mealsLoading, loadMeals } = useMeals();
+  const { dashboard, loading: dashboardLoading, loadDashboard, patchHydration } =
+    useNutritionDashboard();
   const { adjustHydration, syncDate, subscribePersisted } = useHydration();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
@@ -63,6 +64,7 @@ export default function HomeScreen() {
     error,
     uploading,
     setLogDate,
+    setError,
     pickAndAnalyze,
     retryLastAsset,
     lastAssetRef,
@@ -90,9 +92,11 @@ export default function HomeScreen() {
   }, [dashboard?.essentials.hydration.consumed, syncDate]);
 
   const todayMeals = meals.filter((m) => isToday(m.createdAt));
+  const showDashboardSkeleton = dashboardLoading && !dashboard;
+  const showMealsSkeleton = mealsLoading && meals.length === 0;
 
   return (
-    <Screen scroll padded={false} loading={loading && meals.length === 0}>
+    <Screen scroll padded={false}>
       <PremiumHeader
         title="LifePlate"
         subtitle={`${profile?.currentStreak ?? 0} day streak`}
@@ -163,23 +167,6 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : null}
-
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text variant="bodySmall" style={styles.errorText}>
-                {error}
-              </Text>
-              {lastAssetRef.current ? (
-                <Button
-                  mode="text"
-                  compact
-                  onPress={() => void retryLastAsset()}
-                >
-                  Retry
-                </Button>
-              ) : null}
-            </View>
-          ) : null}
         </PremiumCard>
       </View>
 
@@ -189,7 +176,9 @@ export default function HomeScreen() {
           onLogSuggested={() => pickAndAnalyze(preferredSource !== "library")}
         />
 
-        {dashboard ? (
+        {showDashboardSkeleton ? (
+          <HomeDashboardSkeleton />
+        ) : dashboard ? (
           <>
             <TodayAtGlanceCard
               dashboard={dashboard}
@@ -208,25 +197,41 @@ export default function HomeScreen() {
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Today&apos;s meals
         </Text>
-        {!loading && todayMeals.length === 0 ? (
+        {!showMealsSkeleton && !mealsLoading && todayMeals.length === 0 ? (
           <Text variant="bodyMedium" style={styles.emptyMeals}>
             No meals yet today. Snap your first plate.
           </Text>
         ) : null}
-        {todayMeals.map((meal) => (
-          <MealRowCard
-            key={meal.id}
-            mealId={meal.id}
-            mealName={meal.mealName}
-            subtitle={formatMealTypeLabel(meal.mealType)}
-            imageUrl={meal.imageUrl}
-            onPress={() => openMealEdit(meal.id, "home")}
-          />
-        ))}
+        {showMealsSkeleton ? (
+          <HomeMealsSkeleton />
+        ) : (
+          todayMeals.map((meal) => (
+            <MealRowCard
+              key={meal.id}
+              mealId={meal.id}
+              mealName={meal.mealName}
+              subtitle={formatMealTypeLabel(meal.mealType)}
+              imageUrl={meal.imageUrl}
+              onPress={() => openMealEdit(meal.id, "home")}
+            />
+          ))
+        )}
       </View>
 
-      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
-        {snackbar}
+      <Snackbar
+        visible={!!snackbar || !!error}
+        onDismiss={() => {
+          setSnackbar(null);
+          setError(null);
+        }}
+        duration={error ? 6000 : 4000}
+        action={
+          error && lastAssetRef.current
+            ? { label: "Retry", onPress: () => void retryLastAsset() }
+            : undefined
+        }
+      >
+        {error ?? snackbar}
       </Snackbar>
     </Screen>
   );
@@ -240,8 +245,6 @@ const styles = StyleSheet.create({
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
   uploading: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, alignItems: "center" },
   stageText: { opacity: 0.7 },
-  errorBox: { marginTop: spacing.md, gap: spacing.xs },
-  errorText: { color: premium.danger },
   dashboard: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,

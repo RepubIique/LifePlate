@@ -28,6 +28,9 @@ export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return "Session expired. Please sign in again.";
     if (err.status === 413) return "Photo is too large. Try a smaller image or crop.";
+    if (err.status >= 500) {
+      return "Couldn't upload your meal right now. Check your connection and try again.";
+    }
     if (err.status === 429 || err.code === "RATE_LIMITED") {
       return err.message || "You've reached the limit for this hour. Try again in a bit.";
     }
