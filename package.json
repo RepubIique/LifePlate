@@ -13,10 +13,5 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @lifeplate/shared test && pnpm --filter @lifeplate/api test && pnpm --filter @lifeplate/mobile test",
     "build:api": "pnpm --filter @lifeplate/shared build && pnpm --filter @lifeplate/api build"
-  },
-  "dependencies": {
-    "expo": "~56.0.0-preview.8",
-    "react": "19.2.3",
-    "react-native": "0.85.3"
   }
 }

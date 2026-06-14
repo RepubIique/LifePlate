@@ -11,6 +11,12 @@ coverage
 # Accidental Expo prebuild at repo root (native app lives in apps/mobile)
 /app.json
 /ios/
+/eas.json
+
+# Logs and local build metadata
+*.log
+**/*.log
+*.tsbuildinfo
 
 supabase/.temp
 apps/mobile/ios

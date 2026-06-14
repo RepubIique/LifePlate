@@ -9,15 +9,9 @@ import {
   formatEnergyValue,
   type EnergyUnit,
 } from "@/lib/macroMath";
+import { MACRO_NUTRITION_COLORS } from "@/lib/pillarTheme";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
-
-const MACRO_COLORS = {
-  fibre: "#2D6A4F",
-  protein: "#1B4332",
-  carbs: "#40916C",
-  fat: "#74C69D",
-} as const;
 
 const RING_SIZE = 168;
 const STROKE = 14;
@@ -220,9 +214,9 @@ export function MacroNutritionPanel({
     : `${Math.round(fibrePctOfDay)}% of ${Math.round(fibreGoal)}g daily default · personalise in profile`;
 
   const segments: Segment[] = [
-    { pct: data.proteinPct, color: MACRO_COLORS.protein },
-    { pct: data.carbsPct, color: MACRO_COLORS.carbs },
-    { pct: data.fatPct, color: MACRO_COLORS.fat },
+    { pct: data.proteinPct, color: MACRO_NUTRITION_COLORS.protein },
+    { pct: data.carbsPct, color: MACRO_NUTRITION_COLORS.carbs },
+    { pct: data.fatPct, color: MACRO_NUTRITION_COLORS.fat },
   ];
 
   const maxGrams = Math.max(data.protein, data.carbs, data.fat, 1);
@@ -241,17 +235,17 @@ export function MacroNutritionPanel({
       />
 
       <View style={styles.legend}>
-        <LegendChip label="Fibre" color={MACRO_COLORS.fibre} />
-        <LegendChip label="Protein" color={MACRO_COLORS.protein} />
-        <LegendChip label="Carbs" color={MACRO_COLORS.carbs} />
-        <LegendChip label="Fat" color={MACRO_COLORS.fat} />
+        <LegendChip label="Fibre" color={MACRO_NUTRITION_COLORS.fibre} />
+        <LegendChip label="Protein" color={MACRO_NUTRITION_COLORS.protein} />
+        <LegendChip label="Carbs" color={MACRO_NUTRITION_COLORS.carbs} />
+        <LegendChip label="Fat" color={MACRO_NUTRITION_COLORS.fat} />
       </View>
 
       <View style={styles.bars}>
         <MacroBar
           label="Fibre"
           grams={fibre}
-          color={MACRO_COLORS.fibre}
+          color={MACRO_NUTRITION_COLORS.fibre}
           maxGrams={fibreGoal}
           subtitle={fibreSubtitle}
         />
@@ -259,21 +253,21 @@ export function MacroNutritionPanel({
           label="Protein"
           grams={data.protein}
           pct={data.proteinPct}
-          color={MACRO_COLORS.protein}
+          color={MACRO_NUTRITION_COLORS.protein}
           maxGrams={maxGrams}
         />
         <MacroBar
           label="Carbs"
           grams={data.carbs}
           pct={data.carbsPct}
-          color={MACRO_COLORS.carbs}
+          color={MACRO_NUTRITION_COLORS.carbs}
           maxGrams={maxGrams}
         />
         <MacroBar
           label="Fat"
           grams={data.fat}
           pct={data.fatPct}
-          color={MACRO_COLORS.fat}
+          color={MACRO_NUTRITION_COLORS.fat}
           maxGrams={maxGrams}
         />
       </View>
