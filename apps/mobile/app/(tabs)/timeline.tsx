@@ -1,17 +1,19 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { Snackbar, Text } from "react-native-paper";
+import { Snackbar } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
-import { MealRowCard } from "@/components/MealRowCard";
+import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
+import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
+import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
+import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useMeals } from "@/context/MealsContext";
 import { deleteMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { formatMealTime, formatMealTypeLabel, groupMealsByDay } from "@/lib/mealUtils";
-import { premiumStyles } from "@/src/theme/premium";
+import { countMealsThisWeek, groupMealsByDay } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
@@ -70,13 +72,19 @@ export default function TimelineScreen() {
   }
 
   const groups = groupMealsByDay(meals);
+  const weekMeals = countMealsThisWeek(meals);
 
   return (
-    <Screen padded={false} loading={loading && !refreshing}>
+    <Screen padded={false} loading={loading && !refreshing && meals.length === 0}>
       <PremiumHeader
         title="Timeline"
-        subtitle={meals.length ? `${meals.length} meals logged` : "Your health story, chronologically"}
+        subtitle="Your health story, chronologically"
       />
+
+      {meals.length > 0 ? (
+        <TimelineSummaryBar totalMeals={meals.length} weekMeals={weekMeals} />
+      ) : null}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.list}
@@ -90,27 +98,26 @@ export default function TimelineScreen() {
         }
       >
         {groups.map((group) => (
-          <View key={group.day} style={styles.dayGroup}>
-            <Text variant="titleSmall" style={styles.dayLabel}>
-              {group.day}
-            </Text>
-            {group.meals.map((meal) => (
-              <MealRowCard
+          <View key={group.dateKey} style={styles.dayGroup}>
+            <TimelineDayHeader
+              day={group.day}
+              subtitle={group.subtitle}
+              mealCount={group.meals.length}
+              isToday={group.isToday}
+            />
+            {group.meals.map((meal, index) => (
+              <TimelineMealCard
                 key={meal.id}
-                mealName={meal.mealName}
-                subtitle={`${formatMealTypeLabel(meal.mealType)} · ${formatMealTime(meal.createdAt)}`}
-                imageUrl={meal.imageUrl}
+                meal={meal}
+                isLast={index === group.meals.length - 1}
                 onPress={() => router.push({ pathname: "/meal/edit", params: { id: meal.id } })}
                 onDelete={() => scheduleDelete(meal)}
               />
             ))}
           </View>
         ))}
-        {!loading && meals.length === 0 ? (
-          <Text variant="bodyMedium" style={premiumStyles.empty}>
-            Your meal history will appear here.
-          </Text>
-        ) : null}
+
+        {!loading && meals.length === 0 ? <TimelineEmptyState /> : null}
       </ScrollView>
 
       <Snackbar
@@ -131,12 +138,11 @@ export default function TimelineScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
-  dayGroup: { marginBottom: spacing.lg },
-  dayLabel: {
-    opacity: 0.65,
-    marginBottom: spacing.sm,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  dayGroup: {
+    marginBottom: spacing.lg,
   },
 });

@@ -239,11 +239,15 @@ export async function mealRoutes(app: FastifyInstance) {
         meal_name: string;
         image_url: string;
         created_at: Date;
+        calories: number | null;
+        protein: number | null;
       }>(
-        `SELECT id, meal_type, meal_name, image_url, created_at
-         FROM meals
-         WHERE user_id = $1
-         ORDER BY created_at DESC
+        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+                a.calories, a.protein
+         FROM meals m
+         LEFT JOIN meal_analysis a ON a.meal_id = m.id
+         WHERE m.user_id = $1
+         ORDER BY m.created_at DESC
          LIMIT 100`,
         [userId],
       );
@@ -254,6 +258,8 @@ export async function mealRoutes(app: FastifyInstance) {
         mealName: r.meal_name,
         imageUrl: r.image_url,
         createdAt: r.created_at.toISOString(),
+        calories: r.calories,
+        protein: r.protein,
       }));
 
       return { meals };

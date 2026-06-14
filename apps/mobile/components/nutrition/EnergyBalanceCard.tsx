@@ -2,63 +2,85 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { EnergyMetric } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { spacing } from "@/src/theme/lifeplate";
-import { BulletList, statusEmoji } from "./shared";
+import { BulletList } from "./shared";
 
 type Props = {
   carbs: EnergyMetric;
   fats: EnergyMetric;
 };
 
-function EnergyRow({ metric }: { metric: EnergyMetric }) {
+function energyStatusLabel(status: EnergyMetric["status"]): string {
+  if (status === "good") return "Balanced";
+  if (status === "moderate") return "Moderate";
+  return "Low";
+}
+
+function EnergyMetricCard({ metric }: { metric: EnergyMetric }) {
   return (
-    <View style={styles.metric}>
-      <Text variant="titleMedium">
-        {metric.emoji} {metric.label}
-      </Text>
-      <Text variant="headlineSmall" style={styles.grams}>
-        {metric.grams}g
-      </Text>
-      <Text variant="bodyMedium" style={styles.description}>
+    <View style={styles.metricCard}>
+      <View style={styles.metricHeader}>
+        <Text style={styles.emoji}>{metric.emoji}</Text>
+        <View style={styles.metricTitle}>
+          <Text variant="titleSmall" style={styles.label}>
+            {metric.label}
+          </Text>
+          <Text variant="headlineSmall" style={styles.grams}>
+            {metric.grams}g
+          </Text>
+        </View>
+        <StatusBadge status={metric.status} label={energyStatusLabel(metric.status)} />
+      </View>
+      <Text variant="bodySmall" style={styles.description}>
         {metric.description}
       </Text>
-      <Text variant="bodyMedium" style={styles.status}>
-        Status: {statusEmoji(metric.status)} {metric.status === "good" ? "Good" : metric.status === "moderate" ? "Balanced" : "Low"}
-      </Text>
-      <View style={styles.equiv}>
-        <Text variant="labelLarge" style={styles.equivLabel}>
-          Equivalent to
-        </Text>
-        <BulletList items={metric.equivalents} />
-      </View>
+      {metric.equivalents.length > 0 ? (
+        <View style={styles.equiv}>
+          <Text variant="labelMedium" style={styles.equivLabel}>
+            Equivalent to
+          </Text>
+          <BulletList items={metric.equivalents.slice(0, 2)} />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 export function EnergyBalanceCard({ carbs, fats }: Props) {
   return (
-    <PremiumCard>
+    <PremiumCard style={styles.card}>
       <Text variant="titleMedium" style={styles.title}>
-        Energy Balance
+        Energy balance
       </Text>
-      <EnergyRow metric={carbs} />
-      <View style={styles.divider} />
-      <EnergyRow metric={fats} />
+      <View style={styles.grid}>
+        <EnergyMetricCard metric={carbs} />
+        <EnergyMetricCard metric={fats} />
+      </View>
     </PremiumCard>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { letterSpacing: 0.15, marginBottom: spacing.sm },
-  metric: { gap: spacing.xs },
-  grams: { letterSpacing: 0.1 },
-  description: { opacity: 0.75, lineHeight: 20 },
-  status: { opacity: 0.85 },
-  equiv: { marginTop: spacing.sm, gap: spacing.xs },
-  equivLabel: { opacity: 0.55, letterSpacing: 0.6, textTransform: "uppercase" },
-  divider: {
-    height: 1,
-    backgroundColor: "#F1F3F5",
-    marginVertical: spacing.md,
+  card: { gap: spacing.md },
+  title: { letterSpacing: 0.15 },
+  grid: { gap: spacing.sm },
+  metricCard: {
+    backgroundColor: "#F8FBF9",
+    borderRadius: 14,
+    padding: spacing.sm,
+    gap: spacing.xs,
   },
+  metricHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  emoji: { fontSize: 22 },
+  metricTitle: { flex: 1 },
+  label: { opacity: 0.65, letterSpacing: 0.2 },
+  grams: { fontWeight: "700", letterSpacing: -0.3 },
+  description: { opacity: 0.7, lineHeight: 18 },
+  equiv: { marginTop: spacing.xs, gap: 2 },
+  equivLabel: { opacity: 0.45, letterSpacing: 0.6, textTransform: "uppercase" },
 });

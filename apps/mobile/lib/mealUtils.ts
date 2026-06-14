@@ -21,7 +21,9 @@ export function formatDayLabel(iso: string): string {
   });
 }
 
-export function groupMealsByDay(meals: MealListSummary[]): { day: string; meals: MealListSummary[] }[] {
+export function groupMealsByDay(
+  meals: MealListSummary[],
+): { day: string; subtitle: string; dateKey: string; isToday: boolean; meals: MealListSummary[] }[] {
   const map = new Map<string, MealListSummary[]>();
 
   for (const meal of meals) {
@@ -31,12 +33,61 @@ export function groupMealsByDay(meals: MealListSummary[]): { day: string; meals:
     map.set(key, list);
   }
 
+  const today = new Date();
+
   return [...map.entries()]
     .sort(([a], [b]) => (a < b ? 1 : -1))
-    .map(([, dayMeals]) => ({
-      day: formatDayLabel(dayMeals[0].createdAt),
-      meals: dayMeals,
-    }));
+    .map(([dateKey, dayMeals]) => {
+      const first = dayMeals[0]!;
+      const d = new Date(first.createdAt);
+      const isToday =
+        d.getDate() === today.getDate() &&
+        d.getMonth() === today.getMonth() &&
+        d.getFullYear() === today.getFullYear();
+
+      return {
+        dateKey,
+        day: formatDayLabel(first.createdAt),
+        subtitle: d.toLocaleDateString(undefined, {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        }),
+        isToday,
+        meals: dayMeals,
+      };
+    });
+}
+
+export function countMealsThisWeek(meals: MealListSummary[]): number {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setHours(0, 0, 0, 0);
+  return meals.filter((meal) => new Date(meal.createdAt) >= cutoff).length;
+}
+
+export function mealTypeIcon(
+  mealType: string | null | undefined,
+):
+  | "weather-sunset-up"
+  | "white-balance-sunny"
+  | "weather-night"
+  | "cookie-outline"
+  | "silverware-fork-knife" {
+  switch (mealType) {
+    case "breakfast":
+      return "weather-sunset-up";
+    case "lunch":
+      return "white-balance-sunny";
+    case "dinner":
+      return "weather-night";
+    case "snack":
+    case "beverage":
+    case "dessert":
+      return "cookie-outline";
+    default:
+      return "silverware-fork-knife";
+  }
 }
 
 export function formatMealTime(iso: string) {

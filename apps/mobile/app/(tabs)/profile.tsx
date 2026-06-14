@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ActionSheetIOS, Alert, Platform, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Text, TextInput } from "react-native-paper";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
@@ -8,31 +9,17 @@ import {
   toOptionalInt,
   toOptionalNumber,
 } from "@/components/BodyMetricsForm";
+import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { ProfileStatsRow } from "@/components/profile/ProfileStatsRow";
 import { PremiumCard } from "@/components/PremiumCard";
-import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
+import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMealsFull, updateProfile } from "@/lib/api";
+import { fetchMealsFull, updateProfile, uploadProfileAvatar } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
+import { prepareProfileImage } from "@/lib/imagePrep";
 import { spacing } from "@/src/theme/lifeplate";
-
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text variant="bodyMedium" style={styles.rowLabel}>
-        {label}
-      </Text>
-      <Text variant="bodyLarge">{value}</Text>
-    </View>
-  );
-}
-
-function metricEqual(stored: number | null, draft: number | null): boolean {
-  if (stored == null && draft == null) return true;
-  if (stored == null || draft == null) return false;
-  return Math.abs(stored - draft) < 0.01;
-}
 
 function applyProfileToForm(
   profile: UserProfile | null | undefined,
@@ -53,6 +40,12 @@ function applyProfileToForm(
   setters.setGender(profile?.gender ?? null);
 }
 
+function metricEqual(stored: number | null, draft: number | null): boolean {
+  if (stored == null && draft == null) return true;
+  if (stored == null || draft == null) return false;
+  return Math.abs(stored - draft) < 0.01;
+}
+
 export default function ProfileScreen() {
   const { profile, linkProvider, loadProfile, patchProfile, signOut } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
@@ -66,6 +59,7 @@ export default function ProfileScreen() {
   const [age, setAge] = useState(profile?.age != null ? String(profile.age) : "");
   const [gender, setGender] = useState<Gender | null>(profile?.gender ?? null);
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -185,14 +179,98 @@ export default function ProfileScreen() {
     }
   }
 
+  async function pickAvatarFromSource(useCamera: boolean) {
+    const permission = useCamera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setSnackbar("Permission required to access photos or camera.");
+      return;
+    }
+
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync({
+          quality: 0.85,
+          allowsEditing: true,
+          aspect: [1, 1],
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          quality: 0.85,
+          allowsEditing: true,
+          aspect: [1, 1],
+        });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setAvatarUploading(true);
+    try {
+      const prepared = await prepareProfileImage(result.assets[0].uri);
+      const { avatarUrl } = await uploadProfileAvatar(prepared);
+      patchProfile({ avatarUrl });
+      setSnackbar("Profile photo updated");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  function showAvatarPicker() {
+    const options = ["Take photo", "Choose from library", "Cancel"];
+    const cancelIndex = 2;
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: cancelIndex,
+        },
+        (index) => {
+          if (index === 0) void pickAvatarFromSource(true);
+          if (index === 1) void pickAvatarFromSource(false);
+        },
+      );
+      return;
+    }
+
+    Alert.alert("Profile photo", "Update your profile picture", [
+      { text: "Take photo", onPress: () => void pickAvatarFromSource(true) },
+      { text: "Choose from library", onPress: () => void pickAvatarFromSource(false) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  const displayName = name.trim() || profile?.name?.trim() || "Your profile";
+
   return (
     <Screen scroll padded={false}>
-      <PremiumHeader
-        title="Profile"
-        subtitle={profile?.email ?? "Your account"}
-      />
       <View style={styles.body}>
-        <PremiumCard>
+        <PremiumCard style={styles.hero}>
+          <ProfileAvatar
+            avatarUrl={profile?.avatarUrl ?? null}
+            name={displayName}
+            uploading={avatarUploading}
+            onPress={showAvatarPicker}
+          />
+          <Text variant="headlineSmall" style={styles.heroName}>
+            {displayName}
+          </Text>
+          <Text variant="bodyMedium" style={styles.heroEmail}>
+            {profile?.email ?? "Your account"}
+          </Text>
+          <Text variant="bodySmall" style={styles.avatarHint}>
+            Tap photo to update
+          </Text>
+        </PremiumCard>
+
+        <ProfileStatsRow
+          mealsLogged={profile?.mealsLogged ?? 0}
+          currentStreak={profile?.currentStreak ?? 0}
+          longestStreak={profile?.longestStreak ?? 0}
+        />
+
+        <SectionLabel title="About you" />
+        <PremiumCard style={styles.formCard}>
           <TextInput
             label="Name"
             value={name}
@@ -211,17 +289,16 @@ export default function ProfileScreen() {
               setGoal(value);
             }}
             mode="outlined"
+            placeholder="e.g. Increase protein"
             style={styles.input}
           />
         </PremiumCard>
 
-        <PremiumCard>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Body metrics
-          </Text>
-          <Text variant="bodySmall" style={styles.sectionHint}>
-            Used to estimate your daily fibre and calorie targets.
-          </Text>
+        <SectionLabel
+          title="Body metrics"
+          subtitle="Used to estimate your daily fibre and calorie targets"
+        />
+        <PremiumCard style={styles.formCard}>
           <BodyMetricsForm
             weightKg={weightKg}
             heightCm={heightCm}
@@ -244,49 +321,51 @@ export default function ProfileScreen() {
               setGender(value);
             }}
           />
-          <Button mode="contained" onPress={handleSave} disabled={saving} loading={saving}>
-            Save profile
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            disabled={saving || !canSave}
+            loading={saving}
+            style={styles.saveButton}
+          >
+            Save changes
           </Button>
         </PremiumCard>
 
-        <PremiumCard>
-          <ProfileRow label="Meals logged" value={String(profile?.mealsLogged ?? 0)} />
-          <ProfileRow
-            label="Current streak"
-            value={`${profile?.currentStreak ?? 0} days`}
-          />
-          <ProfileRow
-            label="Longest streak"
-            value={`${profile?.longestStreak ?? 0} days`}
-          />
-        </PremiumCard>
-
-        <Text variant="titleMedium" style={styles.sectionLabel}>
-          Linked accounts
-        </Text>
-        <PremiumCard noBlur>
+        <SectionLabel title="Account" />
+        <PremiumCard style={styles.formCard} noBlur>
           <View style={styles.linkActions}>
-            <Button mode="outlined" onPress={() => linkProvider("apple")}>
+            <Button mode="outlined" icon="apple" onPress={() => linkProvider("apple")}>
               Link Apple
             </Button>
-            <Button mode="outlined" onPress={() => linkProvider("google")}>
+            <Button mode="outlined" icon="google" onPress={() => linkProvider("google")}>
               Link Google
             </Button>
           </View>
         </PremiumCard>
 
-        <Button mode="text" onPress={handleExport} loading={exporting} style={styles.export}>
-          Export data
-        </Button>
-        <Button
-          mode="outlined"
-          onPress={async () => {
-            await signOut();
-            router.replace("/(auth)/welcome");
-          }}
-        >
-          Sign out
-        </Button>
+        <View style={styles.actions}>
+          <Button
+            mode="text"
+            icon="export-variant"
+            onPress={handleExport}
+            loading={exporting}
+            disabled={exporting}
+          >
+            Export data
+          </Button>
+          <Button
+            mode="outlined"
+            icon="logout"
+            textColor="#c0392b"
+            onPress={async () => {
+              await signOut();
+              router.replace("/(auth)/welcome");
+            }}
+          >
+            Sign out
+          </Button>
+        </View>
       </View>
 
       <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
@@ -297,17 +376,31 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
-  input: { marginBottom: spacing.sm },
-  sectionTitle: { letterSpacing: 0.15, marginBottom: spacing.xs },
-  sectionHint: { opacity: 0.65, lineHeight: 18, marginBottom: spacing.sm },
-  row: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F3F5",
+  body: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
-  rowLabel: { opacity: 0.65, marginBottom: 2 },
-  sectionLabel: { marginTop: spacing.sm, letterSpacing: 0.15 },
+  hero: {
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: "#F8FBF9",
+    paddingVertical: spacing.xl,
+  },
+  heroName: {
+    marginTop: spacing.sm,
+    letterSpacing: 0.15,
+    color: "#1B4332",
+  },
+  heroEmail: { opacity: 0.6 },
+  avatarHint: { opacity: 0.45, marginTop: 2 },
+  formCard: { gap: spacing.sm },
+  input: { backgroundColor: "#FFFFFF" },
+  saveButton: { marginTop: spacing.sm },
   linkActions: { gap: spacing.sm },
-  export: { alignSelf: "flex-start" },
+  actions: {
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
 });

@@ -1,18 +1,8 @@
+import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { PillarStatus } from "@lifeplate/shared";
 import { spacing } from "@/src/theme/lifeplate";
-
-export function ProgressBlocks({ progress, blocks = 10 }: { progress: number; blocks?: number }) {
-  const filled = Math.round(Math.max(0, Math.min(1, progress)) * blocks);
-  const bar = "█".repeat(filled) + "░".repeat(blocks - filled);
-
-  return (
-    <Text variant="bodySmall" style={styles.blocks}>
-      {bar}
-    </Text>
-  );
-}
 
 export function statusLabel(status: PillarStatus | "on_track" | "moderate" | "needs_improvement"): string {
   if (status === "good" || status === "on_track") return "Good";
@@ -24,10 +14,6 @@ export function statusEmoji(status: PillarStatus | "on_track" | "moderate" | "ne
   if (status === "good" || status === "on_track") return "🟢";
   if (status === "moderate") return "🟡";
   return "🔴";
-}
-
-export function SectionDivider() {
-  return <View style={styles.divider} />;
 }
 
 export function BulletList({ items }: { items: string[] }) {
@@ -43,17 +29,68 @@ export function BulletList({ items }: { items: string[] }) {
   );
 }
 
+export function FoodChips({ items, emptyLabel }: { items: string[]; emptyLabel?: string }) {
+  if (items.length === 0) {
+    return emptyLabel ? (
+      <Text variant="bodyMedium" style={styles.empty}>
+        {emptyLabel}
+      </Text>
+    ) : null;
+  }
+
+  return (
+    <View style={styles.chips}>
+      {items.map((item) => (
+        <View key={item} style={styles.chip}>
+          <Text variant="labelMedium" style={styles.chipText}>
+            {item}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function DetailBlock({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.detailBlock}>
+      <Text variant="labelLarge" style={styles.detailLabel}>
+        {label}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  blocks: {
-    letterSpacing: 1,
-    opacity: 0.85,
-    fontFamily: "Menlo",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F1F3F5",
-    marginVertical: spacing.sm,
-  },
   bulletList: { gap: 4 },
   bulletItem: { opacity: 0.85, lineHeight: 20 },
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: "#EEF2F0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  chipText: {
+    color: "#1B4332",
+    letterSpacing: 0.1,
+  },
+  empty: { opacity: 0.55, fontStyle: "italic" },
+  detailBlock: { gap: spacing.xs },
+  detailLabel: {
+    opacity: 0.5,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
 });

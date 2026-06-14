@@ -5,18 +5,21 @@ import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
 import type { ImagePickerAsset } from "expo-image-picker";
+import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
+import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
+import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { uploadMealImage } from "@/lib/api";
+import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
+import { uploadMealImage, updateHydration } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { premium } from "@/src/theme/premium";
-import { premiumStyles } from "@/src/theme/premium";
 import { getLastPhotoSource, setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
@@ -42,17 +45,20 @@ function stageLabel(stage: UploadStage) {
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading, loadMeals } = useMeals();
+  const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [hydrationUpdating, setHydrationUpdating] = useState(false);
   const lastAssetRef = useRef<ImagePickerAsset | null>(null);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+      void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       getLastPhotoSource().then(setPreferredSource);
-    }, [loadMeals]),
+    }, [loadMeals, loadDashboard]),
   );
 
   async function processAsset(asset: ImagePickerAsset) {
@@ -124,11 +130,24 @@ export default function HomeScreen() {
     await processAsset(asset);
   }
 
+  async function changeHydration(nextGlasses: number) {
+    if (!dashboard) return;
+    setHydrationUpdating(true);
+    try {
+      const { glasses } = await updateHydration(nextGlasses);
+      patchHydration(glasses);
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setHydrationUpdating(false);
+    }
+  }
+
   const uploading = uploadStage !== "idle";
   const todayMeals = meals.filter((m) => isToday(m.createdAt));
 
   return (
-    <Screen padded={false} loading={loading}>
+    <Screen scroll padded={false} loading={loading && meals.length === 0}>
       <PremiumHeader
         title="LifePlate"
         subtitle={`${profile?.currentStreak ?? 0} day streak`}
@@ -203,12 +222,38 @@ export default function HomeScreen() {
         </PremiumCard>
       </View>
 
+      <View style={styles.dashboard}>
+        <MealSlotsTracker
+          meals={todayMeals}
+          onLogSuggested={() => pickAndAnalyze(preferredSource !== "library")}
+        />
+
+        {dashboard ? (
+          <>
+            <TodayAtGlanceCard
+              dashboard={dashboard}
+              onPressInsights={() => router.push("/(tabs)/insights")}
+            />
+            <HydrationQuickAdd
+              pillar={dashboard.essentials.hydration}
+              updating={hydrationUpdating}
+              onIncrement={() =>
+                changeHydration(dashboard.essentials.hydration.consumed + 1)
+              }
+              onDecrement={() =>
+                changeHydration(dashboard.essentials.hydration.consumed - 1)
+              }
+            />
+          </>
+        ) : null}
+      </View>
+
       <View style={styles.section}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Today&apos;s meals
         </Text>
         {!loading && todayMeals.length === 0 ? (
-          <Text variant="bodyMedium" style={premiumStyles.empty}>
+          <Text variant="bodyMedium" style={styles.emptyMeals}>
             No meals yet today. Snap your first plate.
           </Text>
         ) : null}
@@ -231,7 +276,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   ctaText: { letterSpacing: 0.2 },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
@@ -239,6 +284,12 @@ const styles = StyleSheet.create({
   stageText: { opacity: 0.7 },
   errorBox: { marginTop: spacing.md, gap: spacing.xs },
   errorText: { color: premium.danger },
-  section: { paddingHorizontal: spacing.lg, flex: 1, paddingTop: spacing.sm },
+  dashboard: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  section: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, paddingTop: spacing.xs },
   sectionTitle: { marginBottom: spacing.md, letterSpacing: 0.15 },
+  emptyMeals: { opacity: 0.6, marginBottom: spacing.sm },
 });

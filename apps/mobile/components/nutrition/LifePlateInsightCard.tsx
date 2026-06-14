@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
 import { spacing } from "@/src/theme/lifeplate";
@@ -8,24 +8,47 @@ type Props = {
 };
 
 export function LifePlateInsightCard({ insight }: Props) {
+  if (!insight) return null;
+
   return (
-    <PremiumCard>
-      <Text variant="labelLarge" style={styles.label}>
-        LifePlate Insight
-      </Text>
-      <Text variant="bodyLarge" style={styles.insight}>
-        &ldquo;{insight}&rdquo;
-      </Text>
+    <PremiumCard style={styles.card}>
+      <View style={styles.accent} />
+      <View style={styles.content}>
+        <Text variant="labelLarge" style={styles.label}>
+          LifePlate insight
+        </Text>
+        <Text variant="bodyLarge" style={styles.insight}>
+          &ldquo;{insight}&rdquo;
+        </Text>
+      </View>
     </PremiumCard>
   );
 }
 
 const styles = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    overflow: "hidden",
+    padding: 0,
+    backgroundColor: "#F8FBF9",
+  },
+  accent: {
+    width: 4,
+    backgroundColor: "#40916C",
+  },
+  content: {
+    flex: 1,
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
   label: {
-    opacity: 0.55,
+    opacity: 0.5,
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    marginBottom: spacing.xs,
   },
-  insight: { lineHeight: 24, fontStyle: "italic", opacity: 0.9 },
+  insight: {
+    lineHeight: 24,
+    fontStyle: "italic",
+    opacity: 0.9,
+  },
 });

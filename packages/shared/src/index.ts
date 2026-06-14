@@ -222,6 +222,8 @@ export interface MealListSummary {
   mealName: string;
   imageUrl: string;
   createdAt: string;
+  calories?: number | null;
+  protein?: number | null;
 }
 
 export interface MealListItem extends MealListSummary {
@@ -319,6 +321,7 @@ export interface ProfilePatchResponse {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
+  avatarUrl?: string | null;
   nutritionTargets?: NutritionTargets | null;
 }
 
@@ -327,6 +330,7 @@ export interface UserProfile {
   email: string;
   name: string | null;
   goal: string | null;
+  avatarUrl: string | null;
   weightKg: number | null;
   heightCm: number | null;
   age: number | null;

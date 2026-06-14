@@ -20,3 +20,24 @@ export async function prepareMealImage(uri: string): Promise<{
     fileName: "meal.jpg",
   };
 }
+
+const PROFILE_MAX_WIDTH = 512;
+const PROFILE_JPEG_QUALITY = 0.82;
+
+export async function prepareProfileImage(uri: string): Promise<{
+  uri: string;
+  mimeType: string;
+  fileName: string;
+}> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: PROFILE_MAX_WIDTH } }],
+    { compress: PROFILE_JPEG_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+  );
+
+  return {
+    uri: result.uri,
+    mimeType: "image/jpeg",
+    fileName: "avatar.jpg",
+  };
+}

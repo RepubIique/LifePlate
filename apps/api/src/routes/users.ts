@@ -8,11 +8,15 @@ import {
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
+import { validateUploadImage } from "../services/imageValidation.js";
+import { MealGuardrailError } from "../services/mealGuardrails.js";
+import { uploadProfileAvatar } from "../services/storage.js";
 
 type UserRow = {
   email: string;
   name: string | null;
   goal: string | null;
+  avatar_url: string | null;
   weight_kg: string | null;
   height_cm: string | null;
   age: number | null;
@@ -44,6 +48,7 @@ function toProfile(
     email: row.email ?? userEmail,
     name: row.name,
     goal: row.goal,
+    avatarUrl: row.avatar_url,
     weightKg,
     heightCm,
     age,
@@ -69,7 +74,7 @@ async function ensureUser(userId: string, userEmail: string) {
 
 async function loadUserRow(userId: string): Promise<UserRow | null> {
   const { rows } = await pool.query<UserRow>(
-    `SELECT email, name, goal, weight_kg, height_cm, age, gender,
+    `SELECT email, name, goal, avatar_url, weight_kg, height_cm, age, gender,
             meals_logged, current_streak, longest_streak
      FROM users WHERE id = $1`,
     [userId],
@@ -87,6 +92,7 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
       email: userEmail,
       name: null,
       goal: null,
+      avatar_url: null,
       weight_kg: null,
       height_cm: null,
       age: null,
@@ -165,6 +171,54 @@ export async function userRoutes(app: FastifyInstance) {
     async (request) => {
       const { userId, userEmail } = request as AuthedRequest;
       return buildProfile(userId, userEmail);
+    },
+  );
+
+  app.post(
+    "/api/users/me/avatar",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId, userEmail } = request as AuthedRequest;
+      const file = await request.file();
+      if (!file) {
+        return reply.code(400).send({ error: "No image provided" });
+      }
+
+      const buffer = await file.toBuffer();
+      const mimeType = file.mimetype || "image/jpeg";
+
+      try {
+        validateUploadImage(buffer, mimeType);
+      } catch (err) {
+        if (err instanceof MealGuardrailError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+
+      await ensureUser(userId, userEmail);
+
+      let avatarUrl: string;
+      try {
+        avatarUrl = await uploadProfileAvatar(userId, buffer, mimeType);
+      } catch (err) {
+        request.log.error(err);
+        return reply.code(500).send({ error: "Failed to upload profile photo" });
+      }
+
+      const { rowCount } = await pool.query(
+        `UPDATE users SET avatar_url = $1 WHERE id = $2`,
+        [avatarUrl, userId],
+      );
+      if (!rowCount) {
+        return reply.code(500).send({ error: "Failed to save profile photo" });
+      }
+
+      return { avatarUrl };
     },
   );
 

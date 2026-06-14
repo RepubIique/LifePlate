@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: session.user.email ?? "",
           name: null,
           goal: null,
+          avatarUrl: null,
           weightKg: null,
           heightCm: null,
           age: null,

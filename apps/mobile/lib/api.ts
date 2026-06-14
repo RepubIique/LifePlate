@@ -76,6 +76,52 @@ export async function updateProfile(body: {
   });
 }
 
+export async function uploadProfileAvatar(input: {
+  uri: string;
+  mimeType?: string | null;
+  fileName?: string | null;
+}): Promise<{ avatarUrl: string }> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    notifyUnauthorized();
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  const mimeType = input.mimeType ?? "image/jpeg";
+  const fileName = input.fileName ?? "avatar.jpg";
+
+  if (Platform.OS === "web") {
+    const form = new FormData();
+    const blob = await (await fetch(input.uri)).blob();
+    form.append("file", blob, fileName);
+
+    const res = await fetch(`${API_URL}/api/users/me/avatar`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    return handleResponse<{ avatarUrl: string }>(res);
+  }
+
+  const file = new File(input.uri);
+  const result = await file.upload(`${API_URL}/api/users/me/avatar`, {
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (result.status < 200 || result.status >= 300) {
+    const err = parseApiError(result.body, result.status);
+    if (err.status === 401) notifyUnauthorized();
+    throw err;
+  }
+
+  return JSON.parse(result.body) as { avatarUrl: string };
+}
+
 export async function updateGoal(goal: string): Promise<ProfilePatchResponse> {
   return updateProfile({ goal });
 }
