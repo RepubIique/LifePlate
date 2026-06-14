@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
 import {
+  buildMealPortionMeta,
   clampMealPortions,
   inferMealType,
   isLikelySharedMeal,
@@ -250,6 +251,12 @@ export default function MealResultScreen() {
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
         confidence,
+        portionMeta: buildMealPortionMeta(
+          baseMacros,
+          totalPortions,
+          portionsEaten,
+          estimatedServings,
+        ),
         loggedAt: params.logDate
           ? loggedAtForDateKey(params.logDate, mealType)
           : undefined,

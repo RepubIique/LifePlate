@@ -1,9 +1,14 @@
-import { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import Svg, { Circle, G } from "react-native-svg";
 import { DEFAULT_DAILY_FIBRE_G } from "@lifeplate/shared";
-import { computeMacroBreakdown } from "@/lib/macroMath";
+import {
+  computeMacroBreakdown,
+  energyUnitLabel,
+  formatEnergyValue,
+  type EnergyUnit,
+} from "@/lib/macroMath";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -22,9 +27,13 @@ type Segment = { pct: number; color: string };
 function MacroRing({
   calories,
   segments,
+  energyUnit,
+  onToggleEnergyUnit,
 }: {
   calories: number;
   segments: Segment[];
+  energyUnit: EnergyUnit;
+  onToggleEnergyUnit?: () => void;
 }) {
   const radius = (RING_SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -72,13 +81,27 @@ function MacroRing({
           {arcs}
         </G>
       </Svg>
-      <View style={styles.ringCenter} pointerEvents="none">
-        <Text variant="headlineMedium" style={styles.calorieValue}>
-          {Math.round(calories)}
-        </Text>
-        <Text variant="bodySmall" style={styles.calorieLabel}>
-          kcal
-        </Text>
+      <View style={styles.ringCenter} pointerEvents="box-none">
+        <Pressable
+          onPress={onToggleEnergyUnit}
+          disabled={!onToggleEnergyUnit}
+          accessibilityRole="button"
+          accessibilityLabel={`${formatEnergyValue(calories, energyUnit)} ${energyUnitLabel(energyUnit)}`}
+          accessibilityHint={
+            onToggleEnergyUnit ? "Tap to switch between kcal and kJ" : undefined
+          }
+          style={styles.energyTap}
+        >
+          <Text variant="headlineMedium" style={styles.calorieValue}>
+            {formatEnergyValue(calories, energyUnit)}
+          </Text>
+          <Text
+            variant="bodySmall"
+            style={[styles.calorieLabel, onToggleEnergyUnit && styles.calorieLabelTappable]}
+          >
+            {energyUnitLabel(energyUnit)}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -169,6 +192,7 @@ export function MacroNutritionPanel({
   personalisedGoal = false,
   confidence,
   showConfidence = false,
+  energyUnitToggle = false,
 }: {
   calories: number;
   protein: number;
@@ -181,7 +205,9 @@ export function MacroNutritionPanel({
   personalisedGoal?: boolean;
   confidence?: number;
   showConfidence?: boolean;
+  energyUnitToggle?: boolean;
 }) {
+  const [energyUnit, setEnergyUnit] = useState<EnergyUnit>("kcal");
   const data = useMemo(
     () => computeMacroBreakdown(calories, protein, carbs, fat),
     [calories, protein, carbs, fat],
@@ -203,7 +229,16 @@ export function MacroNutritionPanel({
 
   return (
     <View style={styles.panel}>
-      <MacroRing calories={data.calories} segments={segments} />
+      <MacroRing
+        calories={data.calories}
+        segments={segments}
+        energyUnit={energyUnit}
+        onToggleEnergyUnit={
+          energyUnitToggle
+            ? () => setEnergyUnit((unit) => (unit === "kcal" ? "kj" : "kcal"))
+            : undefined
+        }
+      />
 
       <View style={styles.legend}>
         <LegendChip label="Fibre" color={MACRO_COLORS.fibre} />
@@ -301,6 +336,8 @@ const styles = StyleSheet.create({
   },
   calorieValue: { fontWeight: "600", letterSpacing: -0.5 },
   calorieLabel: { opacity: 0.55, marginTop: -2 },
+  calorieLabelTappable: { textDecorationLine: "underline" },
+  energyTap: { alignItems: "center", justifyContent: "center", padding: spacing.xs },
   legend: {
     flexDirection: "row",
     justifyContent: "center",

@@ -227,6 +227,108 @@ export function scaleMealForPortions(
   };
 }
 
+export interface MealPortionMeta {
+  totalPortions: number;
+  portionsEaten: number;
+  baseMacros: MealMacroTotals;
+  estimatedServings?: number;
+}
+
+export function mealListItemToMacros(
+  meal: Pick<
+    MealListItem,
+    "calories" | "protein" | "carbs" | "fat" | "fibre" | "sugar" | "sodium"
+  >,
+): MealMacroTotals {
+  return {
+    estimatedCalories: meal.calories ?? 0,
+    protein: meal.protein ?? 0,
+    carbs: meal.carbs ?? 0,
+    fat: meal.fat ?? 0,
+    fibre: meal.fibre ?? 0,
+    sugar: meal.sugar ?? 0,
+    sodium: meal.sodium ?? 0,
+  };
+}
+
+function isMealMacroTotals(value: unknown): value is MealMacroTotals {
+  if (!value || typeof value !== "object") return false;
+  const v = value as MealMacroTotals;
+  return (
+    typeof v.estimatedCalories === "number" &&
+    typeof v.protein === "number" &&
+    typeof v.carbs === "number" &&
+    typeof v.fat === "number" &&
+    typeof v.fibre === "number" &&
+    typeof v.sugar === "number" &&
+    typeof v.sodium === "number"
+  );
+}
+
+export function parseMealPortionMeta(raw: unknown): MealPortionMeta | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const portionMeta = (raw as { portionMeta?: unknown }).portionMeta;
+  if (!portionMeta || typeof portionMeta !== "object") return undefined;
+
+  const meta = portionMeta as MealPortionMeta;
+  if (
+    typeof meta.totalPortions !== "number" ||
+    typeof meta.portionsEaten !== "number" ||
+    !isMealMacroTotals(meta.baseMacros)
+  ) {
+    return undefined;
+  }
+
+  return {
+    totalPortions: clampMealPortions(meta.totalPortions),
+    portionsEaten: clampMealPortions(meta.portionsEaten, 1, meta.totalPortions),
+    baseMacros: meta.baseMacros,
+    estimatedServings: meta.estimatedServings,
+  };
+}
+
+export function resolveMealPortionState(
+  stored: MealMacroTotals,
+  portionMeta?: MealPortionMeta | null,
+): {
+  baseMacros: MealMacroTotals;
+  totalPortions: number;
+  portionsEaten: number;
+  estimatedServings?: number;
+} {
+  if (portionMeta) {
+    return {
+      baseMacros: portionMeta.baseMacros,
+      totalPortions: portionMeta.totalPortions,
+      portionsEaten: portionMeta.portionsEaten,
+      estimatedServings: portionMeta.estimatedServings,
+    };
+  }
+
+  return {
+    baseMacros: stored,
+    totalPortions: 1,
+    portionsEaten: 1,
+  };
+}
+
+export function buildMealPortionMeta(
+  baseMacros: MealMacroTotals,
+  totalPortions: number,
+  portionsEaten: number,
+  estimatedServings?: number,
+): MealPortionMeta | undefined {
+  const total = clampMealPortions(totalPortions);
+  if (total <= 1) return undefined;
+
+  return {
+    totalPortions: total,
+    portionsEaten: clampMealPortions(portionsEaten, 1, total),
+    baseMacros,
+    estimatedServings,
+  };
+}
+
 export interface MealUploadResponse extends MealAnalysisResult {
   draftId: string;
   imageUrl: string;
@@ -258,6 +360,7 @@ export interface MealConfirmRequest {
   mealType?: MealType;
   /** ISO timestamp — log the meal on a prior day. */
   loggedAt?: string;
+  portionMeta?: MealPortionMeta;
 }
 
 export interface MealListSummary {
@@ -284,6 +387,7 @@ export interface MealListItem extends MealListSummary {
 
 export interface MealDetail extends MealListItem {
   rawAiResponse?: unknown;
+  portionMeta?: MealPortionMeta;
 }
 
 export interface MealUpdateRequest {
@@ -299,6 +403,7 @@ export interface MealUpdateRequest {
   sodium?: number | null;
   /** ISO timestamp — move the meal to another day. */
   loggedAt?: string;
+  portionMeta?: MealPortionMeta | null;
 }
 
 export interface HydrationDayRecord {

@@ -19,6 +19,7 @@ import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
+import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
 import { uploadMealImage } from "../services/storage.js";
 
 export async function mealRoutes(app: FastifyInstance) {
@@ -158,7 +159,7 @@ export async function mealRoutes(app: FastifyInstance) {
             body.sugar,
             body.sodium,
             body.confidence,
-            JSON.stringify(draft?.rawAiResponse ?? body),
+            mergeRawAiPortionMeta(draft?.rawAiResponse, body.portionMeta),
           ],
         );
 
@@ -296,20 +297,24 @@ export async function mealRoutes(app: FastifyInstance) {
         sodium: number | null;
         confidence: string | null;
         foods: string[] | null;
+        raw_ai_response: unknown;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
+                a.raw_ai_response,
                 COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
          FROM meals m
          LEFT JOIN meal_analysis a ON a.meal_id = m.id
          LEFT JOIN foods f ON f.meal_id = m.id
          WHERE m.user_id = $1 AND m.id = $2
-         GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence`,
+         GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence, a.raw_ai_response`,
         [userId, id],
       );
 
       const r = rows[0];
       if (!r) return reply.code(404).send({ error: "Not found" });
+
+      const portionMeta = extractMealPortionMeta(r.raw_ai_response);
 
       return {
         id: r.id,
@@ -326,6 +331,7 @@ export async function mealRoutes(app: FastifyInstance) {
         sodium: r.sodium,
         confidence: r.confidence ? Number(r.confidence) : null,
         foods: r.foods ?? [],
+        portionMeta,
       };
     },
   );
@@ -342,8 +348,15 @@ export async function mealRoutes(app: FastifyInstance) {
       try {
         await client.query("BEGIN");
 
-        const owned = await client.query<{ id: string; created_at: Date }>(
-          `SELECT id, created_at FROM meals WHERE id = $1 AND user_id = $2`,
+        const owned = await client.query<{
+          id: string;
+          created_at: Date;
+          raw_ai_response: unknown;
+        }>(
+          `SELECT m.id, m.created_at, a.raw_ai_response
+           FROM meals m
+           LEFT JOIN meal_analysis a ON a.meal_id = m.id
+           WHERE m.id = $1 AND m.user_id = $2`,
           [id, userId],
         );
         if (!owned.rows[0]) {
@@ -424,6 +437,18 @@ export async function mealRoutes(app: FastifyInstance) {
               [id, food],
             );
           }
+        }
+
+        if (body.portionMeta !== undefined) {
+          await client.query(
+            `UPDATE meal_analysis
+             SET raw_ai_response = $1::jsonb
+             WHERE meal_id = $2`,
+            [
+              mergeRawAiPortionMeta(owned.rows[0].raw_ai_response, body.portionMeta),
+              id,
+            ],
+          );
         }
 
         await client.query("COMMIT");

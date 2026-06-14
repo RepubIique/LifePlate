@@ -10,6 +10,7 @@ type SharedMealPortionsCardProps = {
   totalPortions: number;
   portionsEaten: number;
   estimatedServings?: number;
+  variant?: "confirm" | "edit";
   onTotalPortionsChange: (value: number) => void;
   onPortionsEatenChange: (value: number) => void;
 };
@@ -38,6 +39,7 @@ export function SharedMealPortionsCard({
   totalPortions,
   portionsEaten,
   estimatedServings,
+  variant = "confirm",
   onTotalPortionsChange,
   onPortionsEatenChange,
 }: SharedMealPortionsCardProps) {
@@ -46,16 +48,21 @@ export function SharedMealPortionsCard({
     (_, i) => i + 1,
   );
 
+  const title = variant === "edit" ? "Portions" : "Shared meal?";
+  const subtitle =
+    variant === "edit"
+      ? "Update how this meal was split if you shared it or only ate part of it."
+      : estimatedServings != null && estimatedServings >= 2
+        ? `This looks like food for about ${Math.round(estimatedServings)} people. Tell us how many servings are in the photo so we log your share correctly.`
+        : "This looks like more than one portion. Tell us how many servings are in the photo so we log your share correctly.";
+
   return (
     <PremiumCard>
       <Text variant="titleMedium" style={styles.title}>
-        Shared meal?
+        {title}
       </Text>
       <Text variant="bodySmall" style={styles.subtitle}>
-        {estimatedServings != null && estimatedServings >= 2
-          ? `This looks like food for about ${Math.round(estimatedServings)} people.`
-          : "This looks like more than one portion."}{" "}
-        Tell us how many servings are in the photo so we log your share correctly.
+        {subtitle}
       </Text>
 
       <Text variant="labelLarge" style={styles.sectionLabel}>

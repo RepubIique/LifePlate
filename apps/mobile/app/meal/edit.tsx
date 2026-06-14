@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import {
   Button,
@@ -9,7 +9,14 @@ import {
   TextInput,
 } from "react-native-paper";
 import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
-import { isMealType } from "@lifeplate/shared";
+import {
+  buildMealPortionMeta,
+  isMealType,
+  mealListItemToMacros,
+  resolveMealPortionState,
+  scaleMealForPortions,
+  type MealMacroTotals,
+} from "@lifeplate/shared";
 import { MealLogDateField, mealDateKeyFromIso } from "@/components/meal/MealLogDateField";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
@@ -17,6 +24,7 @@ import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
@@ -32,6 +40,27 @@ function toNumber(value: string, fallback: number) {
 
 function normalizeFood(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function applyMacrosToForm(
+  macros: MealMacroTotals,
+  setters: {
+    setCalories: (v: string) => void;
+    setProtein: (v: string) => void;
+    setCarbs: (v: string) => void;
+    setFat: (v: string) => void;
+    setFibre: (v: string) => void;
+    setSugar: (v: string) => void;
+    setSodium: (v: string) => void;
+  },
+) {
+  setters.setCalories(String(macros.estimatedCalories));
+  setters.setProtein(String(macros.protein));
+  setters.setCarbs(String(macros.carbs));
+  setters.setFat(String(macros.fat));
+  setters.setFibre(String(macros.fibre));
+  setters.setSugar(String(macros.sugar));
+  setters.setSodium(String(macros.sodium));
 }
 
 function applyMealToForm(
@@ -53,13 +82,7 @@ function applyMealToForm(
   const type = m.mealType ?? "";
   setters.setMealType(isMealType(type) ? type : "lunch");
   setters.setFoods(m.foods ?? []);
-  setters.setCalories(String(m.calories ?? 0));
-  setters.setProtein(String(m.protein ?? 0));
-  setters.setCarbs(String(m.carbs ?? 0));
-  setters.setFat(String(m.fat ?? 0));
-  setters.setFibre(String(m.fibre ?? 0));
-  setters.setSugar(String(m.sugar ?? 0));
-  setters.setSodium(String(m.sodium ?? 0));
+  applyMacrosToForm(mealListItemToMacros(m), setters);
 }
 
 export default function EditMealScreen() {
@@ -85,6 +108,40 @@ export default function EditMealScreen() {
   const [sugar, setSugar] = useState("0");
   const [sodium, setSodium] = useState("0");
   const [loggedAt, setLoggedAt] = useState<string>("");
+  const [baseMacros, setBaseMacros] = useState<MealMacroTotals>({
+    estimatedCalories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    fibre: 0,
+    sugar: 0,
+    sodium: 0,
+  });
+  const [totalPortions, setTotalPortions] = useState(1);
+  const [portionsEaten, setPortionsEaten] = useState(1);
+  const [estimatedServings, setEstimatedServings] = useState<number | undefined>();
+
+  const macroSetters = {
+    setCalories,
+    setProtein,
+    setCarbs,
+    setFat,
+    setFibre,
+    setSugar,
+    setSodium,
+  };
+
+  useEffect(() => {
+    if (!meal) return;
+    if (totalPortions <= 1) {
+      applyMacrosToForm(baseMacros, macroSetters);
+      return;
+    }
+    applyMacrosToForm(
+      scaleMealForPortions(baseMacros, totalPortions, portionsEaten),
+      macroSetters,
+    );
+  }, [meal, totalPortions, portionsEaten, baseMacros]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -93,6 +150,12 @@ export default function EditMealScreen() {
     try {
       const m = await fetchMeal(id);
       setMeal(m);
+      const stored = mealListItemToMacros(m);
+      const resolved = resolveMealPortionState(stored, m.portionMeta);
+      setBaseMacros(resolved.baseMacros);
+      setTotalPortions(resolved.totalPortions);
+      setPortionsEaten(resolved.portionsEaten);
+      setEstimatedServings(resolved.estimatedServings);
       applyMealToForm(m, {
         setMealName,
         setMealType,
@@ -150,6 +213,12 @@ export default function EditMealScreen() {
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
         loggedAt,
+        portionMeta: buildMealPortionMeta(
+          baseMacros,
+          totalPortions,
+          portionsEaten,
+          estimatedServings,
+        ) ?? null,
       });
       refreshAfterMealChange();
       setSnackbar("Saved");
@@ -214,6 +283,15 @@ export default function EditMealScreen() {
 
         <MealTypePicker value={mealType} onChange={setMealType} />
 
+        <SharedMealPortionsCard
+          variant="edit"
+          totalPortions={totalPortions}
+          portionsEaten={portionsEaten}
+          estimatedServings={estimatedServings}
+          onTotalPortionsChange={setTotalPortions}
+          onPortionsEatenChange={setPortionsEaten}
+        />
+
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Foods
         </Text>
@@ -245,6 +323,7 @@ export default function EditMealScreen() {
           personalisedGoal={personalisedFibreGoal}
           confidence={meal.confidence ?? undefined}
           showConfidence={meal.confidence != null}
+          energyUnitToggle
         />
         <Text variant="titleMedium" style={styles.sectionTitle}>
           Adjust macros

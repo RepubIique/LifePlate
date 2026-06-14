@@ -12,6 +12,18 @@ export type MacroBreakdown = {
   fatPct: number;
 };
 
+export const KCAL_TO_KJ = 4.184;
+
+export type EnergyUnit = "kcal" | "kj";
+
+export function formatEnergyValue(calories: number, unit: EnergyUnit): number {
+  return unit === "kj" ? Math.round(calories * KCAL_TO_KJ) : Math.round(calories);
+}
+
+export function energyUnitLabel(unit: EnergyUnit): string {
+  return unit === "kj" ? "kJ" : "kcal";
+}
+
 export function computeMacroBreakdown(
   calories: number,
   protein: number,
