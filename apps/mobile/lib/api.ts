@@ -9,6 +9,7 @@ import type {
   MealUploadResponse,
   MealUpdateRequest,
   NutritionDashboardApiResponse,
+  ProfileAvatarResponse,
   ProfilePatchResponse,
   UserProfile,
   HydrationHistoryResponse,
@@ -62,6 +63,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function fetchProfile(): Promise<UserProfile> {
   return request<UserProfile>("/api/users/me");
+}
+
+export async function fetchProfileAvatar(): Promise<ProfileAvatarResponse> {
+  return request<ProfileAvatarResponse>("/api/users/me/avatar");
 }
 
 export async function updateProfile(body: {

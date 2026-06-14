@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Snackbar } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
@@ -15,11 +15,11 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { Screen } from "@/components/Screen";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
+import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
-import { deleteMeal, fetchHydrationHistory } from "@/lib/api";
+import { deleteMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
 import { useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
@@ -48,12 +48,11 @@ export default function TimelineScreen() {
   const {
     hydrationByDate,
     syncingDate,
-    replaceFromServer: replaceHydrationFromServer,
+    loadHydration,
+    refreshHydration,
     adjustHydration,
-  } = useDebouncedHydration({
-    onSynced: () => refreshAfterMealChangeRef.current(),
-    onError: (e) => setSnackbar(friendlyErrorMessage(e)),
-  });
+    subscribePersisted,
+  } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
@@ -63,14 +62,13 @@ export default function TimelineScreen() {
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
 
+  useEffect(() => {
+    return subscribePersisted(() => refreshAfterMealChangeRef.current());
+  }, [subscribePersisted]);
+
   const loadTimeline = useCallback(async () => {
-    const [{ days }] = await Promise.all([fetchHydrationHistory(60), loadMeals()]);
-    const map: Record<string, number> = {};
-    for (const day of days) {
-      map[day.date] = day.glasses;
-    }
-    replaceHydrationFromServer(map);
-  }, [loadMeals, replaceHydrationFromServer]);
+    await Promise.all([loadHydration(), loadMeals()]);
+  }, [loadHydration, loadMeals]);
 
   useFocusEffect(
     useCallback(() => {
@@ -155,12 +153,7 @@ export default function TimelineScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               void refreshMeals()
-                .then(() => fetchHydrationHistory(60))
-                .then(({ days }) => {
-                  const map: Record<string, number> = {};
-                  for (const day of days) map[day.date] = day.glasses;
-                  replaceHydrationFromServer(map);
-                })
+                .then(() => refreshHydration())
                 .catch((e) => setSnackbar(friendlyErrorMessage(e)));
             }}
           />

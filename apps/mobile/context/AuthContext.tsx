@@ -14,13 +14,16 @@ import type { UserProfile } from "@lifeplate/shared";
 import { router } from "expo-router";
 import { fetchProfile } from "@/lib/api";
 import { AUTH_REDIRECT_URI } from "@/lib/authRedirect";
+import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   clearCachedProfile,
   loadCachedProfile,
   saveCachedProfile,
 } from "@/lib/profileCache";
+import { clearCachedAvatar } from "@/lib/avatarCache";
 import { clearCachedMeals } from "@/lib/mealsCache";
 import { clearCachedDashboard } from "@/lib/dashboardCache";
+import { clearCachedHydration } from "@/lib/hydrationCache";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
@@ -47,8 +50,6 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-const PROFILE_STALE_MS = 60_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: session.user.email ?? "",
           name: null,
           goal: null,
-          avatarUrl: null,
+          hasAvatar: false,
           weightKg: null,
           heightCm: null,
           age: null,
@@ -90,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
       if (next) {
-        void saveCachedProfile(next);
+        void saveCachedProfile(next, profileFetchedAtRef.current || Date.now());
         profileFetchedAtRef.current = Date.now();
         profileDirtyRef.current = false;
       }
@@ -114,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const p = await fetchProfile();
         if (fetchId !== profileFetchSeq.current) return null;
         setProfile(p);
-        void saveCachedProfile(p);
+        void saveCachedProfile(p, Date.now());
         profileFetchedAtRef.current = Date.now();
         profileDirtyRef.current = false;
         return p;
@@ -140,7 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isFresh =
         !profileDirtyRef.current &&
         hasData &&
-        Date.now() - profileFetchedAtRef.current < PROFILE_STALE_MS;
+        profileFetchedAtRef.current > 0 &&
+        Date.now() - profileFetchedAtRef.current < TAB_FOCUS_STALE_MS;
 
       if (!force && isFresh) return profileRef.current;
 
@@ -221,10 +223,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const cached = await loadCachedProfile(session.user.id);
       if (!cancelled && cached) {
-        setProfile(cached);
-        profileRef.current = cached;
+        setProfile(cached.profile);
+        profileRef.current = cached.profile;
+        profileFetchedAtRef.current = cached.fetchedAt;
       }
-      await loadProfile({ force: true });
+      await loadProfile();
     })();
 
     return () => {
@@ -295,8 +298,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileInflightRef.current = null;
     if (userId) {
       void clearCachedProfile(userId);
+      void clearCachedAvatar(userId);
       void clearCachedMeals(userId);
       void clearCachedDashboard(userId);
+      void clearCachedHydration(userId);
     }
   }, [session]);
 

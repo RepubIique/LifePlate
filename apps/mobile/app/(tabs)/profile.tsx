@@ -15,7 +15,8 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMealsFull, updateProfile, uploadProfileAvatar } from "@/lib/api";
+import { fetchMealsFull, fetchProfileAvatar, updateProfile, uploadProfileAvatar } from "@/lib/api";
+import { getCachedAvatarUri, saveAvatarFromLocalUri } from "@/lib/avatarCache";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { prepareProfileImage } from "@/lib/imagePrep";
@@ -60,6 +61,8 @@ export default function ProfileScreen() {
   const [gender, setGender] = useState<Gender | null>(profile?.gender ?? null);
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarCacheRevision, setAvatarCacheRevision] = useState(0);
+  const [remoteAvatarUrl, setRemoteAvatarUrl] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -89,25 +92,44 @@ export default function ProfileScreen() {
     profile?.weightKg,
   ]);
 
+  const loadProfileScreen = useCallback(async () => {
+    const latest = await loadProfile();
+    if (!latest) {
+      if (!profile) {
+        setSnackbar("Could not refresh profile — showing last saved data");
+      }
+      return;
+    }
+
+    applyProfileToForm(latest, {
+      setName,
+      setGoal,
+      setWeightKg,
+      setHeightCm,
+      setAge,
+      setGender,
+    });
+
+    if (!latest.hasAvatar || !latest.id) {
+      setRemoteAvatarUrl(null);
+      return;
+    }
+
+    const cached = await getCachedAvatarUri(latest.id);
+    if (cached) {
+      setRemoteAvatarUrl(null);
+      return;
+    }
+
+    const { avatarUrl } = await fetchProfileAvatar();
+    setRemoteAvatarUrl(avatarUrl);
+  }, [loadProfile, profile]);
+
   useFocusEffect(
     useCallback(() => {
       setIsDirty(false);
-      void (async () => {
-        const latest = await loadProfile();
-        if (latest) {
-          applyProfileToForm(latest, {
-            setName,
-            setGoal,
-            setWeightKg,
-            setHeightCm,
-            setAge,
-            setGender,
-          });
-        } else if (!profile) {
-          setSnackbar("Could not refresh profile — showing last saved data");
-        }
-      })();
-    }, [loadProfile, profile]),
+      void loadProfileScreen().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadProfileScreen]),
   );
 
   const canSave = useMemo(() => {
@@ -206,8 +228,12 @@ export default function ProfileScreen() {
     try {
       const prepared = await prepareProfileImage(result.assets[0].uri);
       const { avatarUrl } = await uploadProfileAvatar(prepared);
-      patchProfile({ avatarUrl });
-      void loadProfile({ force: true });
+      if (profile?.id) {
+        await saveAvatarFromLocalUri(profile.id, prepared.uri);
+        setAvatarCacheRevision((v) => v + 1);
+      }
+      setRemoteAvatarUrl(avatarUrl);
+      patchProfile({ hasAvatar: true });
       setSnackbar("Profile photo updated");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -248,9 +274,12 @@ export default function ProfileScreen() {
       <View style={styles.body}>
         <PremiumCard style={styles.hero}>
           <ProfileAvatar
-            avatarUrl={profile?.avatarUrl ?? null}
+            userId={profile?.id ?? null}
+            hasAvatar={profile?.hasAvatar ?? false}
+            remoteAvatarUrl={remoteAvatarUrl}
             name={displayName}
             uploading={avatarUploading}
+            cacheRevision={avatarCacheRevision}
             onPress={showAvatarPicker}
           />
           <Text variant="headlineSmall" style={styles.heroName}>

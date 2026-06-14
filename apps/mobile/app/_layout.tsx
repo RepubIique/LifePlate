@@ -9,6 +9,7 @@ import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
+import { HydrationProvider } from "@/context/HydrationContext";
 import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
@@ -37,6 +38,7 @@ export default function RootLayout() {
           <MealsProvider>
           <PendingLogDateProvider>
           <NutritionDashboardProvider>
+          <HydrationProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)/welcome" />
@@ -55,6 +57,7 @@ export default function RootLayout() {
             />
           </Stack>
           <AlphaFeedbackBubble />
+          </HydrationProvider>
           </NutritionDashboardProvider>
           </PendingLogDateProvider>
           </MealsProvider>

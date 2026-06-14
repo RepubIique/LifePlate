@@ -48,7 +48,7 @@ function toProfile(
     email: row.email ?? userEmail,
     name: row.name,
     goal: row.goal,
-    avatarUrl: row.avatar_url,
+    hasAvatar: Boolean(row.avatar_url?.trim()),
     weightKg,
     heightCm,
     age,
@@ -103,10 +103,7 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
     },
   );
 
-  return {
-    ...profile,
-    avatarUrl: await resolveStorageObjectUrl(row?.avatar_url ?? null),
-  };
+  return profile;
 }
 
 const TARGET_AFFECTING_FIELDS = new Set([
@@ -176,6 +173,17 @@ export async function userRoutes(app: FastifyInstance) {
     async (request) => {
       const { userId, userEmail } = request as AuthedRequest;
       return buildProfile(userId, userEmail);
+    },
+  );
+
+  app.get(
+    "/api/users/me/avatar",
+    { preHandler: requireAuth },
+    async (request) => {
+      const { userId } = request as AuthedRequest;
+      const row = await loadUserRow(userId);
+      const avatarUrl = await resolveStorageObjectUrl(row?.avatar_url ?? null);
+      return { avatarUrl };
     },
   );
 

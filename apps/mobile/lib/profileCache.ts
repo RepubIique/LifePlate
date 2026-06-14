@@ -2,6 +2,11 @@ import type { UserProfile } from "@lifeplate/shared";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
+type ProfileCachePayload = {
+  profile: UserProfile;
+  fetchedAt: number;
+};
+
 function cacheKey(userId: string) {
   return `lifeplate:profile:${userId}`;
 }
@@ -41,18 +46,44 @@ async function remove(key: string): Promise<void> {
   }
 }
 
-export async function loadCachedProfile(userId: string): Promise<UserProfile | null> {
+function normalizeProfile(
+  parsed: UserProfile & { avatarUrl?: string | null },
+): UserProfile {
+  return {
+    ...parsed,
+    hasAvatar: parsed.hasAvatar ?? Boolean(parsed.avatarUrl),
+  };
+}
+
+export async function loadCachedProfile(
+  userId: string,
+): Promise<ProfileCachePayload | null> {
   const raw = await read(cacheKey(userId));
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as UserProfile;
+    const parsed = JSON.parse(raw) as ProfileCachePayload | (UserProfile & { avatarUrl?: string | null });
+    if ("profile" in parsed && parsed.profile) {
+      return {
+        profile: normalizeProfile(parsed.profile),
+        fetchedAt: parsed.fetchedAt,
+      };
+    }
+    const legacy = parsed as UserProfile & { avatarUrl?: string | null };
+    if (legacy.id) {
+      return { profile: normalizeProfile(legacy), fetchedAt: 0 };
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-export async function saveCachedProfile(profile: UserProfile): Promise<void> {
-  await write(cacheKey(profile.id), JSON.stringify(profile));
+export async function saveCachedProfile(
+  profile: UserProfile,
+  fetchedAt: number,
+): Promise<void> {
+  const payload: ProfileCachePayload = { profile, fetchedAt };
+  await write(cacheKey(profile.id), JSON.stringify(payload));
 }
 
 export async function clearCachedProfile(userId: string): Promise<void> {

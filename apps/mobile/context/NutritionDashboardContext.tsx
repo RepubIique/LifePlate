@@ -11,6 +11,7 @@ import {
 import type { NutritionDashboardApiResponse } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchNutritionDashboard } from "@/lib/api";
+import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   clearCachedDashboard,
   loadCachedDashboard,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/dashboardCache";
 import { expandDashboard, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
 
-const STALE_MS = 60_000;
+const STALE_MS = TAB_FOCUS_STALE_MS;
 
 type LoadOptions = {
   force?: boolean;
@@ -105,6 +106,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
     const current = dashboardRef.current;
     if (!current || dirtyRef.current) return false;
     if (current.date !== todayDateKey()) return false;
+    if (fetchedAtRef.current <= 0) return false;
     return Date.now() - fetchedAtRef.current < STALE_MS;
   }, []);
 

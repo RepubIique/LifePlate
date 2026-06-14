@@ -11,12 +11,13 @@ import {
 import type { MealListSummary } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
+import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   loadCachedMeals,
   saveCachedMeals,
 } from "@/lib/mealsCache";
 
-const STALE_MS = 60_000;
+const STALE_MS = TAB_FOCUS_STALE_MS;
 
 type LoadOptions = {
   force?: boolean;
@@ -129,9 +130,10 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       if (!session || !hydrated) return;
 
       const force = options?.force ?? false;
-      const hasData = mealsRef.current.length > 0;
       const isFresh =
-        !dirtyRef.current && hasData && Date.now() - fetchedAtRef.current < STALE_MS;
+        !dirtyRef.current &&
+        fetchedAtRef.current > 0 &&
+        Date.now() - fetchedAtRef.current < STALE_MS;
 
       if (!force && isFresh) return;
 
@@ -140,12 +142,12 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const isBackgroundRefresh = force && hasData;
+      const isBackgroundRefresh = force && mealsRef.current.length > 0;
 
       const run = (async () => {
         if (isBackgroundRefresh) {
           setRefreshing(true);
-        } else if (!hasData) {
+        } else if (!mealsRef.current.length) {
           setLoading(true);
         }
 

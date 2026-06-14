@@ -13,10 +13,10 @@ import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
+import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
-import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
 import { premium } from "@/src/theme/premium";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
@@ -32,16 +32,31 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading, loadMeals } = useMeals();
   const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
+  const { adjustHydration, syncDate, subscribePersisted } = useHydration();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
   refreshAfterMealChangeRef.current = refreshAfterMealChange;
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
-  const { adjustHydration, syncDate } = useDebouncedHydration({
-    onOptimistic: (_dateKey, glasses) => patchHydrationRef.current(glasses),
-    onSynced: () => refreshAfterMealChangeRef.current(),
-    onError: (e) => setSnackbar(friendlyErrorMessage(e)),
-  });
+
+  useEffect(() => {
+    return subscribePersisted(() => refreshAfterMealChangeRef.current());
+  }, [subscribePersisted]);
+
+  const handleTodayHydrationDelta = useCallback(
+    (delta: number) => {
+      const dateKey = todayDateKey();
+      adjustHydration(dateKey, delta);
+      if (dashboard) {
+        const next = Math.max(
+          0,
+          Math.min(24, dashboard.essentials.hydration.consumed + delta),
+        );
+        patchHydrationRef.current(next);
+      }
+    },
+    [adjustHydration, dashboard],
+  );
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const {
     uploadStage,
@@ -182,8 +197,8 @@ export default function HomeScreen() {
             />
             <HydrationQuickAdd
               pillar={dashboard.essentials.hydration}
-              onIncrement={() => adjustHydration(todayDateKey(), 1)}
-              onDecrement={() => adjustHydration(todayDateKey(), -1)}
+              onIncrement={() => handleTodayHydrationDelta(1)}
+              onDecrement={() => handleTodayHydrationDelta(-1)}
             />
           </>
         ) : null}

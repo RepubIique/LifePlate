@@ -504,7 +504,7 @@ export interface ProfilePatchResponse {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
-  avatarUrl?: string | null;
+  hasAvatar?: boolean;
   nutritionTargets?: NutritionTargets | null;
 }
 
@@ -520,12 +520,16 @@ export interface AlphaFeedbackMessagesResponse {
   messages: AlphaFeedbackMessage[];
 }
 
+export interface ProfileAvatarResponse {
+  avatarUrl: string | null;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
   name: string | null;
   goal: string | null;
-  avatarUrl: string | null;
+  hasAvatar: boolean;
   weightKg: number | null;
   heightCm: number | null;
   age: number | null;

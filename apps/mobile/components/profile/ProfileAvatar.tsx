@@ -8,11 +8,15 @@ import {
   View,
 } from "react-native";
 import { Text } from "react-native-paper";
+import { useCachedAvatarUri } from "@/lib/avatarCache";
 
 type Props = {
-  avatarUrl: string | null;
+  userId: string | null;
+  hasAvatar: boolean;
+  remoteAvatarUrl: string | null;
   name: string | null;
   uploading?: boolean;
+  cacheRevision?: number;
   onPress: () => void;
 };
 
@@ -26,14 +30,29 @@ function initials(name: string | null): string {
   return trimmed[0]!.toUpperCase();
 }
 
-export function ProfileAvatar({ avatarUrl, name, uploading, onPress }: Props) {
+export function ProfileAvatar({
+  userId,
+  hasAvatar,
+  remoteAvatarUrl,
+  name,
+  uploading,
+  cacheRevision,
+  onPress,
+}: Props) {
   const [imageError, setImageError] = useState(false);
+  const { uri: cachedUri, ready } = useCachedAvatarUri(
+    userId,
+    hasAvatar,
+    remoteAvatarUrl,
+    cacheRevision,
+  );
+  const imageUri = cachedUri ?? (ready ? remoteAvatarUrl : null);
 
   useEffect(() => {
     setImageError(false);
-  }, [avatarUrl]);
+  }, [imageUri]);
 
-  const showImage = !!avatarUrl && !imageError;
+  const showImage = !!imageUri && !imageError;
 
   return (
     <Pressable
@@ -46,7 +65,7 @@ export function ProfileAvatar({ avatarUrl, name, uploading, onPress }: Props) {
       <View style={styles.wrap}>
         {showImage ? (
           <Image
-            source={{ uri: avatarUrl }}
+            source={{ uri: imageUri }}
             style={styles.image}
             onError={() => setImageError(true)}
           />
