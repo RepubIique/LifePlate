@@ -35,16 +35,17 @@ export const premiumStyles = StyleSheet.create({
     marginBottom: spacing.sm,
     backgroundColor: "#FFFFFF",
     borderColor: premium.borderColor,
+    borderRadius: 10,
   },
   thumb: {
     width: 56,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   thumbPlaceholder: {
     width: 56,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: "#F1F3F5",
   },
 });
