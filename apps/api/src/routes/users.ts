@@ -10,7 +10,7 @@ import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
-import { uploadProfileAvatar } from "../services/storage.js";
+import { resolveStorageObjectUrl, uploadProfileAvatar } from "../services/storage.js";
 
 type UserRow = {
   email: string;
@@ -85,7 +85,7 @@ async function loadUserRow(userId: string): Promise<UserRow | null> {
 async function buildProfile(userId: string, userEmail: string): Promise<UserProfile> {
   const row = await loadUserRow(userId);
 
-  return toProfile(
+  const profile = toProfile(
     userId,
     userEmail,
     row ?? {
@@ -102,6 +102,11 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
       longest_streak: 0,
     },
   );
+
+  return {
+    ...profile,
+    avatarUrl: await resolveStorageObjectUrl(row?.avatar_url ?? null),
+  };
 }
 
 const TARGET_AFFECTING_FIELDS = new Set([
@@ -202,9 +207,9 @@ export async function userRoutes(app: FastifyInstance) {
 
       await ensureUser(userId, userEmail);
 
-      let avatarUrl: string;
+      let avatarPath: string;
       try {
-        avatarUrl = await uploadProfileAvatar(userId, buffer, mimeType);
+        avatarPath = await uploadProfileAvatar(userId, buffer, mimeType);
       } catch (err) {
         request.log.error(err);
         return reply.code(500).send({ error: "Failed to upload profile photo" });
@@ -212,12 +217,13 @@ export async function userRoutes(app: FastifyInstance) {
 
       const { rowCount } = await pool.query(
         `UPDATE users SET avatar_url = $1 WHERE id = $2`,
-        [avatarUrl, userId],
+        [avatarPath, userId],
       );
       if (!rowCount) {
         return reply.code(500).send({ error: "Failed to save profile photo" });
       }
 
+      const avatarUrl = await resolveStorageObjectUrl(avatarPath);
       return { avatarUrl };
     },
   );

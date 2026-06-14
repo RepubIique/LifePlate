@@ -207,6 +207,7 @@ export default function ProfileScreen() {
       const prepared = await prepareProfileImage(result.assets[0].uri);
       const { avatarUrl } = await uploadProfileAvatar(prepared);
       patchProfile({ avatarUrl });
+      void loadProfile({ force: true });
       setSnackbar("Profile photo updated");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   ActivityIndicator,
@@ -26,6 +27,14 @@ function initials(name: string | null): string {
 }
 
 export function ProfileAvatar({ avatarUrl, name, uploading, onPress }: Props) {
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
+
+  const showImage = !!avatarUrl && !imageError;
+
   return (
     <Pressable
       onPress={onPress}
@@ -35,8 +44,12 @@ export function ProfileAvatar({ avatarUrl, name, uploading, onPress }: Props) {
       accessibilityRole="button"
     >
       <View style={styles.wrap}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.image} />
+        {showImage ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={styles.image}
+            onError={() => setImageError(true)}
+          />
         ) : (
           <View style={styles.placeholder}>
             <Text variant="headlineLarge" style={styles.initials}>
