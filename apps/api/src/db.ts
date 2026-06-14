@@ -43,6 +43,7 @@ export async function runMigrations() {
     "007_refine_rate_limits.sql",
     "008_user_stats_and_daily_insights.sql",
     "009_user_avatar.sql",
+    "010_alpha_feedback_chat.sql",
   ];
   for (const file of files) {
     const sql = readFileSync(join(__dirname, "../migrations", file), "utf-8");

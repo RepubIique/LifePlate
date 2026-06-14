@@ -325,6 +325,18 @@ export interface ProfilePatchResponse {
   nutritionTargets?: NutritionTargets | null;
 }
 
+export interface AlphaFeedbackMessage {
+  id: string;
+  userId: string;
+  authorName: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface AlphaFeedbackMessagesResponse {
+  messages: AlphaFeedbackMessage[];
+}
+
 export interface UserProfile {
   id: string;
   email: string;

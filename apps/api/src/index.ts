@@ -9,6 +9,7 @@ import { mealRoutes } from "./routes/meals.js";
 import { insightRoutes } from "./routes/insights.js";
 import { nutritionRoutes } from "./routes/nutrition.js";
 import { userRoutes } from "./routes/users.js";
+import { feedbackRoutes } from "./routes/feedback.js";
 
 assertRuntimeConfig();
 
@@ -27,6 +28,7 @@ await app.register(mealRoutes);
 await app.register(insightRoutes);
 await app.register(nutritionRoutes);
 await app.register(userRoutes);
+await app.register(feedbackRoutes);
 
 try {
   await runMigrations();

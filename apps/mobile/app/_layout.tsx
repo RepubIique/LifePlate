@@ -7,6 +7,7 @@ import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
+import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +40,7 @@ export default function RootLayout() {
               options={{ presentation: "modal", headerShown: true, title: "Edit meal" }}
             />
           </Stack>
+          <AlphaFeedbackBubble />
           </NutritionDashboardProvider>
           </MealsProvider>
         </AuthProvider>

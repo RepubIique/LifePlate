@@ -1,4 +1,5 @@
 import type {
+  AlphaFeedbackMessage,
   InsightsResponse,
   MealConfirmRequest,
   MealListItem,
@@ -226,5 +227,17 @@ export async function refineMeal(
   return request<MealRefineResponse>("/api/meals/refine", {
     method: "POST",
     body: JSON.stringify({ draftId, clarification }),
+  });
+}
+
+export async function fetchAlphaFeedbackMessages(): Promise<AlphaFeedbackMessage[]> {
+  const data = await request<{ messages: AlphaFeedbackMessage[] }>("/api/feedback/messages");
+  return data.messages;
+}
+
+export async function sendAlphaFeedbackMessage(message: string): Promise<AlphaFeedbackMessage> {
+  return request<AlphaFeedbackMessage>("/api/feedback/messages", {
+    method: "POST",
+    body: JSON.stringify({ message }),
   });
 }
