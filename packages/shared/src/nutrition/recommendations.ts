@@ -106,16 +106,16 @@ export function buildLifeplateInsightTemplate(
     : 0;
 
   if (fibrePct < 60) {
-    return `You hit enough energy today, but only ${fibrePct}% of your fibre target. Adding one fruit and one vegetable serving would have a bigger long-term health impact than reducing calories further.`;
+    return `Only ${fibrePct}% of your fibre target so far — one fruit and one veg serving would help more than cutting calories.`;
   }
 
   if (totals.protein < targets.dailyProteinG * 0.7) {
-    return "Your energy is covered, but protein is still light for muscle support and fullness. Anchoring your next meal with eggs, fish, tofu, or legumes would improve today's balance.";
+    return "Protein is still light today. Eggs, fish, tofu, or legumes at your next meal would improve balance.";
   }
 
   if (plantCount < 4) {
-    return "Macros look reasonable, but plant diversity is still modest. More colourful plants would lift gut health and micronutrient variety without needing to track harder.";
+    return "Macros look fine, but plant diversity is modest. More colour on your plate would lift gut health.";
   }
 
-  return "Today's choices support long-term health, not just calories. Keep pairing protein with plants and fibre across meals to maintain this momentum.";
+  return "Today's choices support long-term health. Keep pairing protein with plants and fibre across meals.";
 }

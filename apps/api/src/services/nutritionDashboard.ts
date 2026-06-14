@@ -18,7 +18,7 @@ import {
 } from "@lifeplate/shared";
 import type { Gender } from "@lifeplate/shared";
 import { computeNutritionTargets } from "@lifeplate/shared";
-import { generateLifeplateInsight } from "./coaching.js";
+import { generateLifeplateInsight, normalizeLifeplateInsight } from "./coaching.js";
 import {
   getCachedDailyInsight,
   saveDailyInsight,
@@ -351,7 +351,7 @@ export async function buildNutritionDashboard(
       omega3Days: weeklyMetrics.omega3Days,
       daysWithMeals: weeklyMetrics.daysWithMeals,
     }),
-    lifeplateInsight,
+    lifeplateInsight: normalizeLifeplateInsight(lifeplateInsight),
     comparison,
   };
 }

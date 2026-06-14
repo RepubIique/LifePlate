@@ -204,6 +204,21 @@ export type DailyInsightContext = {
   score: number;
 };
 
+const MAX_INSIGHT_WORDS = 35;
+const MAX_INSIGHT_CHARS = 200;
+
+export function normalizeLifeplateInsight(text: string, maxChars = MAX_INSIGHT_CHARS): string {
+  const cleaned = text.replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxChars) return cleaned;
+
+  const slice = cleaned.slice(0, maxChars);
+  const lastSpace = slice.lastIndexOf(" ");
+  const truncated =
+    lastSpace > maxChars * 0.55 ? slice.slice(0, lastSpace) : slice.trimEnd();
+
+  return `${truncated.replace(/[,;:\s]+$/, "")}…`;
+}
+
 export async function generateLifeplateInsight(
   ctx: DailyInsightContext,
 ): Promise<string> {
@@ -222,7 +237,7 @@ export async function generateLifeplateInsight(
   );
 
   if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
-    return fallback;
+    return normalizeLifeplateInsight(fallback);
   }
 
   const fibrePct = ctx.targets.dailyFibreG
@@ -230,8 +245,10 @@ export async function generateLifeplateInsight(
     : 0;
 
   const prompt = `You are a calm, evidence-informed nutrition coach for LifePlate.
-Write 2-3 sentences (max 70 words total). No markdown, bullet lists, guilt, or emojis.
-Focus on long-term health impact over calorie obsession.
+Summarize today's nutrition in 1-2 short sentences only (maximum ${MAX_INSIGHT_WORDS} words total).
+One clear takeaway — no lists, no second topic, no trailing clauses.
+The reply must be a complete thought that fits on a mobile card.
+No markdown, bullet lists, guilt, emojis, or quotation marks.
 
 User goal: ${ctx.goal ?? "General wellbeing"}
 Today's score: ${ctx.score}/100
@@ -239,7 +256,7 @@ Today totals: ${ctx.totals.calories} kcal, ${ctx.totals.protein}g protein, ${ctx
 Targets: ${ctx.targets.dailyCalories} kcal, ${ctx.targets.dailyProteinG}g protein, ${ctx.targets.dailyFibreG}g fibre
 Recent foods: ${ctx.recentFoods.join(", ") || "none yet"}
 
-Give one clear insight about what matters most for this user's day.`;
+Give the single most useful insight for this user's day.`;
 
   try {
     const client = new OpenAI({ apiKey: config.openaiApiKey });
@@ -249,17 +266,17 @@ Give one clear insight about what matters most for this user's day.`;
         {
           role: "system",
           content:
-            "Reply with a short coaching paragraph only. No quotes around the whole response.",
+            `Reply with one brief coaching summary only. Maximum ${MAX_INSIGHT_WORDS} words. End on a complete sentence.`,
         },
         { role: "user", content: prompt },
       ],
-      max_tokens: 120,
-      temperature: 0.6,
+      max_tokens: 70,
+      temperature: 0.5,
     });
     const text = response.choices[0]?.message?.content?.trim();
-    if (!text) return fallback;
-    return text.replace(/^["']|["']$/g, "").slice(0, 320);
+    if (!text) return normalizeLifeplateInsight(fallback);
+    return normalizeLifeplateInsight(text);
   } catch {
-    return fallback;
+    return normalizeLifeplateInsight(fallback);
   }
 }
