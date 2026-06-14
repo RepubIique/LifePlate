@@ -7,7 +7,7 @@ import type {
   MealRefineRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { inferMealType } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -125,15 +125,23 @@ export async function mealRoutes(app: FastifyInstance) {
       const draft = body.draftId ? getDraft(body.draftId, userId) : null;
 
       const mealType = body.mealType ?? inferMealType();
+      let loggedAt: Date | null = null;
+      if (body.loggedAt) {
+        loggedAt = new Date(body.loggedAt);
+        if (Number.isNaN(loggedAt.getTime()) || !isValidLogDateKey(dateKeyFromIso(loggedAt.toISOString()))) {
+          return reply.code(400).send({ error: "Invalid loggedAt" });
+        }
+      }
+
       const client = await pool.connect();
 
       try {
         await client.query("BEGIN");
         const mealResult = await client.query<{ id: string }>(
-          `INSERT INTO meals (user_id, meal_type, meal_name, image_url)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO meals (user_id, meal_type, meal_name, image_url, created_at)
+           VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()))
            RETURNING id`,
-          [userId, mealType, body.mealName, body.imageUrl],
+          [userId, mealType, body.mealName, body.imageUrl, loggedAt],
         );
         const mealId = mealResult.rows[0].id;
 
@@ -164,7 +172,7 @@ export async function mealRoutes(app: FastifyInstance) {
         await client.query("COMMIT");
         deleteDraft(body.draftId);
 
-        await onMealDataChanged(userId);
+        await onMealDataChanged(userId, { mealCreatedAt: loggedAt ?? new Date() });
 
         return { id: mealId };
       } catch (err) {
@@ -343,6 +351,20 @@ export async function mealRoutes(app: FastifyInstance) {
           return reply.code(404).send({ error: "Not found" });
         }
         const mealCreatedAt = owned.rows[0].created_at;
+        let nextCreatedAt = mealCreatedAt;
+
+        if (body.loggedAt !== undefined) {
+          const parsed = new Date(body.loggedAt);
+          if (Number.isNaN(parsed.getTime()) || !isValidLogDateKey(dateKeyFromIso(parsed.toISOString()))) {
+            await client.query("ROLLBACK");
+            return reply.code(400).send({ error: "Invalid loggedAt" });
+          }
+          await client.query(
+            `UPDATE meals SET created_at = $1 WHERE id = $2 AND user_id = $3`,
+            [parsed, id, userId],
+          );
+          nextCreatedAt = parsed;
+        }
 
         if (
           body.mealName !== undefined ||
@@ -405,7 +427,10 @@ export async function mealRoutes(app: FastifyInstance) {
         }
 
         await client.query("COMMIT");
-        await onMealDataChanged(userId, { mealCreatedAt });
+        await onMealDataChanged(userId, {
+          mealCreatedAt: nextCreatedAt,
+          previousMealCreatedAt: mealCreatedAt,
+        });
 
         const patch: MealPatchResponse = { id };
         if (body.mealName !== undefined) patch.mealName = body.mealName;

@@ -9,6 +9,7 @@ import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
+import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 
@@ -34,6 +35,7 @@ export default function RootLayout() {
       <PaperProvider theme={lifeplateTheme}>
         <AuthProvider>
           <MealsProvider>
+          <PendingLogDateProvider>
           <NutritionDashboardProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -54,6 +56,7 @@ export default function RootLayout() {
           </Stack>
           <AlphaFeedbackBubble />
           </NutritionDashboardProvider>
+          </PendingLogDateProvider>
           </MealsProvider>
         </AuthProvider>
       </PaperProvider>

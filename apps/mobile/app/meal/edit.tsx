@@ -10,6 +10,7 @@ import {
 } from "react-native-paper";
 import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import { isMealType } from "@lifeplate/shared";
+import { MealLogDateField, mealDateKeyFromIso } from "@/components/meal/MealLogDateField";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
@@ -83,6 +84,7 @@ export default function EditMealScreen() {
   const [fibre, setFibre] = useState("0");
   const [sugar, setSugar] = useState("0");
   const [sodium, setSodium] = useState("0");
+  const [loggedAt, setLoggedAt] = useState<string>("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -103,6 +105,7 @@ export default function EditMealScreen() {
         setSugar,
         setSodium,
       });
+      setLoggedAt(m.createdAt);
     } catch (e) {
       setMeal(null);
       setSnackbar(friendlyErrorMessage(e));
@@ -146,6 +149,7 @@ export default function EditMealScreen() {
         fibre: toNumber(fibre, 0),
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
+        loggedAt,
       });
       refreshAfterMealChange();
       setSnackbar("Saved");
@@ -196,6 +200,11 @@ export default function EditMealScreen() {
 
       <View style={styles.cardWrap}>
       <PremiumCard>
+        <MealLogDateField
+          dateKey={mealDateKeyFromIso(loggedAt || meal.createdAt)}
+          mealType={mealType}
+          onChange={setLoggedAt}
+        />
         <TextInput
           label="Meal name"
           value={mealName}

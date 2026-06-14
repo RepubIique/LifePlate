@@ -3,8 +3,9 @@ import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
+import { ActivityIndicator, Button, Chip, IconButton, Snackbar, Text } from "react-native-paper";
 import type { ImagePickerAsset } from "expo-image-picker";
+import { formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
@@ -15,6 +16,7 @@ import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
+import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { uploadMealImage, updateHydration } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
@@ -46,19 +48,27 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading, loadMeals } = useMeals();
   const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
+  const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [hydrationUpdating, setHydrationUpdating] = useState(false);
+  const [logDateKey, setLogDateKey] = useState<string | null>(null);
+  const logDateRef = useRef<string | null>(null);
   const lastAssetRef = useRef<ImagePickerAsset | null>(null);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
   useFocusEffect(
     useCallback(() => {
+      if (pendingLogDate) {
+        setLogDateKey(pendingLogDate);
+        logDateRef.current = pendingLogDate;
+        setPendingLogDate(null);
+      }
       void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
       getLastPhotoSource().then(setPreferredSource);
-    }, [loadMeals, loadDashboard]),
+    }, [loadMeals, loadDashboard, pendingLogDate, setPendingLogDate]),
   );
 
   async function processAsset(asset: ImagePickerAsset) {
@@ -85,6 +95,7 @@ export default function HomeScreen() {
           sodium: String(analysis.sodium),
           confidence: String(analysis.confidence),
           coachNudge: analysis.coachNudge,
+          logDate: logDateRef.current ?? "",
         },
       });
     } catch (e) {
@@ -161,6 +172,19 @@ export default function HomeScreen() {
 
       <View style={styles.hero}>
         <PremiumCard>
+          {logDateKey && logDateKey !== todayDateKey() ? (
+            <View style={styles.logDateBanner}>
+              <Chip
+                icon="calendar"
+                onClose={() => {
+                  setLogDateKey(null);
+                  logDateRef.current = null;
+                }}
+              >
+                Logging for {formatLogDateLabel(logDateKey)}
+              </Chip>
+            </View>
+          ) : null}
           <Text variant="titleLarge" style={styles.ctaText}>
             What are you eating?
           </Text>
@@ -277,6 +301,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  logDateBanner: { marginBottom: spacing.sm },
   ctaText: { letterSpacing: 0.2 },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },

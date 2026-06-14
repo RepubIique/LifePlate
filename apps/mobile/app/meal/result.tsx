@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
-import { inferMealType, type MealType } from "@lifeplate/shared";
+import { inferMealType, loggedAtForDateKey, type MealType } from "@lifeplate/shared";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
@@ -40,6 +40,7 @@ export default function MealResultScreen() {
     sodium: string;
     confidence: string;
     coachNudge: string;
+    logDate?: string;
   }>();
 
   const initialFoods = useMemo(() => {
@@ -142,9 +143,12 @@ export default function MealResultScreen() {
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
         confidence,
+        loggedAt: params.logDate
+          ? loggedAtForDateKey(params.logDate, mealType)
+          : undefined,
       });
       refreshAfterMealChange();
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/timeline");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
