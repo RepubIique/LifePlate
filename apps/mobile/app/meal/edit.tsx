@@ -29,6 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { leaveMealEditScreen } from "@/lib/mealNavigation";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
@@ -89,7 +90,7 @@ export default function EditMealScreen() {
   const { profile } = useAuth();
   const { removeMealLocally } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -222,7 +223,7 @@ export default function EditMealScreen() {
       });
       refreshAfterMealChange();
       setSnackbar("Saved");
-      router.back();
+      leaveMealEditScreen(returnTo);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
@@ -393,7 +394,7 @@ export default function EditMealScreen() {
         <Button mode="contained" onPress={handleSave} loading={saving}>
           Save changes
         </Button>
-        <Button mode="outlined" onPress={() => router.back()} disabled={saving}>
+        <Button mode="outlined" onPress={() => leaveMealEditScreen(returnTo)} disabled={saving}>
           Cancel
         </Button>
         <Button

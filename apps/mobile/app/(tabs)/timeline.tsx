@@ -21,6 +21,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
 import { useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
+import { openMealEdit } from "@/lib/mealNavigation";
 import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -185,7 +186,7 @@ export default function TimelineScreen() {
                 key={meal.id}
                 meal={meal}
                 isLast={index === group.meals.length - 1}
-                onPress={() => router.push({ pathname: "/meal/edit", params: { id: meal.id } })}
+                onPress={() => openMealEdit(meal.id, "timeline")}
                 onDelete={() => scheduleDelete(meal)}
               />
             ))}

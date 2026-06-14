@@ -20,6 +20,7 @@ import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
 import { premium } from "@/src/theme/premium";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
+import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -203,7 +204,7 @@ export default function HomeScreen() {
             mealName={meal.mealName}
             subtitle={formatMealTypeLabel(meal.mealType)}
             imageUrl={meal.imageUrl}
-            onPress={() => router.push({ pathname: "/meal/edit", params: { id: meal.id } })}
+            onPress={() => openMealEdit(meal.id, "home")}
           />
         ))}
       </View>
