@@ -148,6 +148,13 @@ export async function fetchMeal(id: string): Promise<MealDetail> {
   return request<MealDetail>(`/api/meals/${id}`);
 }
 
+/** Plus fallback — resolve a cloud-backed meal photo from the database. */
+export async function fetchMealImageUrl(
+  mealId: string,
+): Promise<{ imageUrl: string | null }> {
+  return request<{ imageUrl: string | null }>(`/api/meals/${mealId}/image`);
+}
+
 export async function updateMeal(id: string, body: MealUpdateRequest): Promise<void> {
   await request(`/api/meals/${id}`, {
     method: "PATCH",

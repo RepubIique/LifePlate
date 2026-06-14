@@ -20,6 +20,7 @@ import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
 import { uploadMealImage } from "../services/storage.js";
+import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
 import {
   loadUserImageStorageFlags,
   normalizeMealCloudImageUrl,
@@ -208,6 +209,7 @@ export async function mealRoutes(app: FastifyInstance) {
     async (request) => {
       const { userId } = request as AuthedRequest;
       const view = request.query.view ?? "summary";
+      const { isPaid } = await loadUserImageStorageFlags(userId);
 
       if (view === "full") {
         const { rows } = await pool.query<{
@@ -239,22 +241,24 @@ export async function mealRoutes(app: FastifyInstance) {
           [userId],
         );
 
-        const meals: MealListItem[] = rows.map((r) => ({
-          id: r.id,
-          mealType: r.meal_type,
-          mealName: r.meal_name,
-          imageUrl: r.image_url,
-          createdAt: r.created_at.toISOString(),
-          calories: r.calories,
-          protein: r.protein,
-          carbs: r.carbs,
-          fat: r.fat,
-          fibre: r.fibre,
-          sugar: r.sugar,
-          sodium: r.sodium,
-          confidence: r.confidence ? Number(r.confidence) : null,
-          foods: r.foods ?? [],
-        }));
+        const meals: MealListItem[] = await Promise.all(
+          rows.map(async (r) => ({
+            id: r.id,
+            mealType: r.meal_type,
+            mealName: r.meal_name,
+            imageUrl: await mealListImageUrl(r.image_url, isPaid),
+            createdAt: r.created_at.toISOString(),
+            calories: r.calories,
+            protein: r.protein,
+            carbs: r.carbs,
+            fat: r.fat,
+            fibre: r.fibre,
+            sugar: r.sugar,
+            sodium: r.sodium,
+            confidence: r.confidence ? Number(r.confidence) : null,
+            foods: r.foods ?? [],
+          })),
+        );
 
         return { meals };
       }
@@ -278,17 +282,48 @@ export async function mealRoutes(app: FastifyInstance) {
         [userId],
       );
 
-      const meals: MealListSummary[] = rows.map((r) => ({
-        id: r.id,
-        mealType: r.meal_type,
-        mealName: r.meal_name,
-        imageUrl: r.image_url,
-        createdAt: r.created_at.toISOString(),
-        calories: r.calories,
-        protein: r.protein,
-      }));
+      const meals: MealListSummary[] = await Promise.all(
+        rows.map(async (r) => ({
+          id: r.id,
+          mealType: r.meal_type,
+          mealName: r.meal_name,
+          imageUrl: await mealListImageUrl(r.image_url, isPaid),
+          createdAt: r.created_at.toISOString(),
+          calories: r.calories,
+          protein: r.protein,
+        })),
+      );
 
       return { meals };
+    },
+  );
+
+  app.get(
+    "/api/meals/:id/image",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { id } = request.params as { id: string };
+
+      const flags = await loadUserImageStorageFlags(userId);
+      if (!flags.isPaid) {
+        return reply.code(403).send({
+          error: "Cloud meal images require LifePlate Plus.",
+          code: "PLUS_REQUIRED",
+        });
+      }
+
+      const { rows } = await pool.query<{ image_url: string | null }>(
+        `SELECT image_url FROM meals WHERE id = $1 AND user_id = $2`,
+        [id, userId],
+      );
+      const stored = rows[0]?.image_url;
+      if (!stored?.trim()) {
+        return { imageUrl: null };
+      }
+
+      const imageUrl = await resolveMealImageUrl(stored);
+      return { imageUrl };
     },
   );
 
@@ -332,12 +367,13 @@ export async function mealRoutes(app: FastifyInstance) {
       if (!r) return reply.code(404).send({ error: "Not found" });
 
       const portionMeta = extractMealPortionMeta(r.raw_ai_response);
+      const imageUrl = (await resolveMealImageUrl(r.image_url)) ?? "";
 
       return {
         id: r.id,
         mealType: r.meal_type,
         mealName: r.meal_name,
-        imageUrl: r.image_url,
+        imageUrl,
         createdAt: r.created_at.toISOString(),
         calories: r.calories,
         protein: r.protein,

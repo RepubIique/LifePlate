@@ -1,5 +1,6 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
+import { fetchMealImageUrl } from "@/lib/api";
 
 const MEALS_DIR = `${FileSystem.documentDirectory ?? ""}meals/`;
 const WEB_INDEX_PREFIX = "lifeplate:meal-image:";
@@ -79,16 +80,63 @@ function isRemoteImageUrl(url: string | null | undefined): url is string {
   return trimmed.startsWith("http://") || trimmed.startsWith("https://");
 }
 
-/** Prefer the on-device copy; fall back to cloud URL for Plus users. */
+async function cacheRemoteMealImage(
+  mealId: string,
+  remoteUrl: string,
+): Promise<string | null> {
+  if (!mealId.trim() || !remoteUrl.trim()) return null;
+
+  try {
+    if (Platform.OS === "web" || !FileSystem.documentDirectory) {
+      return await writeWebImage(mealId, remoteUrl);
+    }
+
+    await ensureMealsDir();
+    const dest = mealFilePath(mealId);
+    await FileSystem.downloadAsync(remoteUrl, dest);
+    return dest;
+  } catch {
+    return null;
+  }
+}
+
+type ResolveMealImageOptions = {
+  /** When true (Plus), fetch image_url from the API if missing locally. */
+  cloudFallback?: boolean;
+};
+
+/** Prefer on-device copy; Plus users fall back to cloud URL from the meal or API. */
 export async function resolveMealImageUri(
   mealId: string | undefined,
   cloudUrl?: string | null,
+  options?: ResolveMealImageOptions,
 ): Promise<string | null> {
   if (mealId) {
     const local = await getLocalMealImageUri(mealId);
     if (local) return local;
   }
-  if (isRemoteImageUrl(cloudUrl)) return cloudUrl.trim();
+
+  if (isRemoteImageUrl(cloudUrl)) {
+    const url = cloudUrl.trim();
+    if (mealId) {
+      void cacheRemoteMealImage(mealId, url);
+    }
+    return url;
+  }
+
+  if (options?.cloudFallback && mealId) {
+    try {
+      const { imageUrl } = await fetchMealImageUrl(mealId);
+      if (isRemoteImageUrl(imageUrl)) {
+        const url = imageUrl.trim();
+        void cacheRemoteMealImage(mealId, url);
+        return url;
+      }
+    } catch {
+      // Plus-only endpoint — ignore for free users or missing cloud copies.
+    }
+  }
+
   return null;
 }
 
