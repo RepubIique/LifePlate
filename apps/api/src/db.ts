@@ -32,23 +32,11 @@ async function verifyUserSchema() {
   }
 }
 
+const SCHEMA_FILE = "schema.sql";
+
 export async function runMigrations() {
-  const files = [
-    "001_init.sql",
-    "002_nutrition_details.sql",
-    "003_user_body_metrics.sql",
-    "004_user_gender.sql",
-    "005_daily_hydration.sql",
-    "006_upload_rate_limits.sql",
-    "007_refine_rate_limits.sql",
-    "008_user_stats_and_daily_insights.sql",
-    "009_user_avatar.sql",
-    "010_alpha_feedback_chat.sql",
-  ];
-  for (const file of files) {
-    const sql = readFileSync(join(__dirname, "../migrations", file), "utf-8");
-    await pool.query(sql);
-  }
+  const sql = readFileSync(join(__dirname, "../migrations", SCHEMA_FILE), "utf-8");
+  await pool.query(sql);
   await verifyUserSchema();
 }
 
