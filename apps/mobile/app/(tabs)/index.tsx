@@ -14,6 +14,7 @@ import { useMeals } from "@/context/MealsContext";
 import { uploadMealImage } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
+import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { premium } from "@/src/theme/premium";
 import { premiumStyles } from "@/src/theme/premium";
 import { getLastPhotoSource, setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
@@ -117,6 +118,9 @@ export default function HomeScreen() {
 
     const asset = result.assets[0];
     lastAssetRef.current = asset;
+    if (useCamera) {
+      await saveToCameraRoll(asset.uri);
+    }
     await processAsset(asset);
   }
 

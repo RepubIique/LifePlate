@@ -31,6 +31,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/withDisableUserScriptSandboxing",
       "expo-router",
       "expo-secure-store",
       [
@@ -38,6 +39,13 @@
         {
           "photosPermission": "LifePlate needs photo access to log meals from your library.",
           "cameraPermission": "LifePlate needs camera access to photograph your meals."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "LifePlate needs photo access to log meals from your library.",
+          "savePhotosPermission": "LifePlate saves meal photos to your camera roll so you never lose them if upload fails."
         }
       ],
       [
