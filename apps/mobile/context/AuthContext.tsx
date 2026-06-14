@@ -18,6 +18,7 @@ import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   clearCachedProfile,
   loadCachedProfile,
+  isProfileEntitlementsStale,
   saveCachedProfile,
 } from "@/lib/profileCache";
 import { clearCachedAvatar } from "@/lib/avatarCache";
@@ -224,12 +225,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       const cached = await loadCachedProfile(session.user.id);
-      if (!cancelled && cached) {
+      if (!cancelled && cached && !isProfileEntitlementsStale(cached.profile)) {
         setProfile(cached.profile);
         profileRef.current = cached.profile;
         profileFetchedAtRef.current = cached.fetchedAt;
       }
-      await loadProfile();
+      await loadProfile({ force: true });
     })();
 
     return () => {

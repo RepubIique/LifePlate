@@ -1,6 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { fetchMealImageUrl } from "@/lib/api";
+import { ApiError } from "@/lib/apiErrors";
 
 const MEALS_DIR = `${FileSystem.documentDirectory ?? ""}meals/`;
 const WEB_INDEX_PREFIX = "lifeplate:meal-image:";
@@ -77,7 +78,13 @@ export async function getLocalMealImageUri(mealId: string): Promise<string | nul
 
 function isRemoteImageUrl(url: string | null | undefined): url is string {
   const trimmed = url?.trim() ?? "";
-  return trimmed.startsWith("http://") || trimmed.startsWith("https://");
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    return false;
+  }
+  if (trimmed.includes("data:image") || trimmed.includes("data%3Aimage")) {
+    return false;
+  }
+  return true;
 }
 
 async function cacheRemoteMealImage(
@@ -132,8 +139,10 @@ export async function resolveMealImageUri(
         void cacheRemoteMealImage(mealId, url);
         return url;
       }
-    } catch {
-      // Plus-only endpoint — ignore for free users or missing cloud copies.
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        return null;
+      }
     }
   }
 

@@ -11,6 +11,9 @@ export function profileAvatarPath(userId: string): string {
 
 export function normalizeStoragePath(stored: string): string {
   const trimmed = stored.trim();
+  if (trimmed.startsWith("data:") || trimmed.includes("data:image")) {
+    return "";
+  }
   const publicMatch = trimmed.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
   if (publicMatch?.[1]) return decodeURIComponent(publicMatch[1]);
   const signMatch = trimmed.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+?)(?:\?|$)/);
@@ -24,6 +27,7 @@ export async function resolveStorageObjectUrl(
   if (!stored?.trim()) return null;
 
   const path = normalizeStoragePath(stored);
+  if (!path) return null;
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase.storage

@@ -1,7 +1,10 @@
 import type { MealAnalysisResult } from "@lifeplate/shared";
+import { pool } from "../db.js";
 import { imageUrlToBuffer } from "./imageFetch.js";
 
-interface Draft {
+const TTL_MS = 30 * 60 * 1000;
+
+export interface Draft {
   userId: string;
   imageUrl: string;
   imageBuffer?: Buffer;
@@ -11,65 +14,111 @@ interface Draft {
   expiresAt: number;
 }
 
-const drafts = new Map<string, Draft>();
-const TTL_MS = 30 * 60 * 1000;
+type DraftRow = {
+  user_id: string;
+  image_url: string;
+  image_data: Buffer | null;
+  mime_type: string;
+  analysis: MealAnalysisResult;
+  raw_ai_response: unknown;
+  expires_at: Date;
+};
 
-function prune() {
-  const now = Date.now();
-  for (const [id, draft] of drafts) {
-    if (draft.expiresAt < now) drafts.delete(id);
-  }
+function rowToDraft(row: DraftRow): Draft {
+  return {
+    userId: row.user_id,
+    imageUrl: row.image_url,
+    imageBuffer: row.image_data ?? undefined,
+    mimeType: row.mime_type,
+    analysis: row.analysis,
+    rawAiResponse: row.raw_ai_response,
+    expiresAt: row.expires_at.getTime(),
+  };
 }
 
-export function saveDraft(input: {
+async function pruneExpiredDrafts() {
+  await pool.query(`DELETE FROM meal_drafts WHERE expires_at <= NOW()`);
+}
+
+export async function saveDraft(input: {
   userId: string;
   imageUrl: string;
   imageBuffer?: Buffer;
   mimeType?: string;
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
-}): string {
-  prune();
-  const draftId = crypto.randomUUID();
-  drafts.set(draftId, {
-    userId: input.userId,
-    imageUrl: input.imageUrl,
-    imageBuffer: input.imageBuffer,
-    mimeType: input.mimeType,
-    analysis: input.analysis,
-    rawAiResponse: input.rawAiResponse,
-    expiresAt: Date.now() + TTL_MS,
-  });
+}): Promise<string> {
+  await pruneExpiredDrafts();
+
+  const expiresAt = new Date(Date.now() + TTL_MS);
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO meal_drafts (
+       user_id, image_url, image_data, mime_type, analysis, raw_ai_response, expires_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id`,
+    [
+      input.userId,
+      input.imageUrl,
+      input.imageBuffer ?? null,
+      input.mimeType ?? "image/jpeg",
+      input.analysis,
+      input.rawAiResponse,
+      expiresAt,
+    ],
+  );
+
+  const draftId = rows[0]?.id;
+  if (!draftId) {
+    throw new Error("Failed to save meal draft");
+  }
   return draftId;
 }
 
-export function getDraft(draftId: string, userId: string): Draft | null {
-  prune();
-  const draft = drafts.get(draftId);
-  if (!draft || draft.userId !== userId) return null;
-  return draft;
+export async function getDraft(
+  draftId: string,
+  userId: string,
+): Promise<Draft | null> {
+  await pruneExpiredDrafts();
+
+  const { rows } = await pool.query<DraftRow>(
+    `SELECT user_id, image_url, image_data, mime_type, analysis, raw_ai_response, expires_at
+     FROM meal_drafts
+     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
+    [draftId, userId],
+  );
+
+  const row = rows[0];
+  return row ? rowToDraft(row) : null;
 }
 
-export function deleteDraft(draftId: string | undefined) {
+export async function deleteDraft(draftId: string | undefined) {
   if (!draftId) return;
-  drafts.delete(draftId);
+  await pool.query(`DELETE FROM meal_drafts WHERE id = $1`, [draftId]);
 }
 
-export function updateDraftAnalysis(
+export async function updateDraftAnalysis(
   draftId: string,
   userId: string,
   analysis: MealAnalysisResult,
   rawAiResponse: unknown,
-): boolean {
-  const draft = getDraft(draftId, userId);
-  if (!draft) return false;
-  drafts.set(draftId, {
-    ...draft,
-    analysis,
-    rawAiResponse,
-    expiresAt: Date.now() + TTL_MS,
-  });
-  return true;
+): Promise<boolean> {
+  const expiresAt = new Date(Date.now() + TTL_MS);
+  const { rowCount } = await pool.query(
+    `UPDATE meal_drafts
+     SET analysis = $3,
+         raw_ai_response = $4,
+         expires_at = $5
+     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
+    [
+      draftId,
+      userId,
+      analysis,
+      rawAiResponse,
+      expiresAt,
+    ],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function getDraftImage(

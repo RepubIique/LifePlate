@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { assertRuntimeConfig, config } from "./config.js";
-import { runMigrations } from "./db.js";
+import { runMigrations, pool } from "./db.js";
 import { backfillAllUserMealStats } from "./services/userMealStats.js";
 import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { mealRoutes } from "./routes/meals.js";
@@ -22,7 +22,15 @@ await app.register(multipart, {
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
-app.get("/health", async () => ({ ok: true }));
+app.get("/health", async (_request, reply) => {
+  try {
+    await pool.query("SELECT 1");
+    return { ok: true };
+  } catch (err) {
+    app.log.error({ err }, "health check failed");
+    return reply.code(503).send({ ok: false, error: "database unavailable" });
+  }
+});
 
 await app.register(mealRoutes);
 await app.register(insightRoutes);

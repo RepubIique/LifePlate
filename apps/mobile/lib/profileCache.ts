@@ -52,7 +52,13 @@ function normalizeProfile(
   return {
     ...parsed,
     hasAvatar: parsed.hasAvatar ?? Boolean(parsed.avatarUrl),
+    isPaid: parsed.isPaid ?? false,
+    cloudImageBackup: parsed.cloudImageBackup ?? false,
   };
+}
+
+export function isProfileEntitlementsStale(profile: UserProfile): boolean {
+  return !("isPaid" in profile) || !("cloudImageBackup" in profile);
 }
 
 export async function loadCachedProfile(

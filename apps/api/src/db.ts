@@ -1,10 +1,13 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { config } from "./config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = join(__dirname, "../migrations");
+const BASELINE_VERSION = "baseline";
+const BASELINE_FILE = "schema.sql";
 
 const useSsl =
   config.databaseUrl.includes("supabase") ||
@@ -32,11 +35,72 @@ async function verifyUserSchema() {
   }
 }
 
-const SCHEMA_FILE = "schema.sql";
+async function ensureMigrationTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS _schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function isMigrationApplied(version: string): Promise<boolean> {
+  const { rows } = await pool.query<{ version: string }>(
+    `SELECT version FROM _schema_migrations WHERE version = $1`,
+    [version],
+  );
+  return rows.length > 0;
+}
+
+async function markMigrationApplied(version: string) {
+  await pool.query(
+    `INSERT INTO _schema_migrations (version) VALUES ($1)
+     ON CONFLICT (version) DO NOTHING`,
+    [version],
+  );
+}
+
+async function hasExistingPublicSchema(): Promise<boolean> {
+  const { rows } = await pool.query<{ reg: string }>(
+    `SELECT to_regclass('public.users') AS reg`,
+  );
+  return rows[0]?.reg != null;
+}
+
+function incrementalMigrationFiles(): string[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((name) => /^\d{3}_.+\.sql$/.test(name))
+    .sort();
+}
+
+function migrationVersionFromFile(file: string): string {
+  return file.replace(/\.sql$/, "");
+}
+
+async function applyMigrationFile(file: string) {
+  const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf-8");
+  await pool.query(sql);
+}
 
 export async function runMigrations() {
-  const sql = readFileSync(join(__dirname, "../migrations", SCHEMA_FILE), "utf-8");
-  await pool.query(sql);
+  await ensureMigrationTable();
+
+  if (!(await isMigrationApplied(BASELINE_VERSION))) {
+    if (await hasExistingPublicSchema()) {
+      await markMigrationApplied(BASELINE_VERSION);
+    } else {
+      await applyMigrationFile(BASELINE_FILE);
+      await markMigrationApplied(BASELINE_VERSION);
+    }
+  }
+
+  for (const file of incrementalMigrationFiles()) {
+    const version = migrationVersionFromFile(file);
+    if (await isMigrationApplied(version)) continue;
+    await applyMigrationFile(file);
+    await markMigrationApplied(version);
+  }
+
   await verifyUserSchema();
 }
 

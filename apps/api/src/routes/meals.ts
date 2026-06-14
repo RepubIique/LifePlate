@@ -57,7 +57,7 @@ export async function mealRoutes(app: FastifyInstance) {
           }
         }
 
-        const draftId = saveDraft({
+        const draftId = await saveDraft({
           userId,
           imageUrl,
           imageBuffer: buffer,
@@ -98,7 +98,7 @@ export async function mealRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "draftId and clarification are required" });
       }
 
-      const draft = getDraft(draftId, userId);
+      const draft = await getDraft(draftId, userId);
       if (!draft) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
@@ -112,7 +112,7 @@ export async function mealRoutes(app: FastifyInstance) {
           draft.analysis,
           clarification.trim(),
         );
-        updateDraftAnalysis(draftId, userId, analysis, raw);
+        await updateDraftAnalysis(draftId, userId, analysis, raw);
 
         const coachingContext = await buildCoachingContext(userId);
         const coachNudge = await generateCoachNudge(coachingContext, analysis);
@@ -138,10 +138,22 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const body = request.body;
 
-      const draft = body.draftId ? getDraft(body.draftId, userId) : null;
-      const imageUrl = normalizeMealCloudImageUrl(
+      const draft = body.draftId ? await getDraft(body.draftId, userId) : null;
+      let imageUrl = normalizeMealCloudImageUrl(
         body.imageUrl?.trim() || draft?.imageUrl,
       );
+
+      if (!imageUrl && draft) {
+        const storageFlags = await loadUserImageStorageFlags(userId);
+        if (shouldUploadMealToCloud(storageFlags)) {
+          try {
+            const { buffer, mimeType } = await getDraftImage(draft);
+            imageUrl = await uploadMealImage(userId, buffer, mimeType);
+          } catch (err) {
+            request.log.error(err, "Confirm-time cloud upload failed");
+          }
+        }
+      }
 
       const mealType = body.mealType ?? inferMealType();
       let loggedAt: Date | null = null;
@@ -189,7 +201,7 @@ export async function mealRoutes(app: FastifyInstance) {
         }
 
         await client.query("COMMIT");
-        deleteDraft(body.draftId);
+        await deleteDraft(body.draftId);
 
         await onMealDataChanged(userId, { mealCreatedAt: loggedAt ?? new Date() });
 
@@ -323,7 +335,7 @@ export async function mealRoutes(app: FastifyInstance) {
       }
 
       const imageUrl = await resolveMealImageUrl(stored);
-      return { imageUrl };
+      return { imageUrl: imageUrl ?? (stored.startsWith("http") ? stored : null) };
     },
   );
 
@@ -367,7 +379,7 @@ export async function mealRoutes(app: FastifyInstance) {
       if (!r) return reply.code(404).send({ error: "Not found" });
 
       const portionMeta = extractMealPortionMeta(r.raw_ai_response);
-      const imageUrl = (await resolveMealImageUrl(r.image_url)) ?? "";
+      const imageUrl = (await resolveMealImageUrl(r.image_url)) ?? r.image_url?.trim() ?? "";
 
       return {
         id: r.id,

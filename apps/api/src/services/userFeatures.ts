@@ -26,9 +26,12 @@ export function shouldUploadMealToCloud(flags: UserImageStorageFlags): boolean {
   return flags.isPaid && flags.cloudImageBackup;
 }
 
-/** Persisted cloud URL for meals — empty when photos are device-only. */
+/** Persisted cloud URL for meals — empty when photos are device-only or legacy inline base64. */
 export function normalizeMealCloudImageUrl(url: string | null | undefined): string {
   const trimmed = url?.trim() ?? "";
   if (!trimmed || trimmed.startsWith("data:")) return "";
+  if (trimmed.includes("/storage/v1/object/") && trimmed.includes("data:image")) {
+    return "";
+  }
   return trimmed;
 }
