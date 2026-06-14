@@ -1,8 +1,11 @@
 import type { MealAnalysisResult } from "@lifeplate/shared";
+import { imageUrlToBuffer } from "./imageFetch.js";
 
 interface Draft {
   userId: string;
   imageUrl: string;
+  imageBuffer?: Buffer;
+  mimeType?: string;
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
   expiresAt: number;
@@ -18,19 +21,23 @@ function prune() {
   }
 }
 
-export function saveDraft(
-  userId: string,
-  imageUrl: string,
-  analysis: MealAnalysisResult,
-  rawAiResponse: unknown,
-): string {
+export function saveDraft(input: {
+  userId: string;
+  imageUrl: string;
+  imageBuffer?: Buffer;
+  mimeType?: string;
+  analysis: MealAnalysisResult;
+  rawAiResponse: unknown;
+}): string {
   prune();
   const draftId = crypto.randomUUID();
   drafts.set(draftId, {
-    userId,
-    imageUrl,
-    analysis,
-    rawAiResponse,
+    userId: input.userId,
+    imageUrl: input.imageUrl,
+    imageBuffer: input.imageBuffer,
+    mimeType: input.mimeType,
+    analysis: input.analysis,
+    rawAiResponse: input.rawAiResponse,
     expiresAt: Date.now() + TTL_MS,
   });
   return draftId;
@@ -43,7 +50,8 @@ export function getDraft(draftId: string, userId: string): Draft | null {
   return draft;
 }
 
-export function deleteDraft(draftId: string) {
+export function deleteDraft(draftId: string | undefined) {
+  if (!draftId) return;
   drafts.delete(draftId);
 }
 
@@ -62,4 +70,16 @@ export function updateDraftAnalysis(
     expiresAt: Date.now() + TTL_MS,
   });
   return true;
+}
+
+export async function getDraftImage(
+  draft: Draft,
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (draft.imageBuffer) {
+    return {
+      buffer: draft.imageBuffer,
+      mimeType: draft.mimeType ?? "image/jpeg",
+    };
+  }
+  return imageUrlToBuffer(draft.imageUrl);
 }

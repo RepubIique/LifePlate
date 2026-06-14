@@ -76,6 +76,7 @@ export async function updateProfile(body: {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
+  cloudImageBackup?: boolean;
 }): Promise<ProfilePatchResponse> {
   return request<ProfilePatchResponse>("/api/users/me", {
     method: "PATCH",
@@ -226,12 +227,15 @@ export async function uploadMealImage(input: {
   return JSON.parse(result.body) as MealUploadResponse;
 }
 
-export async function confirmMeal(body: MealConfirmRequest): Promise<void> {
-  const imageUrl =
-    body.draftId && body.imageUrl.startsWith("data:") ? "" : body.imageUrl;
-  await request("/api/meals/confirm", {
+export async function confirmMeal(body: MealConfirmRequest): Promise<{ id: string }> {
+  const cloudUrl = body.imageUrl?.trim() ?? "";
+  const payload = {
+    ...body,
+    imageUrl: cloudUrl.startsWith("http") ? cloudUrl : undefined,
+  };
+  return request<{ id: string }>("/api/meals/confirm", {
     method: "POST",
-    body: JSON.stringify({ ...body, imageUrl }),
+    body: JSON.stringify(payload),
   });
 }
 

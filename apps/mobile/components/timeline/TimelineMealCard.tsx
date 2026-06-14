@@ -1,7 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
+import { MealImage } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
 import {
   formatMealTime,
@@ -45,13 +46,12 @@ export function TimelineMealCard({ meal, isLast, onPress, onDelete }: Props) {
           style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
         >
           <PremiumCard style={styles.card} noBlur>
-            {meal.imageUrl ? (
-              <Image source={{ uri: meal.imageUrl }} style={styles.image} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <MaterialCommunityIcons name="food" size={28} color="#636E72" />
-              </View>
-            )}
+            <MealImage
+              mealId={meal.id}
+              cloudUrl={meal.imageUrl}
+              style={styles.image}
+              placeholderStyle={styles.imagePlaceholder}
+            />
 
             <View style={styles.body}>
               <View style={styles.metaRow}>

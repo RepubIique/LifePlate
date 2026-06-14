@@ -37,6 +37,9 @@ export function friendlyErrorMessage(err: unknown): string {
     if (err.code === "UNCLEAR_PHOTO") {
       return "We couldn't see the food clearly. Try brighter light or move closer.";
     }
+    if (err.code === "PLUS_REQUIRED") {
+      return "Cloud photo backup requires LifePlate Plus.";
+    }
     if (err.code === "INVALID_IMAGE") {
       return "Please upload a photo of your meal (JPEG or PNG).";
     }

@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
   meals_logged INTEGER NOT NULL DEFAULT 0,
   current_streak INTEGER NOT NULL DEFAULT 0,
   longest_streak INTEGER NOT NULL DEFAULT 0,
+  is_paid BOOLEAN NOT NULL DEFAULT false,
+  cloud_image_backup BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -32,6 +34,8 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS meals_logged INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS current_streak INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS longest_streak INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cloud_image_backup BOOLEAN NOT NULL DEFAULT false;
 
 -- ---------------------------------------------------------------------------
 -- Meals & analysis
@@ -42,9 +46,12 @@ CREATE TABLE IF NOT EXISTS meals (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   meal_type TEXT,
   meal_name TEXT NOT NULL,
-  image_url TEXT NOT NULL,
+  image_url TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE meals ALTER COLUMN image_url DROP NOT NULL;
+ALTER TABLE meals ALTER COLUMN image_url SET DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS meals_user_created_idx ON meals(user_id, created_at DESC);
 

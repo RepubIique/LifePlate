@@ -87,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           mealsLogged: 0,
           currentStreak: 0,
           longestStreak: 0,
+          isPaid: false,
+          cloudImageBackup: false,
           ...patch,
         };
       }

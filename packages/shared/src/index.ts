@@ -331,8 +331,21 @@ export function buildMealPortionMeta(
 
 export interface MealUploadResponse extends MealAnalysisResult {
   draftId: string;
+  /** Cloud URL when paid cloud backup is enabled; empty when photos stay on device. */
   imageUrl: string;
   coachNudge: string;
+}
+
+export interface MealConfirmResponse {
+  id: string;
+}
+
+/** Paid users who opted in — meal photos are also stored in cloud storage. */
+export function hasCloudMealImageBackup(profile: {
+  isPaid: boolean;
+  cloudImageBackup: boolean;
+}): boolean {
+  return profile.isPaid && profile.cloudImageBackup;
 }
 
 export interface MealRefineRequest {
@@ -346,7 +359,8 @@ export interface MealRefineResponse extends MealAnalysisResult {
 
 export interface MealConfirmRequest {
   draftId: string;
-  imageUrl: string;
+  /** Cloud URL only — omit or leave empty for device-only photos. */
+  imageUrl?: string;
   mealName: string;
   foods: string[];
   estimatedCalories: number;
@@ -506,6 +520,8 @@ export interface ProfilePatchResponse {
   gender?: Gender | null;
   hasAvatar?: boolean;
   nutritionTargets?: NutritionTargets | null;
+  isPaid?: boolean;
+  cloudImageBackup?: boolean;
 }
 
 export interface AlphaFeedbackMessage {
@@ -538,4 +554,8 @@ export interface UserProfile {
   mealsLogged: number;
   currentStreak: number;
   longestStreak: number;
+  /** Subscription entitlement — unlocks cloud photo backup. */
+  isPaid: boolean;
+  /** When true (and isPaid), new meal photos are copied to cloud storage. */
+  cloudImageBackup: boolean;
 }

@@ -12,8 +12,7 @@ import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
-import { saveDraft, getDraft, deleteDraft, updateDraftAnalysis } from "../services/drafts.js";
-import { imageUrlToBuffer } from "../services/imageFetch.js";
+import { getDraft, deleteDraft, updateDraftAnalysis, getDraftImage, saveDraft } from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
@@ -21,6 +20,11 @@ import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
 import { uploadMealImage } from "../services/storage.js";
+import {
+  loadUserImageStorageFlags,
+  normalizeMealCloudImageUrl,
+  shouldUploadMealToCloud,
+} from "../services/userFeatures.js";
 
 export async function mealRoutes(app: FastifyInstance) {
   app.post(
@@ -41,15 +45,25 @@ export async function mealRoutes(app: FastifyInstance) {
         validateUploadImage(buffer, mimeType);
         const { analysis, raw } = await analyzeMealImage(buffer, mimeType);
 
-        let imageUrl: string;
-        try {
-          imageUrl = await uploadMealImage(userId, buffer, mimeType);
-        } catch (err) {
-          request.log.error(err);
-          imageUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+        const storageFlags = await loadUserImageStorageFlags(userId);
+        let imageUrl = "";
+
+        if (shouldUploadMealToCloud(storageFlags)) {
+          try {
+            imageUrl = await uploadMealImage(userId, buffer, mimeType);
+          } catch (err) {
+            request.log.error(err, "Cloud meal upload failed — continuing with device-only photo");
+          }
         }
 
-        const draftId = saveDraft(userId, imageUrl, analysis, raw);
+        const draftId = saveDraft({
+          userId,
+          imageUrl,
+          imageBuffer: buffer,
+          mimeType,
+          analysis,
+          rawAiResponse: raw,
+        });
         const coachingContext = await buildCoachingContext(userId);
         const coachNudge = await generateCoachNudge(coachingContext, analysis);
 
@@ -88,7 +102,7 @@ export async function mealRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
 
-      const { buffer, mimeType } = await imageUrlToBuffer(draft.imageUrl);
+      const { buffer, mimeType } = await getDraftImage(draft);
       try {
         await reserveRefineAttempt(userId);
         const { analysis, raw } = await refineMealImage(
@@ -124,12 +138,9 @@ export async function mealRoutes(app: FastifyInstance) {
       const body = request.body;
 
       const draft = body.draftId ? getDraft(body.draftId, userId) : null;
-      const imageUrl = body.imageUrl?.trim() || draft?.imageUrl?.trim();
-      if (!imageUrl) {
-        return reply.code(400).send({
-          error: "Missing meal image. Try uploading the photo again.",
-        });
-      }
+      const imageUrl = normalizeMealCloudImageUrl(
+        body.imageUrl?.trim() || draft?.imageUrl,
+      );
 
       const mealType = body.mealType ?? inferMealType();
       let loggedAt: Date | null = null;

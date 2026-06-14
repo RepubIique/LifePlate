@@ -1,15 +1,18 @@
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Card, IconButton, Text } from "react-native-paper";
+import { MealImage } from "@/components/MealImage";
 import { premiumStyles } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
 export function MealRowCard({
+  mealId,
   mealName,
   subtitle,
   imageUrl,
   onPress,
   onDelete,
 }: {
+  mealId?: string;
   mealName: string;
   subtitle: string;
   imageUrl?: string | null;
@@ -19,11 +22,12 @@ export function MealRowCard({
   return (
     <Card style={premiumStyles.mealCard} onPress={onPress}>
       <Card.Content style={styles.row}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={premiumStyles.thumb} />
-        ) : (
-          <View style={premiumStyles.thumbPlaceholder} />
-        )}
+        <MealImage
+          mealId={mealId}
+          cloudUrl={imageUrl}
+          style={premiumStyles.thumb}
+          placeholderStyle={premiumStyles.thumbPlaceholder}
+        />
         <View style={styles.text}>
           <Text variant="titleMedium">{mealName}</Text>
           <Text variant="bodySmall" style={styles.sub}>

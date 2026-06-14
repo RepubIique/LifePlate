@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionSheetIOS, Alert, Platform, StyleSheet, View } from "react-native";
-import { Button, Snackbar, Text, TextInput } from "react-native-paper";
+import { Button, Snackbar, Switch, Text, TextInput } from "react-native-paper";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
   BodyMetricsForm,
@@ -187,6 +187,20 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handleCloudBackupToggle(enabled: boolean) {
+    if (!profile?.isPaid) {
+      setSnackbar("Cloud photo backup requires LifePlate Plus.");
+      return;
+    }
+    try {
+      const updated = await updateProfile({ cloudImageBackup: enabled });
+      patchProfile(updated);
+      setSnackbar(enabled ? "Cloud backup enabled" : "Cloud backup disabled");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    }
+  }
+
   async function handleExport() {
     if (!profile) return;
     setExporting(true);
@@ -362,6 +376,25 @@ export default function ProfileScreen() {
           </Button>
         </PremiumCard>
 
+        <SectionLabel title="LifePlate Plus" />
+        <PremiumCard style={styles.formCard} noBlur>
+          <View style={styles.switchRow}>
+            <View style={styles.switchCopy}>
+              <Text variant="titleMedium">Cloud photo backup</Text>
+              <Text variant="bodySmall" style={styles.switchHint}>
+                {profile?.isPaid
+                  ? "Also store meal photos in the cloud for multi-device access."
+                  : "Upgrade to Plus to back up meal photos across devices."}
+              </Text>
+            </View>
+            <Switch
+              value={profile?.cloudImageBackup ?? false}
+              onValueChange={handleCloudBackupToggle}
+              disabled={!profile?.isPaid}
+            />
+          </View>
+        </PremiumCard>
+
         <SectionLabel title="Account" />
         <PremiumCard style={styles.formCard} noBlur>
           <View style={styles.linkActions}>
@@ -426,6 +459,13 @@ const styles = StyleSheet.create({
   heroEmail: { opacity: 0.6 },
   avatarHint: { opacity: 0.45, marginTop: 2 },
   formCard: { gap: spacing.sm },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  switchCopy: { flex: 1, gap: 4 },
+  switchHint: { opacity: 0.65 },
   input: { backgroundColor: "#FFFFFF" },
   saveButton: { marginTop: spacing.sm },
   linkActions: { gap: spacing.sm },

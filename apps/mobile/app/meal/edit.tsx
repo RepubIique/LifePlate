@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Button,
   Chip,
@@ -24,10 +24,12 @@ import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
+import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { leaveMealEditScreen } from "@/lib/mealNavigation";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
@@ -236,6 +238,7 @@ export default function EditMealScreen() {
     setDeleting(true);
     try {
       await deleteMeal(id);
+      await deleteMealImage(id);
       removeMealLocally(id);
       refreshAfterMealChange();
       router.replace("/(tabs)/timeline");
@@ -263,9 +266,11 @@ export default function EditMealScreen() {
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
       <View style={styles.imageWrap}>
-        {meal.imageUrl ? (
-          <Image source={{ uri: meal.imageUrl }} style={styles.image} />
-        ) : null}
+        <MealImage
+          mealId={meal.id}
+          cloudUrl={meal.imageUrl}
+          style={styles.image}
+        />
       </View>
 
       <View style={styles.cardWrap}>

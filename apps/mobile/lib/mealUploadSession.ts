@@ -1,12 +1,17 @@
 import type { MealUploadResponse } from "@lifeplate/shared";
 
-const sessions = new Map<string, MealUploadResponse>();
+export type MealUploadSession = MealUploadResponse & {
+  /** Compressed photo kept on device for confirm + timeline display. */
+  localImageUri: string;
+};
 
-export function saveMealUploadSession(draftId: string, payload: MealUploadResponse): void {
+const sessions = new Map<string, MealUploadSession>();
+
+export function saveMealUploadSession(draftId: string, payload: MealUploadSession): void {
   sessions.set(draftId, payload);
 }
 
-export function getMealUploadSession(draftId: string | undefined): MealUploadResponse | null {
+export function getMealUploadSession(draftId: string | undefined): MealUploadSession | null {
   if (!draftId?.trim()) return null;
   return sessions.get(draftId) ?? null;
 }

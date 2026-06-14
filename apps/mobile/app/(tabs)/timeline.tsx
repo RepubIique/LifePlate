@@ -18,6 +18,7 @@ import { useMeals } from "@/context/MealsContext";
 import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
 import { deleteMeal } from "@/lib/api";
+import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
@@ -86,6 +87,7 @@ export default function TimelineScreen() {
       pendingRef.current.delete(meal.id);
       try {
         await deleteMeal(meal.id);
+        await deleteMealImage(meal.id);
         refreshAfterMealChange();
       } catch (e) {
         restoreMealLocally(meal);

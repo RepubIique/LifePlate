@@ -25,6 +25,7 @@ import {
   getMealUploadSession,
   routeParam,
 } from "@/lib/mealUploadSession";
+import { saveMealImage } from "@/lib/mealImages";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
@@ -65,7 +66,10 @@ export default function MealResultScreen() {
     [draftId],
   );
   const imageUrl =
-    routeParam(params.imageUrl) || uploadSession?.imageUrl || "";
+    uploadSession?.localImageUri ||
+    routeParam(params.imageUrl) ||
+    uploadSession?.imageUrl ||
+    "";
   const logDateKey = routeParam(params.logDate);
 
   const initialFoods = useMemo(() => {
@@ -251,9 +255,9 @@ export default function MealResultScreen() {
   async function handleConfirm() {
     setSaving(true);
     try {
-      await confirmMeal({
+      const { id } = await confirmMeal({
         draftId,
-        imageUrl,
+        imageUrl: uploadSession?.imageUrl || undefined,
         mealName,
         mealType,
         foods,
@@ -275,6 +279,9 @@ export default function MealResultScreen() {
           ? loggedAtForDateKey(logDateKey, mealType)
           : undefined,
       });
+      if (imageUrl) {
+        await saveMealImage(id, imageUrl);
+      }
       clearMealUploadSession(draftId);
       refreshAfterMealChange();
       router.replace("/(tabs)/timeline");

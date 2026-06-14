@@ -35,7 +35,10 @@ export function useMealPhotoUpload() {
       const prepared = await prepareMealImage(asset.uri);
       setUploadStage("analyzing");
       const analysis = await uploadMealImage(prepared);
-      saveMealUploadSession(analysis.draftId, analysis);
+      saveMealUploadSession(analysis.draftId, {
+        ...analysis,
+        localImageUri: prepared.uri,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: "/meal/result",
@@ -54,9 +57,6 @@ export function useMealPhotoUpload() {
           coachNudge: analysis.coachNudge,
           estimatedServings: String(analysis.estimatedServings ?? 1),
           logDate: logDateRef.current ?? "",
-          ...(analysis.imageUrl.startsWith("data:") || analysis.imageUrl.length > 1500
-            ? {}
-            : { imageUrl: analysis.imageUrl }),
         },
       });
     } catch (e) {

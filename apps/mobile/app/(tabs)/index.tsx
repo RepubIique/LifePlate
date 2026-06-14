@@ -216,6 +216,7 @@ export default function HomeScreen() {
         {todayMeals.map((meal) => (
           <MealRowCard
             key={meal.id}
+            mealId={meal.id}
             mealName={meal.mealName}
             subtitle={formatMealTypeLabel(meal.mealType)}
             imageUrl={meal.imageUrl}
