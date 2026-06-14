@@ -16,6 +16,7 @@ import {
   type ExtendedNutritionTargets,
   type NutritionDashboardApiResponse,
   weeklyGutScore,
+  dateKeyFromIso,
 } from "@lifeplate/shared";
 import type { Gender } from "@lifeplate/shared";
 import { computeNutritionTargets } from "@lifeplate/shared";
@@ -146,43 +147,20 @@ async function fetchHydrationGlasses(userId: string, dateKey?: string): Promise<
   return rows[0]?.glasses ?? 0;
 }
 
-function startOfToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function startOfTomorrow(): Date {
-  const today = startOfToday();
-  today.setDate(today.getDate() + 1);
-  return today;
-}
-
 function yesterdayDateKey(): string {
-  const d = startOfToday();
-  d.setDate(d.getDate() - 1);
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }
 
 function filterRowsForDate(rows: MealRow[], dateKey: string): MealRow[] {
-  return rows.filter((row) => {
-    const key = new Date(row.created_at).toISOString().slice(0, 10);
-    return key === dateKey;
-  });
+  return rows.filter((row) => dateKeyFromIso(row.created_at.toISOString()) === dateKey);
 }
 
 function startOfWeek(): Date {
   const now = new Date();
   now.setDate(now.getDate() - 7);
   return now;
-}
-
-function filterTodayRows(weekRows: MealRow[]): MealRow[] {
-  const todayStart = startOfToday();
-  const todayEnd = startOfTomorrow();
-  return weekRows.filter((row) => {
-    const created = new Date(row.created_at);
-    return created >= todayStart && created < todayEnd;
-  });
 }
 
 function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
@@ -196,7 +174,7 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
   const dayMap = new Map<string, MealRow[]>();
 
   for (const row of weekRows) {
-    const key = new Date(row.created_at).toISOString().slice(0, 10);
+    const key = dateKeyFromIso(row.created_at.toISOString());
     const list = dayMap.get(key) ?? [];
     list.push(row);
     dayMap.set(key, list);
@@ -275,7 +253,7 @@ export async function buildNutritionDashboard(
     },
   );
 
-  const todayRows = filterTodayRows(weekRows);
+  const todayRows = filterRowsForDate(weekRows, dateKey);
   const yesterdayRows = filterRowsForDate(weekRows, yesterdayDateKey());
   const totals = aggregateTotals(todayRows);
   const yesterdayTotals = aggregateTotals(yesterdayRows);

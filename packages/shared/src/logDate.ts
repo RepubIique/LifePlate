@@ -21,17 +21,19 @@ export function loggedAtForDateKey(
   dateKey: string,
   mealType?: string | null,
 ): string {
+  // Keep hours on the UTC calendar date so dateKeyFromIso always matches dateKey.
+  // (A late UTC hour like 19:00 spills into the next local day in UTC+8.)
   const hour =
     mealType === "breakfast"
-      ? 8
+      ? 11
       : mealType === "lunch"
         ? 12
         : mealType === "dinner"
-          ? 19
+          ? 13
           : mealType === "snack" || mealType === "beverage" || mealType === "dessert"
-            ? 15
+            ? 12
             : 12;
-  return new Date(`${dateKey}T${String(hour).padStart(2, "0")}:30:00.000Z`).toISOString();
+  return new Date(`${dateKey}T${String(hour).padStart(2, "0")}:00:00.000Z`).toISOString();
 }
 
 export function recentLogDateKeys(count = 30, now = new Date()): string[] {

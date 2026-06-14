@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Chip, IconButton, Snackbar, Text } from "react-native-paper";
-import { formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
+import { dateKeyFromIso, formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
@@ -24,13 +24,7 @@ import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
 function isToday(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  return (
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear()
-  );
+  return dateKeyFromIso(iso) === todayDateKey();
 }
 
 export default function HomeScreen() {

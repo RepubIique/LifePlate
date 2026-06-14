@@ -1,24 +1,7 @@
-import { mealTypeLabel, type MealListSummary } from "@lifeplate/shared";
+import { dateKeyFromIso, formatLogDateLabel, mealTypeLabel, todayDateKey, type MealListSummary } from "@lifeplate/shared";
 
 export function formatDayLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getDate() === b.getDate() &&
-    a.getMonth() === b.getMonth() &&
-    a.getFullYear() === b.getFullYear();
-
-  if (sameDay(d, today)) return "Today";
-  if (sameDay(d, yesterday)) return "Yesterday";
-
-  return d.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  return formatLogDateLabel(dateKeyFromIso(iso));
 }
 
 export type TimelineDayGroup = {
@@ -37,25 +20,20 @@ export function buildTimelineDayGroups(
   const mealMap = new Map<string, MealListSummary[]>();
 
   for (const meal of meals) {
-    const key = new Date(meal.createdAt).toISOString().slice(0, 10);
+    const key = dateKeyFromIso(meal.createdAt);
     const list = mealMap.get(key) ?? [];
     list.push(meal);
     mealMap.set(key, list);
   }
 
   const dateKeys = new Set([...mealMap.keys(), ...Object.keys(hydrationByDate)]);
-  const today = new Date();
+  const todayKey = todayDateKey();
 
   return [...dateKeys]
     .sort((a, b) => (a < b ? 1 : -1))
     .map((dateKey) => {
       const dayMeals = mealMap.get(dateKey) ?? [];
       const anchorIso = dayMeals[0]?.createdAt ?? `${dateKey}T12:00:00.000Z`;
-      const d = new Date(anchorIso);
-      const isToday =
-        d.getDate() === today.getDate() &&
-        d.getMonth() === today.getMonth() &&
-        d.getFullYear() === today.getFullYear();
 
       return {
         dateKey,
@@ -65,7 +43,7 @@ export function buildTimelineDayGroups(
           month: "long",
           day: "numeric",
         }),
-        isToday,
+        isToday: dateKey === todayKey,
         meals: dayMeals,
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
