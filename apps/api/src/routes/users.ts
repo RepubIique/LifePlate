@@ -207,9 +207,16 @@ export async function userRoutes(app: FastifyInstance) {
 
       await ensureUser(userId, userEmail);
 
+      const existing = await loadUserRow(userId);
+
       let avatarPath: string;
       try {
-        avatarPath = await uploadProfileAvatar(userId, buffer, mimeType);
+        avatarPath = await uploadProfileAvatar(
+          userId,
+          buffer,
+          mimeType,
+          existing?.avatar_url ?? null,
+        );
       } catch (err) {
         request.log.error(err);
         return reply.code(500).send({ error: "Failed to upload profile photo" });
