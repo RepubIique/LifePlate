@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
+import { MEAL_UTC_DAY_SQL, UTC_TODAY_SQL } from "./mealLogDate.js";
 import { computeStreaksFromDayKeys } from "./streaks.js";
 
 async function queryDistinctMealDays(
@@ -7,18 +8,14 @@ async function queryDistinctMealDays(
   client?: PoolClient,
 ): Promise<string[]> {
   const runner = client ?? pool;
-  const { rows } = await runner.query<{ log_date: Date }>(
-    `SELECT DISTINCT created_at::date AS log_date
+  const { rows } = await runner.query<{ log_date: string }>(
+    `SELECT DISTINCT ${MEAL_UTC_DAY_SQL} AS log_date
      FROM meals
      WHERE user_id = $1
      ORDER BY log_date`,
     [userId],
   );
-  return rows.map((row) => {
-    const d = row.log_date;
-    if (d instanceof Date) return d.toISOString().slice(0, 10);
-    return String(d).slice(0, 10);
-  });
+  return rows.map((row) => row.log_date);
 }
 
 export async function syncUserMealStats(

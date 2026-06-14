@@ -8,7 +8,7 @@ import {
   rejectNonMealPhoto,
 } from "../dist/services/mealGuardrails.js";
 
-function analysis(overrides = {}) {
+function confirmAnalysis(overrides = {}) {
   return {
     mealName: "Lunch",
     foods: ["rice"],
@@ -24,10 +24,24 @@ function analysis(overrides = {}) {
   };
 }
 
+test("assertMealAnalysis accepts valid confirm payloads", () => {
+  assert.doesNotThrow(() => assertMealAnalysis(confirmAnalysis()));
+});
+
+test("assertMealAnalysis rejects confirm payloads with extreme calories", () => {
+  assert.throws(
+    () =>
+      assertMealAnalysis(
+        confirmAnalysis({ estimatedCalories: MAX_REASONABLE_CALORIES + 1 }),
+      ),
+    (err) => err instanceof MealGuardrailError,
+  );
+});
+
 test("assertMealAnalysis accepts valid analysis at boundaries", () => {
   assert.doesNotThrow(() =>
     assertMealAnalysis(
-      analysis({
+      confirmAnalysis({
         confidence: MIN_MEAL_CONFIDENCE,
         estimatedCalories: MAX_REASONABLE_CALORIES,
       }),
@@ -37,21 +51,21 @@ test("assertMealAnalysis accepts valid analysis at boundaries", () => {
 
 test("assertMealAnalysis rejects empty foods after trimming", () => {
   assert.throws(
-    () => assertMealAnalysis(analysis({ foods: ["  ", ""] })),
+    () => assertMealAnalysis(confirmAnalysis({ foods: ["  ", ""] })),
     (err) => err instanceof MealGuardrailError && err.code === "UNCLEAR_PHOTO",
   );
 });
 
 test("assertMealAnalysis rejects low confidence", () => {
   assert.throws(
-    () => assertMealAnalysis(analysis({ confidence: MIN_MEAL_CONFIDENCE - 0.01 })),
+    () => assertMealAnalysis(confirmAnalysis({ confidence: MIN_MEAL_CONFIDENCE - 0.01 })),
     (err) => err instanceof MealGuardrailError && err.status === 422,
   );
 });
 
 test("assertMealAnalysis rejects extreme calories", () => {
   assert.throws(
-    () => assertMealAnalysis(analysis({ estimatedCalories: MAX_REASONABLE_CALORIES + 1 })),
+    () => assertMealAnalysis(confirmAnalysis({ estimatedCalories: MAX_REASONABLE_CALORIES + 1 })),
     (err) => err instanceof MealGuardrailError && err.code === "UNCLEAR_PHOTO",
   );
 });

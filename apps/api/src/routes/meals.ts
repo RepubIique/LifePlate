@@ -14,7 +14,7 @@ import { pool } from "../db.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
 import { getDraft, deleteDraft, updateDraftAnalysis, getDraftImage, saveDraft } from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
-import { MealGuardrailError } from "../services/mealGuardrails.js";
+import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
@@ -162,6 +162,30 @@ export async function mealRoutes(app: FastifyInstance) {
         if (Number.isNaN(loggedAt.getTime()) || !isValidLogDateKey(dateKeyFromIso(loggedAt.toISOString()))) {
           return reply.code(400).send({ error: "Invalid loggedAt" });
         }
+      }
+
+      try {
+        assertMealAnalysis({
+          mealName: body.mealName,
+          foods: body.foods,
+          estimatedCalories: body.estimatedCalories,
+          protein: body.protein,
+          carbs: body.carbs,
+          fat: body.fat,
+          fibre: body.fibre,
+          sugar: body.sugar,
+          sodium: body.sodium,
+          confidence: body.confidence,
+        });
+      } catch (err) {
+        if (err instanceof MealGuardrailError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
       }
 
       const client = await pool.connect();

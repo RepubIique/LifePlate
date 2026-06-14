@@ -1,3 +1,15 @@
+function shiftUtcDayKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysBetweenUtc(startKey: string, endKey: string): number {
+  const start = new Date(`${startKey}T12:00:00.000Z`).getTime();
+  const end = new Date(`${endKey}T12:00:00.000Z`).getTime();
+  return Math.round((end - start) / 86400000);
+}
+
 export function computeStreaksFromDayKeys(dayKeys: string[]): {
   current: number;
   longest: number;
@@ -10,9 +22,7 @@ export function computeStreaksFromDayKeys(dayKeys: string[]): {
   let longest = 1;
   let run = 1;
   for (let i = 1; i < sortedDays.length; i++) {
-    const prev = new Date(sortedDays[i - 1]);
-    const curr = new Date(sortedDays[i]);
-    const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+    const diff = daysBetweenUtc(sortedDays[i - 1]!, sortedDays[i]!);
     if (diff === 1) {
       run++;
       longest = Math.max(longest, run);
@@ -23,10 +33,10 @@ export function computeStreaksFromDayKeys(dayKeys: string[]): {
 
   const today = new Date().toISOString().slice(0, 10);
   let current = 0;
-  const cursor = new Date(today);
-  while (daySet.has(cursor.toISOString().slice(0, 10))) {
+  let cursor = today;
+  while (daySet.has(cursor)) {
     current++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = shiftUtcDayKey(cursor, -1);
   }
 
   return { current, longest };

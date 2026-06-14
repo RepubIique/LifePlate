@@ -3,6 +3,11 @@ import type { InsightsResponse } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
+import {
+  computeTakeawayPercent,
+  countTakeawayMeals,
+} from "../services/insightsMetrics.js";
+import { MEAL_UTC_DAY_COLUMN_SQL } from "../services/mealLogDate.js";
 import { pool } from "../db.js";
 
 const VEG_KEYWORDS = [
@@ -23,18 +28,6 @@ const VEG_KEYWORDS = [
   "cabbage",
 ];
 
-const TAKEAWAY_KEYWORDS = [
-  "mcdonald",
-  "kfc",
-  "uber eats",
-  "deliveroo",
-  "takeaway",
-  "pizza hut",
-  "subway",
-  "grab",
-  "foodpanda",
-];
-
 export async function insightRoutes(app: FastifyInstance) {
   app.get(
     "/api/insights",
@@ -43,11 +36,12 @@ export async function insightRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
 
       const { rows: mealRows } = await pool.query<{
+        meal_id: string;
         protein: number | null;
         food_name: string | null;
         meal_name: string | null;
       }>(
-        `SELECT a.protein, f.food_name, m.meal_name
+        `SELECT m.id AS meal_id, a.protein, f.food_name, m.meal_name
          FROM meals m
          LEFT JOIN meal_analysis a ON a.meal_id = m.id
          LEFT JOIN foods f ON f.meal_id = m.id
@@ -74,11 +68,11 @@ export async function insightRoutes(app: FastifyInstance) {
         day: string;
         avg_protein: string;
       }>(
-        `SELECT DATE(m.created_at)::text AS day, AVG(a.protein)::text AS avg_protein
+        `SELECT ${MEAL_UTC_DAY_COLUMN_SQL} AS day, AVG(a.protein)::text AS avg_protein
          FROM meals m
          JOIN meal_analysis a ON a.meal_id = m.id
          WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'
-         GROUP BY DATE(m.created_at)`,
+         GROUP BY ${MEAL_UTC_DAY_COLUMN_SQL}`,
         [userId],
       );
 
@@ -107,16 +101,17 @@ export async function insightRoutes(app: FastifyInstance) {
         }
       }
 
-      const takeawayHits = mealRows.filter((r) => {
-        const text = `${r.meal_name ?? ""} ${r.food_name ?? ""}`.toLowerCase();
-        return TAKEAWAY_KEYWORDS.some((k) => text.includes(k));
-      }).length;
-
-      const takeawayPercent =
-        mealsLogged > 0
-          ? Math.round((takeawayHits / mealsLogged) * 100)
-          : 18;
-      const homeCookedPercent = 100 - takeawayPercent;
+      const takeawayHits = countTakeawayMeals(
+        mealRows.map((row) => ({
+          mealId: row.meal_id,
+          mealName: row.meal_name,
+          foodName: row.food_name,
+        })),
+      );
+      const { takeawayPercent, homeCookedPercent } = computeTakeawayPercent(
+        takeawayHits,
+        mealsLogged,
+      );
 
       const coachingContext = await buildCoachingContext(userId);
       const coachNudge = await generateCoachNudge(coachingContext, null);

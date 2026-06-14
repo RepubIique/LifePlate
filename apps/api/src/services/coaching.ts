@@ -5,6 +5,7 @@ import {
   type ExtendedNutritionTargets,
 } from "@lifeplate/shared";
 import { pool } from "../db.js";
+import { MEAL_UTC_DAY_COLUMN_SQL, UTC_TODAY_SQL } from "./mealLogDate.js";
 import { config } from "../config.js";
 
 const VEG_KEYWORDS = [
@@ -44,7 +45,8 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
 
   const { rows: todayCountRows } = await pool.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM meals m
-     WHERE m.user_id = $1 AND m.created_at::date = CURRENT_DATE`,
+     WHERE m.user_id = $1
+       AND ${MEAL_UTC_DAY_COLUMN_SQL} = ${UTC_TODAY_SQL}`,
     [userId],
   );
 
@@ -65,7 +67,8 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
     `SELECT COALESCE(SUM(a.protein), 0)::text AS total
      FROM meals m
      JOIN meal_analysis a ON a.meal_id = m.id
-     WHERE m.user_id = $1 AND m.created_at::date = CURRENT_DATE`,
+     WHERE m.user_id = $1
+       AND ${MEAL_UTC_DAY_COLUMN_SQL} = ${UTC_TODAY_SQL}`,
     [userId],
   );
   const todayProteinTotal = Number(todayProteinRows[0]?.total ?? 0);
