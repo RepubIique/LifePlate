@@ -10,14 +10,12 @@ type Props = {
   pillar: PillarProgress;
   onIncrement: () => void;
   onDecrement: () => void;
-  updating?: boolean;
 };
 
 export function HydrationQuickAdd({
   pillar,
   onIncrement,
   onDecrement,
-  updating = false,
 }: Props) {
   const fillColor = PILLAR_COLORS.hydration;
   const total = Math.max(pillar.target, 1);
@@ -49,7 +47,7 @@ export function HydrationQuickAdd({
             mode="contained-tonal"
             containerColor="#F1F3F5"
             onPress={onDecrement}
-            disabled={updating || pillar.consumed <= 0}
+            disabled={pillar.consumed <= 0}
           />
           <IconButton
             icon="plus"
@@ -58,7 +56,7 @@ export function HydrationQuickAdd({
             containerColor="#1B4332"
             iconColor="#FFFFFF"
             onPress={onIncrement}
-            disabled={updating || pillar.consumed >= pillar.target}
+            disabled={pillar.consumed >= pillar.target}
           />
         </View>
       </View>

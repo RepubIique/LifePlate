@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Chip, IconButton, Snackbar, Text } from "react-native-paper";
 import { formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
@@ -14,8 +14,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
-import { updateHydration } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
+import { useDebouncedHydration } from "@/lib/useDebouncedHydration";
 import { premium } from "@/src/theme/premium";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
@@ -36,6 +37,16 @@ export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading, loadMeals } = useMeals();
   const { dashboard, loadDashboard, patchHydration } = useNutritionDashboard();
+  const refreshAfterMealChange = useRefreshAfterMealChange();
+  const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
+  refreshAfterMealChangeRef.current = refreshAfterMealChange;
+  const patchHydrationRef = useRef(patchHydration);
+  patchHydrationRef.current = patchHydration;
+  const { adjustHydration, syncDate } = useDebouncedHydration({
+    onOptimistic: (_dateKey, glasses) => patchHydrationRef.current(glasses),
+    onSynced: () => refreshAfterMealChangeRef.current(),
+    onError: (e) => setSnackbar(friendlyErrorMessage(e)),
+  });
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const {
     uploadStage,
@@ -47,7 +58,6 @@ export default function HomeScreen() {
     lastAssetRef,
   } = useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const [hydrationUpdating, setHydrationUpdating] = useState(false);
   const [logDateKey, setLogDateKey] = useState<string | null>(null);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
@@ -64,18 +74,10 @@ export default function HomeScreen() {
     }, [loadMeals, loadDashboard, pendingLogDate, setPendingLogDate, setLogDate]),
   );
 
-  async function changeHydration(nextGlasses: number) {
+  useEffect(() => {
     if (!dashboard) return;
-    setHydrationUpdating(true);
-    try {
-      const { glasses } = await updateHydration(nextGlasses);
-      patchHydration(glasses);
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setHydrationUpdating(false);
-    }
-  }
+    syncDate(todayDateKey(), dashboard.essentials.hydration.consumed);
+  }, [dashboard?.essentials.hydration.consumed, syncDate]);
 
   const todayMeals = meals.filter((m) => isToday(m.createdAt));
 
@@ -185,13 +187,8 @@ export default function HomeScreen() {
             />
             <HydrationQuickAdd
               pillar={dashboard.essentials.hydration}
-              updating={hydrationUpdating}
-              onIncrement={() =>
-                changeHydration(dashboard.essentials.hydration.consumed + 1)
-              }
-              onDecrement={() =>
-                changeHydration(dashboard.essentials.hydration.consumed - 1)
-              }
+              onIncrement={() => adjustHydration(todayDateKey(), 1)}
+              onDecrement={() => adjustHydration(todayDateKey(), -1)}
             />
           </>
         ) : null}
