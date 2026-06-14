@@ -20,6 +20,11 @@ import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import {
+  clearMealUploadSession,
+  getMealUploadSession,
+  routeParam,
+} from "@/lib/mealUploadSession";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
@@ -38,7 +43,7 @@ export default function MealResultScreen() {
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const params = useLocalSearchParams<{
     draftId: string;
-    imageUrl: string;
+    imageUrl?: string;
     mealName: string;
     foods: string;
     estimatedCalories: string;
@@ -53,6 +58,15 @@ export default function MealResultScreen() {
     logDate?: string;
     estimatedServings?: string;
   }>();
+
+  const draftId = routeParam(params.draftId);
+  const uploadSession = useMemo(
+    () => getMealUploadSession(draftId),
+    [draftId],
+  );
+  const imageUrl =
+    routeParam(params.imageUrl) || uploadSession?.imageUrl || "";
+  const logDateKey = routeParam(params.logDate);
 
   const initialFoods = useMemo(() => {
     try {
@@ -176,7 +190,7 @@ export default function MealResultScreen() {
     }
     setRefining(true);
     try {
-      const result = await refineMeal(params.draftId, note);
+      const result = await refineMeal(draftId, note);
       setMealName(result.mealName);
       setFoods(result.foods);
       const nextServings = result.estimatedServings ?? 1;
@@ -238,8 +252,8 @@ export default function MealResultScreen() {
     setSaving(true);
     try {
       await confirmMeal({
-        draftId: params.draftId,
-        imageUrl: params.imageUrl,
+        draftId,
+        imageUrl,
         mealName,
         mealType,
         foods,
@@ -257,10 +271,11 @@ export default function MealResultScreen() {
           portionsEaten,
           estimatedServings,
         ),
-        loggedAt: params.logDate
-          ? loggedAtForDateKey(params.logDate, mealType)
+        loggedAt: logDateKey
+          ? loggedAtForDateKey(logDateKey, mealType)
           : undefined,
       });
+      clearMealUploadSession(draftId);
       refreshAfterMealChange();
       router.replace("/(tabs)/timeline");
     } catch (e) {
@@ -272,8 +287,8 @@ export default function MealResultScreen() {
 
   return (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      {params.imageUrl ? (
-        <Image source={{ uri: params.imageUrl }} style={styles.image} />
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.image} />
       ) : null}
 
       {coachNudge ? (

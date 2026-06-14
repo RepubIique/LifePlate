@@ -124,6 +124,12 @@ export async function mealRoutes(app: FastifyInstance) {
       const body = request.body;
 
       const draft = body.draftId ? getDraft(body.draftId, userId) : null;
+      const imageUrl = body.imageUrl?.trim() || draft?.imageUrl?.trim();
+      if (!imageUrl) {
+        return reply.code(400).send({
+          error: "Missing meal image. Try uploading the photo again.",
+        });
+      }
 
       const mealType = body.mealType ?? inferMealType();
       let loggedAt: Date | null = null;
@@ -142,7 +148,7 @@ export async function mealRoutes(app: FastifyInstance) {
           `INSERT INTO meals (user_id, meal_type, meal_name, image_url, created_at)
            VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()))
            RETURNING id`,
-          [userId, mealType, body.mealName, body.imageUrl, loggedAt],
+          [userId, mealType, body.mealName, imageUrl, loggedAt],
         );
         const mealId = mealResult.rows[0].id;
 

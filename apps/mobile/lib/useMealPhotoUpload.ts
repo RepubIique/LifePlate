@@ -6,6 +6,7 @@ import type { ImagePickerAsset } from "expo-image-picker";
 import { uploadMealImage } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
+import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 
@@ -34,12 +35,12 @@ export function useMealPhotoUpload() {
       const prepared = await prepareMealImage(asset.uri);
       setUploadStage("analyzing");
       const analysis = await uploadMealImage(prepared);
+      saveMealUploadSession(analysis.draftId, analysis);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: "/meal/result",
         params: {
           draftId: analysis.draftId,
-          imageUrl: analysis.imageUrl,
           mealName: analysis.mealName,
           foods: JSON.stringify(analysis.foods),
           estimatedCalories: String(analysis.estimatedCalories),
@@ -53,6 +54,9 @@ export function useMealPhotoUpload() {
           coachNudge: analysis.coachNudge,
           estimatedServings: String(analysis.estimatedServings ?? 1),
           logDate: logDateRef.current ?? "",
+          ...(analysis.imageUrl.startsWith("data:") || analysis.imageUrl.length > 1500
+            ? {}
+            : { imageUrl: analysis.imageUrl }),
         },
       });
     } catch (e) {

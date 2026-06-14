@@ -227,9 +227,11 @@ export async function uploadMealImage(input: {
 }
 
 export async function confirmMeal(body: MealConfirmRequest): Promise<void> {
+  const imageUrl =
+    body.draftId && body.imageUrl.startsWith("data:") ? "" : body.imageUrl;
   await request("/api/meals/confirm", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, imageUrl }),
   });
 }
 
