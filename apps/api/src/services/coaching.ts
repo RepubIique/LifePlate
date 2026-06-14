@@ -108,7 +108,7 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
   };
 }
 
-function ruleBasedNudge(ctx: CoachingContext, meal: MealAnalysisResult | null): string {
+export function ruleBasedNudge(ctx: CoachingContext, meal: MealAnalysisResult | null): string {
   const goal = (ctx.goal ?? "").toLowerCase();
   const proteinGoal =
     goal.includes("protein") || goal.includes("weight") || goal.includes("health");

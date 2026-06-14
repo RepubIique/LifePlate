@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "tsx": "^4.19.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -45,6 +46,7 @@
     "eas-build-post-install": "cd ../.. && pnpm --filter @lifeplate/shared build",
     "dev": "pnpm --filter @lifeplate/shared build && expo start --port 8082",
     "typecheck": "tsc --noEmit",
+    "test": "pnpm --filter @lifeplate/shared build && node --import tsx --test lib/__tests__/*.test.ts",
     "start": "pnpm --filter @lifeplate/shared build && expo start",
     "android": "pnpm --filter @lifeplate/shared build && expo run:android",
     "prebuild:ios": "pnpm --filter @lifeplate/shared build && expo prebuild --platform ios --clean",

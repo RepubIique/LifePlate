@@ -30,8 +30,11 @@ export function getFilledSlots(meals: MealListSummary[]): Set<MealSlotKey> {
   return filled;
 }
 
-export function getSuggestedSlot(filled: Set<MealSlotKey>): MealSlotKey | null {
-  const inferred = inferMealType();
+export function getSuggestedSlot(
+  filled: Set<MealSlotKey>,
+  now = new Date(),
+): MealSlotKey | null {
+  const inferred = inferMealType(now);
   const asSlot: MealSlotKey =
     inferred === "beverage" || inferred === "dessert" ? "snack" : inferred;
 

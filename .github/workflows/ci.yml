@@ -27,8 +27,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Shared package tests
-        run: pnpm --filter @lifeplate/shared test
+      - name: Unit tests
+        run: pnpm test
 
       - name: Build API
         run: pnpm build:api
