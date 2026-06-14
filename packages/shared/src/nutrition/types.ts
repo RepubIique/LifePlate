@@ -1,9 +1,51 @@
+export type ComparisonPeriod = "day" | "week" | "month";
+
+export interface ComparisonPillarMetrics {
+  protein: number;
+  fibre: number;
+  plants: number;
+  hydration: number;
+}
+
+export interface PeriodSnapshot {
+  label: string;
+  date: string;
+  score: number;
+  mealsCount: number;
+  pillars: ComparisonPillarMetrics;
+  hasData: boolean;
+}
+
+export interface PeriodComparison {
+  period: ComparisonPeriod;
+  currentLabel: string;
+  previousLabel: string;
+  current: PeriodSnapshot;
+  previous: PeriodSnapshot;
+}
+
 export type PillarStatus = "good" | "moderate" | "low";
 export type ScoreStatus = "excellent" | "good" | "needs_work";
 export type TrendStatus = "on_track" | "moderate" | "needs_improvement";
 
+/** Semantic icon keys — rendered on mobile via MaterialCommunityIcons. */
+export type NutritionIconKey =
+  | "apple"
+  | "kiwi"
+  | "salad"
+  | "egg"
+  | "legumes"
+  | "fish"
+  | "broccoli"
+  | "pepper"
+  | "carrot"
+  | "water"
+  | "carbs"
+  | "fat"
+  | "fermented"
+  | "prebiotic";
+
 export interface PillarProgress {
-  emoji: string;
   label: string;
   consumed: number;
   target: number;
@@ -18,7 +60,7 @@ export interface PillarProgress {
 }
 
 export interface EnergyMetric {
-  emoji: string;
+  icon: NutritionIconKey;
   label: string;
   grams: number;
   status: PillarStatus;
@@ -34,7 +76,7 @@ export interface GutHealthSummary {
 }
 
 export interface FoodRecommendation {
-  emoji: string;
+  icon: NutritionIconKey;
   name: string;
 }
 
@@ -85,6 +127,7 @@ export interface NutritionDashboardApiResponse {
   recommendations: NutritionDashboardResponse["recommendations"];
   weeklyTrends: WeeklyTrendItem[];
   lifeplateInsight: string;
+  comparison: PeriodComparison;
 }
 
 export interface NutritionDashboardResponse {
@@ -109,6 +152,7 @@ export interface NutritionDashboardResponse {
   };
   weeklyTrends: WeeklyTrendItem[];
   lifeplateInsight: string;
+  comparison: PeriodComparison;
 }
 
 export interface DailyTotals {

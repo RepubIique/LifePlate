@@ -276,8 +276,13 @@ export type {
   GutHealthSummary,
   FoodRecommendation,
   RecommendationImpact,
+  NutritionIconKey,
   WeeklyTrendItem,
   HydrationSummary,
+  ComparisonPeriod,
+  ComparisonPillarMetrics,
+  PeriodSnapshot,
+  PeriodComparison,
   ScoreStatus,
   PillarStatus,
   TrendStatus,
@@ -311,6 +316,14 @@ export {
   buildLifeplateInsightTemplate,
   buildWeeklyTrends,
   weeklyGutScore,
+  buildComparisonPillars,
+  buildPeriodSnapshot,
+  buildDayComparison,
+  scoreDelta,
+  buildComparisonSummary,
+  formatScoreDelta,
+  pillarDelta,
+  COMPARISON_PERIODS,
 } from "./nutrition/index.js";
 
 /** Fields returned from PATCH /api/users/me — only what was edited. */

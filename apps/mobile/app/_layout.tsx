@@ -1,6 +1,8 @@
 import "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { useFonts } from "expo-font";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
@@ -13,9 +15,19 @@ import { lifeplateTheme } from "@/src/theme/lifeplate";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    ...MaterialCommunityIcons.font,
+  });
+
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

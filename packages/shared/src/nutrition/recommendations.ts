@@ -4,24 +4,35 @@ import type {
   RecommendationImpact,
 } from "./types.js";
 
-const SUGGESTIONS = {
+const SUGGESTIONS: Record<
+  "fibre" | "protein" | "plants" | "hydration",
+  FoodRecommendation[]
+> = {
   fibre: [
-    { emoji: "🍎", name: "Apple" },
-    { emoji: "🥝", name: "Kiwi fruit" },
-    { emoji: "🥗", name: "Large salad" },
+    { icon: "apple", name: "Apple" },
+    { icon: "kiwi", name: "Kiwi fruit" },
+    { icon: "salad", name: "Large salad" },
   ],
   protein: [
-    { emoji: "🥚", name: "2 eggs" },
-    { emoji: "🫘", name: "Lentils or beans" },
-    { emoji: "🐟", name: "Tinned fish" },
+    { icon: "egg", name: "2 eggs" },
+    { icon: "legumes", name: "Lentils or beans" },
+    { icon: "fish", name: "Tinned fish" },
   ],
   plants: [
-    { emoji: "🥦", name: "Broccoli side" },
-    { emoji: "🫑", name: "Capsicum strips" },
-    { emoji: "🥕", name: "Carrot sticks" },
+    { icon: "broccoli", name: "Broccoli side" },
+    { icon: "pepper", name: "Capsicum strips" },
+    { icon: "carrot", name: "Carrot sticks" },
   ],
-  hydration: [{ emoji: "💧", name: "Large glass of water" }],
+  hydration: [{ icon: "water", name: "Large glass of water" }],
 };
+
+const DEFAULT_SUGGESTIONS: FoodRecommendation[] = [
+  { icon: "apple", name: "Apple" },
+  { icon: "kiwi", name: "Kiwi fruit" },
+  { icon: "salad", name: "Large salad" },
+  { icon: "legumes", name: "Lentils or beans" },
+  { icon: "egg", name: "2 eggs" },
+];
 
 export function buildFoodRecommendations(gaps: NutritionGaps): {
   items: FoodRecommendation[];
@@ -48,13 +59,7 @@ export function buildFoodRecommendations(gaps: NutritionGaps): {
   }
 
   if (items.length === 0) {
-    items.push(
-      { emoji: "🍎", name: "Apple" },
-      { emoji: "🥝", name: "Kiwi fruit" },
-      { emoji: "🥗", name: "Large salad" },
-      { emoji: "🫘", name: "Lentils or beans" },
-      { emoji: "🥚", name: "2 eggs" },
-    );
+    items.push(...DEFAULT_SUGGESTIONS);
     impact.push(
       { label: "Fibre", detail: "+8–12g" },
       { label: "Protein", detail: "+15–20g" },

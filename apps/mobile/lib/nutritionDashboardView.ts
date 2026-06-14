@@ -1,4 +1,5 @@
 import {
+  buildDayComparison,
   buildEnergyMetrics,
   buildGutHealthSummary,
   buildFibrePillar,
@@ -11,6 +12,8 @@ import {
   type NutritionDashboardApiResponse,
   type NutritionDashboardResponse,
   type NutritionTargets,
+  type PeriodComparison,
+  type PeriodSnapshot,
   type PillarProgress,
 } from "@lifeplate/shared";
 
@@ -31,6 +34,43 @@ function toExtendedTargets(nutritionTargets: NutritionTargets | null): ExtendedN
   };
 }
 
+function emptySnapshot(label: string, date: string): PeriodSnapshot {
+  return {
+    label,
+    date,
+    score: 0,
+    mealsCount: 0,
+    pillars: { protein: 0, fibre: 0, plants: 0, hydration: 0 },
+    hasData: false,
+  };
+}
+
+function resolveComparison(
+  api: NutritionDashboardApiResponse,
+  score: number,
+  mealsCount: number,
+  hasData: boolean,
+  pillars: PeriodSnapshot["pillars"],
+): PeriodComparison {
+  if (api.comparison) {
+    return {
+      ...api.comparison,
+      current: {
+        ...api.comparison.current,
+        score,
+        mealsCount,
+        hasData,
+        pillars,
+      },
+    };
+  }
+
+  return buildDayComparison(
+    emptySnapshot("Today", api.date),
+    emptySnapshot("Yesterday", api.date),
+  );
+}
+
 export function expandDashboard(
   api: NutritionDashboardApiResponse,
   nutritionTargets: NutritionTargets | null,
@@ -44,6 +84,25 @@ export function expandDashboard(
     processedMealCount: 0,
   };
   const totals = api.today.totals;
+  const protein = buildProteinPillar(totals, targets);
+  const fibre = buildFibrePillar(totals, targets);
+  const plants = buildPlantsPillar(classification, targets);
+  const hydration = buildHydrationPillarFromGlasses(
+    api.hydration.glasses,
+    targets.dailyHydrationGlasses,
+  );
+  const comparison = resolveComparison(
+    api,
+    api.score,
+    totals.mealsCount,
+    totals.mealsCount > 0 || api.hydration.glasses > 0,
+    {
+      protein: Math.round(protein.progress * 100),
+      fibre: Math.round(fibre.progress * 100),
+      plants: Math.round(plants.progress * 100),
+      hydration: Math.round(hydration.progress * 100),
+    },
+  );
 
   return {
     date: api.date,
@@ -51,18 +110,16 @@ export function expandDashboard(
     scoreStatus: api.scoreStatus,
     coachSummary: api.coachSummary,
     essentials: {
-      protein: buildProteinPillar(totals, targets),
-      fibre: buildFibrePillar(totals, targets),
-      plants: buildPlantsPillar(classification, targets),
-      hydration: buildHydrationPillarFromGlasses(
-        api.hydration.glasses,
-        targets.dailyHydrationGlasses,
-      ),
+      protein,
+      fibre,
+      plants,
+      hydration,
     },
     energyBalance: buildEnergyMetrics(totals),
     gutHealth: buildGutHealthSummary(classification),
     recommendations: api.recommendations,
     weeklyTrends: api.weeklyTrends,
     lifeplateInsight: api.lifeplateInsight,
+    comparison,
   };
 }

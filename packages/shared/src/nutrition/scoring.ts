@@ -1,5 +1,6 @@
 import type {
   DailyTotals,
+  EnergyMetric,
   ExtendedNutritionTargets,
   FoodClassification,
   NutritionGaps,
@@ -104,7 +105,6 @@ export function buildProteinPillar(
   const currentServes = serveSize > 0 ? Math.min(serveTarget, Math.round(totals.protein / serveSize)) : 0;
 
   return {
-    emoji: "💪",
     label: "Protein",
     consumed: Math.round(totals.protein),
     target: targets.dailyProteinG,
@@ -127,7 +127,6 @@ export function buildFibrePillar(
   const progress = clamp01(totals.fibre / targets.dailyFibreG);
 
   return {
-    emoji: "🌱",
     label: "Fibre",
     consumed: Math.round(totals.fibre),
     target: targets.dailyFibreG,
@@ -151,7 +150,6 @@ export function buildPlantsPillar(
   const progress = clamp01(consumed / targets.dailyPlantServes);
 
   return {
-    emoji: "🥦",
     label: "Plants",
     consumed,
     target: targets.dailyPlantServes,
@@ -171,7 +169,6 @@ export function buildHydrationPillar(
   const progress = clamp01(hydrationGlasses / targets.dailyHydrationGlasses);
 
   return {
-    emoji: "💧",
     label: "Hydration",
     consumed: hydrationGlasses,
     target: targets.dailyHydrationGlasses,
@@ -197,22 +194,8 @@ export function buildHydrationPillarFromGlasses(
 }
 
 export function buildEnergyMetrics(totals: DailyTotals): {
-  carbs: {
-    emoji: string;
-    label: string;
-    grams: number;
-    status: PillarStatus;
-    description: string;
-    equivalents: string[];
-  };
-  fats: {
-    emoji: string;
-    label: string;
-    grams: number;
-    status: PillarStatus;
-    description: string;
-    equivalents: string[];
-  };
+  carbs: EnergyMetric;
+  fats: EnergyMetric;
 } {
   const carbsStatus: PillarStatus =
     totals.carbs >= 80 && totals.carbs <= 220 ? "good" : totals.carbs < 80 ? "low" : "moderate";
@@ -221,7 +204,7 @@ export function buildEnergyMetrics(totals: DailyTotals): {
 
   return {
     carbs: {
-      emoji: "⚡",
+      icon: "carbs",
       label: "Carbs",
       grams: Math.round(totals.carbs),
       status: carbsStatus,
@@ -229,7 +212,7 @@ export function buildEnergyMetrics(totals: DailyTotals): {
       equivalents: formatMacroEquivalents(totals.carbs, "carbs"),
     },
     fats: {
-      emoji: "🥑",
+      icon: "fat",
       label: "Healthy Fats",
       grams: Math.round(totals.fat),
       status: fatStatus,

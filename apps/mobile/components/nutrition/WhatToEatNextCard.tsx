@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { FoodRecommendation, RecommendationImpact } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { NutritionIcon } from "@/components/icons/NutritionIcon";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -29,7 +30,7 @@ export function WhatToEatNextCard({ items, impact }: Props) {
                 {index + 1}
               </Text>
             </View>
-            <Text style={styles.itemEmoji}>{item.emoji}</Text>
+            <NutritionIcon icon={item.icon} emoji={(item as { emoji?: string }).emoji} size={32} variant="badge" />
             <Text variant="bodyLarge" style={styles.itemName}>
               {item.name}
             </Text>
@@ -79,7 +80,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rankText: { color: "#FFFFFF", fontWeight: "700" },
-  itemEmoji: { fontSize: 22 },
   itemName: { flex: 1, letterSpacing: 0.1 },
   impact: { gap: spacing.sm, marginTop: spacing.xs },
   impactLabel: {

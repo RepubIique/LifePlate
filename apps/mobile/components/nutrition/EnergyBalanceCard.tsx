@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { EnergyMetric } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { NutritionIcon } from "@/components/icons/NutritionIcon";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { spacing } from "@/src/theme/lifeplate";
 import { BulletList } from "./shared";
@@ -21,7 +22,12 @@ function EnergyMetricCard({ metric }: { metric: EnergyMetric }) {
   return (
     <View style={styles.metricCard}>
       <View style={styles.metricHeader}>
-        <Text style={styles.emoji}>{metric.emoji}</Text>
+        <NutritionIcon
+          icon={metric.icon}
+          emoji={(metric as { emoji?: string }).emoji}
+          size={36}
+          variant="badge"
+        />
         <View style={styles.metricTitle}>
           <Text variant="titleSmall" style={styles.label}>
             {metric.label}
@@ -76,7 +82,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  emoji: { fontSize: 22 },
   metricTitle: { flex: 1 },
   label: { opacity: 0.65, letterSpacing: 0.2 },
   grams: { fontWeight: "700", letterSpacing: -0.3 },

@@ -2,8 +2,9 @@ import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import type { PillarProgress } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { PillarIcon } from "@/components/icons/PillarIcon";
+import { PILLAR_COLORS, pillarColorForLabel } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
-import { pillarColor } from "@/components/ui/pillarColors";
 
 type Props = {
   pillar: PillarProgress;
@@ -18,7 +19,7 @@ export function HydrationQuickAdd({
   onDecrement,
   updating = false,
 }: Props) {
-  const fillColor = pillarColor(pillar.status);
+  const fillColor = PILLAR_COLORS.hydration;
   const total = Math.max(pillar.target, 1);
   const filled = Math.min(pillar.consumed, total);
 
@@ -26,7 +27,12 @@ export function HydrationQuickAdd({
     <PremiumCard style={styles.card}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.emoji}>{pillar.emoji}</Text>
+          <PillarIcon
+            pillar="hydration"
+            color={pillarColorForLabel("Hydration")}
+            size={32}
+            variant="badge"
+          />
           <View>
             <Text variant="titleMedium" style={styles.title}>
               Hydration
@@ -85,7 +91,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     flex: 1,
   },
-  emoji: { fontSize: 22 },
   title: { letterSpacing: 0.15 },
   subtitle: { opacity: 0.55, marginTop: 1 },
   controls: {

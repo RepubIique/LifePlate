@@ -2,7 +2,8 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { PillarProgress } from "@lifeplate/shared";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { pillarColor } from "@/components/ui/pillarColors";
+import { PillarIcon } from "@/components/icons/PillarIcon";
+import { pillarColorForLabel } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -10,11 +11,16 @@ type Props = {
 };
 
 export function PillarMiniBar({ pillar }: Props) {
-  const fillColor = pillarColor(pillar.status);
+  const fillColor = pillarColorForLabel(pillar.label);
 
   return (
     <View style={styles.row}>
-      <Text style={styles.emoji}>{pillar.emoji}</Text>
+      <PillarIcon
+        pillar={pillar.label}
+        color={pillarColorForLabel(pillar.label)}
+        size={24}
+        variant="badge"
+      />
       <View style={styles.body}>
         <View style={styles.labelRow}>
           <Text variant="labelLarge" style={styles.label}>
@@ -37,7 +43,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  emoji: { fontSize: 18, width: 24, textAlign: "center" },
   body: { flex: 1, gap: 6 },
   labelRow: {
     flexDirection: "row",

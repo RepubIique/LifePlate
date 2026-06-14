@@ -1,7 +1,9 @@
 import {
   buildCoachSummary,
+  buildDayComparison,
   buildExtendedNutritionTargets,
   buildFoodRecommendations,
+  buildPeriodSnapshot,
   buildWeeklyTrends,
   classifyFoods,
   computeNutritionGaps,
@@ -134,11 +136,11 @@ async function fetchMealRowsSince(userId: string, since: Date): Promise<MealRow[
   return rows;
 }
 
-async function fetchHydrationGlasses(userId: string): Promise<number> {
+async function fetchHydrationGlasses(userId: string, dateKey?: string): Promise<number> {
   const { rows } = await pool.query<{ glasses: number }>(
     `SELECT glasses FROM daily_hydration
-     WHERE user_id = $1 AND log_date = CURRENT_DATE`,
-    [userId],
+     WHERE user_id = $1 AND log_date = COALESCE($2::date, CURRENT_DATE)`,
+    [userId, dateKey ?? null],
   );
   return rows[0]?.glasses ?? 0;
 }
@@ -152,6 +154,19 @@ function startOfTomorrow(): Date {
   const today = startOfToday();
   today.setDate(today.getDate() + 1);
   return today;
+}
+
+function yesterdayDateKey(): string {
+  const d = startOfToday();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function filterRowsForDate(rows: MealRow[], dateKey: string): MealRow[] {
+  return rows.filter((row) => {
+    const key = new Date(row.created_at).toISOString().slice(0, 10);
+    return key === dateKey;
+  });
 }
 
 function startOfWeek(): Date {
@@ -237,13 +252,14 @@ export async function buildNutritionDashboard(
 ): Promise<NutritionDashboardApiResponse> {
   const dateKey = todayDateKey();
 
-  const [{ rows: userRows }, weekRows, hydrationGlasses, cachedInsight] = await Promise.all([
+  const [{ rows: userRows }, weekRows, hydrationGlasses, yesterdayHydrationGlasses, cachedInsight] = await Promise.all([
     pool.query<UserRow>(
       `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
       [userId],
     ),
     fetchMealRowsSince(userId, startOfWeek()),
     fetchHydrationGlasses(userId),
+    fetchHydrationGlasses(userId, yesterdayDateKey()),
     getCachedDailyInsight(userId, dateKey),
   ]);
 
@@ -259,10 +275,15 @@ export async function buildNutritionDashboard(
   );
 
   const todayRows = filterTodayRows(weekRows);
+  const yesterdayRows = filterRowsForDate(weekRows, yesterdayDateKey());
   const totals = aggregateTotals(todayRows);
+  const yesterdayTotals = aggregateTotals(yesterdayRows);
   const foods = collectFoods(todayRows);
+  const yesterdayFoods = collectFoods(yesterdayRows);
   const mealNames = collectMealNames(todayRows);
+  const yesterdayMealNames = collectMealNames(yesterdayRows);
   const classification = classifyFoods(foods, mealNames);
+  const yesterdayClassification = classifyFoods(yesterdayFoods, yesterdayMealNames);
 
   const gaps = computeNutritionGaps(totals, targets, classification, hydrationGlasses);
   const score = computeNutritionScore(
@@ -275,6 +296,24 @@ export async function buildNutritionDashboard(
   const coachSummary = buildCoachSummary(gaps, score);
   const recommendations = buildFoodRecommendations(gaps);
   const weeklyMetrics = computeWeeklyMetricsFromRows(weekRows);
+
+  const currentSnapshot = buildPeriodSnapshot(
+    "Today",
+    dateKey,
+    totals,
+    classification,
+    hydrationGlasses,
+    targets,
+  );
+  const previousSnapshot = buildPeriodSnapshot(
+    "Yesterday",
+    yesterdayDateKey(),
+    yesterdayTotals,
+    yesterdayClassification,
+    yesterdayHydrationGlasses,
+    targets,
+  );
+  const comparison = buildDayComparison(currentSnapshot, previousSnapshot);
 
   let lifeplateInsight = cachedInsight;
   if (!lifeplateInsight) {
@@ -313,6 +352,7 @@ export async function buildNutritionDashboard(
       daysWithMeals: weeklyMetrics.daysWithMeals,
     }),
     lifeplateInsight,
+    comparison,
   };
 }
 

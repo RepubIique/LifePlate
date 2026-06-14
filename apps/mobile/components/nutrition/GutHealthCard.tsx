@@ -1,7 +1,8 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import type { GutHealthSummary } from "@lifeplate/shared";
+import type { GutHealthSummary, NutritionIconKey } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { NutritionIcon } from "@/components/icons/NutritionIcon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { pillarColor } from "@/components/ui/pillarColors";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -13,13 +14,13 @@ type Props = {
 };
 
 function FoodGroup({
-  emoji,
+  icon,
   label,
   foods,
   status,
   statusLabel,
 }: {
-  emoji: string;
+  icon: NutritionIconKey;
   label: string;
   foods: string[];
   status: GutHealthSummary["status"];
@@ -28,9 +29,12 @@ function FoodGroup({
   return (
     <View style={styles.group}>
       <View style={styles.groupHeader}>
-        <Text variant="titleSmall" style={styles.groupTitle}>
-          {emoji} {label}
-        </Text>
+        <View style={styles.groupTitleRow}>
+          <NutritionIcon icon={icon} size={28} variant="badge" />
+          <Text variant="titleSmall" style={styles.groupTitle}>
+            {label}
+          </Text>
+        </View>
         <StatusBadge status={status} label={statusLabel} />
       </View>
       <FoodChips items={foods} emptyLabel="None logged today" />
@@ -75,7 +79,7 @@ export function GutHealthCard({ gutHealth }: Props) {
       <ProgressBar progress={scoreProgress} color={fillColor} height={8} />
 
       <FoodGroup
-        emoji="🦠"
+        icon="fermented"
         label="Fermented"
         foods={gutHealth.fermentedFoods}
         status={gutHealth.fermentedFoods.length > 0 ? "good" : "low"}
@@ -83,7 +87,7 @@ export function GutHealthCard({ gutHealth }: Props) {
       />
 
       <FoodGroup
-        emoji="🌱"
+        icon="prebiotic"
         label="Prebiotic"
         foods={gutHealth.prebioticFoods}
         status={
@@ -116,6 +120,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  groupTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flex: 1,
   },
   groupTitle: { letterSpacing: 0.1 },
 });
