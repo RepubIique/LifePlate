@@ -1,23 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { MealListSummary } from "@lifeplate/shared";
 import {
   buildTimelineDayGroups,
   capitalize,
   countMealsThisWeek,
   mealTypeIcon,
-} from "../mealUtils.ts";
+} from "../mealUtils";
 
 function meal(
   id: string,
   createdAt: string,
   mealType = "lunch",
-): {
-  id: string;
-  mealName: string;
-  mealType: string;
-  createdAt: string;
-} {
-  return { id, mealName: `Meal ${id}`, mealType, createdAt };
+): MealListSummary {
+  return {
+    id,
+    mealName: `Meal ${id}`,
+    mealType,
+    imageUrl: "",
+    createdAt,
+  };
 }
 
 test("buildTimelineDayGroups groups meals by day and sorts newest first", () => {

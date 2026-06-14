@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApiError, friendlyErrorMessage, parseApiError } from "../apiErrors.ts";
+import { ApiError, friendlyErrorMessage, parseApiError } from "../apiErrors";
 
 test("parseApiError reads JSON message and code", () => {
   const err = parseApiError(

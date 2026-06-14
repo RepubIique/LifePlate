@@ -4,7 +4,7 @@ import {
   computeMacroBreakdown,
   energyUnitLabel,
   formatEnergyValue,
-} from "../macroMath.ts";
+} from "../macroMath";
 
 test("computeMacroBreakdown calculates macro percentages", () => {
   const breakdown = computeMacroBreakdown(500, 25, 50, 20);

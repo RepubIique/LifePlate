@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { MealListSummary } from "@lifeplate/shared";
 import {
   getFilledSlots,
   getSuggestedSlot,
   mealMatchesSlot,
-} from "../mealSlots.ts";
+} from "../mealSlots";
+
+function summary(
+  id: string,
+  mealName: string,
+  mealType: string,
+  createdAt: string,
+): MealListSummary {
+  return { id, mealName, mealType, imageUrl: "", createdAt };
+}
 
 test("mealMatchesSlot treats beverages and desserts as snack", () => {
   assert.equal(mealMatchesSlot("beverage", "snack"), true);
@@ -15,8 +25,8 @@ test("mealMatchesSlot treats beverages and desserts as snack", () => {
 
 test("getFilledSlots marks slots with matching meals", () => {
   const filled = getFilledSlots([
-    { id: "1", mealName: "Oats", mealType: "breakfast", createdAt: "2026-06-14T08:00:00.000Z" },
-    { id: "2", mealName: "Pasta", mealType: "dinner", createdAt: "2026-06-14T19:00:00.000Z" },
+    summary("1", "Oats", "breakfast", "2026-06-14T08:00:00.000Z"),
+    summary("2", "Pasta", "dinner", "2026-06-14T19:00:00.000Z"),
   ]);
   assert.deepEqual([...filled], ["breakfast", "dinner"]);
 });
