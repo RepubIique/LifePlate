@@ -47,8 +47,9 @@ test("formatLogDateLabel returns Today, Yesterday, or formatted date", () => {
   assert.match(label, /10/);
 });
 
-test("loggedAtForDateKey uses local today for current meals", () => {
-  const earlyMorning = new Date("2026-06-18T02:00:00+08:00");
-  const iso = loggedAtForDateKey(todayDateKey(earlyMorning), "lunch");
-  assert.equal(dateKeyFromIso(iso), "2026-06-18");
+test("loggedAtForDateKey preserves local calendar date for early-morning meals", () => {
+  const earlyMorning = new Date(2026, 5, 18, 2, 0, 0, 0);
+  const dateKey = todayDateKey(earlyMorning);
+  const iso = loggedAtForDateKey(dateKey, "lunch");
+  assert.equal(dateKeyFromIso(iso), dateKey);
 });
