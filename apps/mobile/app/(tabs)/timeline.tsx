@@ -1,5 +1,5 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { router } from "expo-router";
+import { useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Snackbar, Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
@@ -36,7 +36,6 @@ export default function TimelineScreen() {
     meals,
     loading,
     refreshing,
-    loadMeals,
     refreshMeals,
     removeMealLocally,
     restoreMealLocally,
@@ -50,7 +49,6 @@ export default function TimelineScreen() {
   const {
     hydrationByDate,
     syncingDate,
-    loadHydration,
     refreshHydration,
     adjustHydration,
   } = useHydration();
@@ -62,16 +60,6 @@ export default function TimelineScreen() {
 
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
-
-  const loadTimeline = useCallback(async () => {
-    await Promise.all([loadHydration(), loadMeals()]);
-  }, [loadHydration, loadMeals]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadTimeline().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-    }, [loadTimeline]),
-  );
 
   function scheduleDelete(meal: MealListSummary) {
     removeMealLocally(meal.id);

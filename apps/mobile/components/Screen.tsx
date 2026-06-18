@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
+  type RefreshControlProps,
   type ScrollViewProps,
   type ViewProps,
 } from "react-native";
@@ -16,6 +17,7 @@ type Props = ViewProps & {
   scroll?: boolean;
   padded?: boolean;
   keyboardVerticalOffset?: number;
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
 type KeyboardAvoidingScrollViewProps = ScrollViewProps & {
@@ -63,6 +65,7 @@ export function Screen({
   style,
   children,
   keyboardVerticalOffset = 0,
+  refreshControl,
   ...rest
 }: Props) {
   const theme = useTheme();
@@ -87,6 +90,7 @@ export function Screen({
         style={styles.fill}
         contentContainerStyle={[paddingStyle, style]}
         keyboardVerticalOffset={keyboardVerticalOffset}
+        refreshControl={refreshControl}
       >
         {children}
       </KeyboardAvoidingScrollView>

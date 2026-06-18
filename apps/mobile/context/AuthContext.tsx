@@ -230,7 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileRef.current = cached.profile;
         profileFetchedAtRef.current = cached.fetchedAt;
       }
-      await loadProfile({ force: true });
+      await loadProfile();
     })();
 
     return () => {

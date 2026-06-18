@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
 import { dateKeyFromIso, formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
@@ -30,9 +30,14 @@ function isToday(iso: string) {
 
 export default function HomeScreen() {
   const { profile } = useAuth();
-  const { meals, loading: mealsLoading, loadMeals } = useMeals();
-  const { dashboard, loading: dashboardLoading, loadDashboard, patchHydration } =
-    useNutritionDashboard();
+  const { meals, loading: mealsLoading, refreshing: mealsRefreshing, refreshMeals } = useMeals();
+  const {
+    dashboard,
+    loading: dashboardLoading,
+    refreshing: dashboardRefreshing,
+    refreshDashboard,
+    patchHydration,
+  } = useNutritionDashboard();
   const { adjustHydration, syncDate } = useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
@@ -67,6 +72,10 @@ export default function HomeScreen() {
   const [logDatePickerOpen, setLogDatePickerOpen] = useState(false);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
+  useEffect(() => {
+    getLastPhotoSource().then(setPreferredSource);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       if (pendingLogDate) {
@@ -74,11 +83,14 @@ export default function HomeScreen() {
         setLogDate(pendingLogDate);
         setPendingLogDate(null);
       }
-      void loadMeals().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-      void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-      getLastPhotoSource().then(setPreferredSource);
-    }, [loadMeals, loadDashboard, pendingLogDate, setPendingLogDate, setLogDate]),
+    }, [pendingLogDate, setPendingLogDate, setLogDate]),
   );
+
+  const handleRefresh = useCallback(() => {
+    void Promise.all([refreshMeals(), refreshDashboard()]).catch((e) =>
+      setSnackbar(friendlyErrorMessage(e)),
+    );
+  }, [refreshMeals, refreshDashboard]);
 
   useEffect(() => {
     if (!dashboard) return;
@@ -90,7 +102,16 @@ export default function HomeScreen() {
   const showMealsSkeleton = mealsLoading && meals.length === 0;
 
   return (
-    <Screen scroll padded={false}>
+    <Screen
+      scroll
+      padded={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={mealsRefreshing || dashboardRefreshing}
+          onRefresh={handleRefresh}
+        />
+      }
+    >
       <PremiumHeader
         title="LifePlate"
         subtitle={`${profile?.currentStreak ?? 0} day streak`}

@@ -200,6 +200,11 @@ export function MealsProvider({ children }: { children: ReactNode }) {
 
   const refreshMeals = useCallback(() => loadMeals({ force: true }), [loadMeals]);
 
+  useEffect(() => {
+    if (!session || !hydrated) return;
+    void loadMeals();
+  }, [session, hydrated, loadMeals]);
+
   const value = useMemo(
     () => ({
       meals,

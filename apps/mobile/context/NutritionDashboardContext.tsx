@@ -29,6 +29,7 @@ type LoadOptions = {
 type NutritionDashboardContextValue = {
   dashboard: NutritionDashboardView | null;
   loading: boolean;
+  refreshing: boolean;
   loadDashboard: (options?: LoadOptions) => Promise<void>;
   refreshDashboard: () => Promise<void>;
   invalidateDashboard: () => void;
@@ -42,6 +43,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
   const userId = session?.user.id;
   const [dashboard, setDashboard] = useState<NutritionDashboardView | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const fetchedAtRef = useRef(0);
   const dirtyRef = useRef(false);
@@ -145,9 +147,14 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
       }
 
       const hasData = dashboardRef.current != null;
+      const isBackgroundRefresh = force && hasData;
 
       const run = (async () => {
-        if (!hasData) setLoading(true);
+        if (isBackgroundRefresh) {
+          setRefreshing(true);
+        } else if (!hasData) {
+          setLoading(true);
+        }
 
         try {
           const data = await fetchNutritionDashboard();
@@ -161,6 +168,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
           throw e;
         } finally {
           setLoading(false);
+          setRefreshing(false);
         }
       })();
 
@@ -181,10 +189,16 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
     [loadDashboard],
   );
 
+  useEffect(() => {
+    if (!session || !hydrated) return;
+    void loadDashboard();
+  }, [session, hydrated, loadDashboard]);
+
   const value = useMemo(
     () => ({
       dashboard,
       loading,
+      refreshing,
       loadDashboard,
       refreshDashboard,
       invalidateDashboard,
@@ -193,6 +207,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
     [
       dashboard,
       loading,
+      refreshing,
       loadDashboard,
       refreshDashboard,
       invalidateDashboard,

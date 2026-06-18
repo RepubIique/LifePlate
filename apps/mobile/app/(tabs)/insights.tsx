@@ -1,6 +1,5 @@
-import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
 import { Snackbar, Text } from "react-native-paper";
 import type { ComparisonPeriod } from "@lifeplate/shared";
 import { PeriodComparisonCard } from "@/components/insights/PeriodComparisonCard";
@@ -14,18 +13,22 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function InsightsScreen() {
-  const { dashboard, loading, loadDashboard } = useNutritionDashboard();
+  const { dashboard, loading, refreshing, refreshDashboard } = useNutritionDashboard();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [period, setPeriod] = useState<ComparisonPeriod>("day");
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-    }, [loadDashboard]),
-  );
+  const handleRefresh = useCallback(() => {
+    void refreshDashboard().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+  }, [refreshDashboard]);
 
   return (
-    <Screen scroll padded={false}>
+    <Screen
+      scroll
+      padded={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       <PremiumHeader
         title="Insights"
         subtitle="See how you're tracking over time"

@@ -157,6 +157,11 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
     [loadHydration],
   );
 
+  useEffect(() => {
+    if (!session || !hydrated) return;
+    void loadHydration();
+  }, [session, hydrated, loadHydration]);
+
   const persistDate = useCallback(
     async (dateKey: string, glasses: number) => {
       if (persistInflightRef.current.has(dateKey)) {

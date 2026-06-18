@@ -284,7 +284,7 @@ export default function EditMealScreen() {
           sodium: nextSodium,
           createdAt: loggedAt,
           notes: notes || null,
-          portionMeta,
+          portionMeta: portionMeta ?? undefined,
         });
         patchMealLocally(id, {
           mealName,

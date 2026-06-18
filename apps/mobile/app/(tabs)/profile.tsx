@@ -1,7 +1,7 @@
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, Alert, Platform, StyleSheet, View } from "react-native";
+import { ActionSheetIOS, Alert, Platform, RefreshControl, StyleSheet, View } from "react-native";
 import { Button, Snackbar, Switch, Text, TextInput } from "react-native-paper";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
@@ -48,7 +48,7 @@ function metricEqual(stored: number | null, draft: number | null): boolean {
 }
 
 export default function ProfileScreen() {
-  const { profile, linkProvider, loadProfile, patchProfile, signOut } = useAuth();
+  const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -66,6 +66,7 @@ export default function ProfileScreen() {
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setIsDirty(false);
@@ -92,24 +93,7 @@ export default function ProfileScreen() {
     profile?.weightKg,
   ]);
 
-  const loadProfileScreen = useCallback(async () => {
-    const latest = await loadProfile();
-    if (!latest) {
-      if (!profile) {
-        setSnackbar("Could not refresh profile — showing last saved data");
-      }
-      return;
-    }
-
-    applyProfileToForm(latest, {
-      setName,
-      setGoal,
-      setWeightKg,
-      setHeightCm,
-      setAge,
-      setGender,
-    });
-
+  const resolveRemoteAvatar = useCallback(async (latest: UserProfile) => {
     if (!latest.hasAvatar || !latest.id) {
       setRemoteAvatarUrl(null);
       return;
@@ -123,14 +107,44 @@ export default function ProfileScreen() {
 
     const { avatarUrl } = await fetchProfileAvatar();
     setRemoteAvatarUrl(avatarUrl);
-  }, [loadProfile, profile]);
+  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setIsDirty(false);
-      void loadProfileScreen().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-    }, [loadProfileScreen]),
-  );
+  useEffect(() => {
+    if (!profile) return;
+    void resolveRemoteAvatar(profile).catch((e) =>
+      setSnackbar(friendlyErrorMessage(e)),
+    );
+  }, [profile, profile?.hasAvatar, profile?.id, resolveRemoteAvatar]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const latest = await refreshProfile();
+      if (!latest) {
+        if (!profile) {
+          setSnackbar("Could not refresh profile — showing last saved data");
+        }
+        return;
+      }
+
+      if (!isDirty) {
+        applyProfileToForm(latest, {
+          setName,
+          setGoal,
+          setWeightKg,
+          setHeightCm,
+          setAge,
+          setGender,
+        });
+      }
+
+      await resolveRemoteAvatar(latest);
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProfile, profile, isDirty, resolveRemoteAvatar]);
 
   const canSave = useMemo(() => {
     const n = name.trim();
@@ -284,7 +298,13 @@ export default function ProfileScreen() {
   const displayName = name.trim() || profile?.name?.trim() || "Your profile";
 
   return (
-    <Screen scroll padded={false}>
+    <Screen
+      scroll
+      padded={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
+      }
+    >
       <View style={styles.body}>
         <PremiumCard style={styles.hero}>
           <ProfileAvatar
