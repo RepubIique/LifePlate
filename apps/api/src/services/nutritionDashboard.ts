@@ -193,7 +193,7 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
     proteinTotal += totals.protein;
     const foods = collectFoods(dayRows);
     const classification = classifyFoods(foods, collectMealNames(dayRows));
-    plantTotal += classification.plants.length;
+    plantTotal += classification.plantServes ?? classification.plants.length;
     gutScoreTotal += weeklyGutScore(classification);
     if (classification.omega3.length > 0) omega3Days += 1;
 
@@ -300,7 +300,7 @@ export async function buildNutritionDashboard(
       goal: user?.goal ?? null,
       totals,
       targets,
-      plantCount: classification.plants.length,
+      plantCount: classification.plantServes ?? classification.plants.length,
       recentFoods: foods.slice(0, 12),
       score,
     });
@@ -315,6 +315,7 @@ export async function buildNutritionDashboard(
     today: {
       totals,
       plants: classification.plants,
+      plantServes: classification.plantServes ?? classification.plants.length,
       fermented: classification.fermented,
       prebiotic: classification.prebiotic,
     },

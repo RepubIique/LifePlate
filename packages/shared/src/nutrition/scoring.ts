@@ -17,6 +17,7 @@ import {
   stillNeededForMacro,
 } from "./equivalents.js";
 import { defaultExtendedNutritionTargets } from "./targets.js";
+import { resolvedPlantServes } from "./taxonomy.js";
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -53,7 +54,7 @@ export function computeNutritionGaps(
   return {
     proteinG: Math.max(0, targets.dailyProteinG - totals.protein),
     fibreG: Math.max(0, targets.dailyFibreG - totals.fibre),
-    plantServes: Math.max(0, targets.dailyPlantServes - classification.plants.length),
+    plantServes: Math.max(0, targets.dailyPlantServes - resolvedPlantServes(classification)),
     hydrationGlasses: Math.max(0, targets.dailyHydrationGlasses - hydrationGlasses),
     caloriesGap: totals.calories - targets.dailyCalories,
   };
@@ -67,7 +68,7 @@ export function computeNutritionScore(
 ): number {
   const protein = clamp01(totals.protein / targets.dailyProteinG);
   const fibre = clamp01(totals.fibre / targets.dailyFibreG);
-  const plants = clamp01(classification.plants.length / targets.dailyPlantServes);
+  const plants = clamp01(resolvedPlantServes(classification) / targets.dailyPlantServes);
   const hydration = clamp01(hydrationGlasses / targets.dailyHydrationGlasses);
   const energy = energyBalanceProgress(totals.calories, targets.dailyCalories);
   const gut = gutHealthProgress(classification);
@@ -146,7 +147,7 @@ export function buildPlantsPillar(
   classification: FoodClassification,
   targets: ExtendedNutritionTargets,
 ): PillarProgress {
-  const consumed = classification.plants.length;
+  const consumed = resolvedPlantServes(classification);
   const progress = clamp01(consumed / targets.dailyPlantServes);
 
   return {

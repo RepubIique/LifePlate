@@ -8,6 +8,7 @@ import type {
   PeriodSnapshot,
 } from "./types.js";
 import { computeNutritionScore } from "./scoring.js";
+import { resolvedPlantServes } from "./taxonomy.js";
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -27,7 +28,7 @@ export function buildComparisonPillars(
   return {
     protein: progressPercent(totals.protein, targets.dailyProteinG),
     fibre: progressPercent(totals.fibre, targets.dailyFibreG),
-    plants: progressPercent(classification.plants.length, targets.dailyPlantServes),
+    plants: progressPercent(resolvedPlantServes(classification), targets.dailyPlantServes),
     hydration: progressPercent(hydrationGlasses, targets.dailyHydrationGlasses),
   };
 }

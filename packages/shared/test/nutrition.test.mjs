@@ -17,6 +17,7 @@ import {
   formatScoreDelta,
   scoreStatus,
   weeklyGutScore,
+  parsePlantFoodText,
 } from "../dist/nutrition/index.js";
 
 const targets = defaultExtendedNutritionTargets();
@@ -219,4 +220,23 @@ test("buildWeeklyTrends marks processed food intake bands", () => {
     moderate.find((t) => t.label === "Processed Food Intake")?.status,
     "moderate",
   );
+});
+
+test("parsePlantFoodText reads amounts and units from food strings", () => {
+  const halfCup = parsePlantFoodText("1/2 cup peanuts");
+  assert.equal(halfCup.name, "peanuts");
+  assert.equal(halfCup.amount, 0.5);
+  assert.equal(halfCup.unit, "cup");
+
+  const plain = parsePlantFoodText("spinach");
+  assert.equal(plain.name, "spinach");
+  assert.equal(plain.amount, 1);
+  assert.equal(plain.unit, null);
+});
+
+test("classifyFoods sums fractional plant serves from quantities", () => {
+  const result = classifyFoods(["1/2 cup peanuts", "1 cup broccoli"], ["Snack"]);
+  assert.ok(result.plants.includes("Peanuts"));
+  assert.ok(result.plants.includes("Broccoli"));
+  assert.equal(result.plantServes, 1.5);
 });

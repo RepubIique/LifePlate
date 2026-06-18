@@ -22,12 +22,17 @@ function meal(
   };
 }
 
+function mealOnLocalDay(id: string, dateKey: string, hour = 12): MealListSummary {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return meal(id, new Date(year, month - 1, day, hour, 0, 0, 0).toISOString());
+}
+
 test("buildTimelineDayGroups groups meals by day and sorts newest first", () => {
   const groups = buildTimelineDayGroups(
     [
-      meal("1", "2026-06-10T12:00:00.000Z"),
-      meal("2", "2026-06-12T12:00:00.000Z"),
-      meal("3", "2026-06-12T18:00:00.000Z"),
+      mealOnLocalDay("1", "2026-06-10"),
+      mealOnLocalDay("2", "2026-06-12", 12),
+      mealOnLocalDay("3", "2026-06-12", 18),
     ],
     { "2026-06-11": 3 },
   );

@@ -6,8 +6,13 @@ import { fetchMeal, updateMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import {
   buildPlantSources,
+  composePlantFood,
+  formatPlantAmount,
   normalizeFoodName,
+  PLANT_AMOUNT_PRESETS,
+  PLANT_UNIT_OPTIONS,
   type PlantSourceEntry,
+  type PlantUnit,
 } from "@/lib/plantSources";
 import { MEAL_SLOTS, mealMatchesSlot, type MealSlotKey } from "@/lib/mealSlots";
 import { spacing } from "@/src/theme/lifeplate";
@@ -20,25 +25,40 @@ type Props = {
 
 type DialogMode = "add" | "edit" | null;
 
+function amountLabel(amount: number): string {
+  if (amount === 1) return "1";
+  return formatPlantAmount(amount);
+}
+
 export function PlantSourcesEditor({ meals, onChanged }: Props) {
   const sources = useMemo(() => buildPlantSources(meals), [meals]);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [draftName, setDraftName] = useState("");
+  const [draftAmount, setDraftAmount] = useState(1);
+  const [draftUnit, setDraftUnit] = useState<PlantUnit | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MealSlotKey>("lunch");
   const [editingEntry, setEditingEntry] = useState<PlantSourceEntry | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function openAdd() {
+  function resetDraft() {
     setDraftName("");
-    setSelectedSlot("lunch");
+    setDraftAmount(1);
+    setDraftUnit(null);
     setEditingEntry(null);
     setError(null);
+  }
+
+  function openAdd() {
+    resetDraft();
+    setSelectedSlot("lunch");
     setDialogMode("add");
   }
 
   function openEdit(entry: PlantSourceEntry) {
-    setDraftName(entry.food);
+    setDraftName(entry.name);
+    setDraftAmount(entry.amount);
+    setDraftUnit(entry.unit);
     setEditingEntry(entry);
     setError(null);
     setDialogMode("edit");
@@ -47,9 +67,13 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
   function closeDialog() {
     if (busy) return;
     setDialogMode(null);
-    setEditingEntry(null);
-    setDraftName("");
-    setError(null);
+    resetDraft();
+  }
+
+  function buildDraftFood(): string | null {
+    const name = normalizeFoodName(draftName);
+    if (!name) return null;
+    return composePlantFood(name, draftAmount, draftUnit);
   }
 
   async function patchMealFoods(
@@ -78,8 +102,8 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
 
   async function handleSaveEdit() {
     if (!editingEntry) return;
-    const nextName = normalizeFoodName(draftName);
-    if (!nextName) {
+    const nextFood = buildDraftFood();
+    if (!nextFood) {
       setError("Enter a food name.");
       return;
     }
@@ -88,7 +112,7 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
     setError(null);
     try {
       await patchMealFoods(editingEntry.mealId, (foods) =>
-        foods.map((food, index) => (index === editingEntry.foodIndex ? nextName : food)),
+        foods.map((food, index) => (index === editingEntry.foodIndex ? nextFood : food)),
       );
       closeDialog();
     } catch (e) {
@@ -99,8 +123,8 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
   }
 
   async function handleSaveAdd() {
-    const nextName = normalizeFoodName(draftName);
-    if (!nextName) {
+    const nextFood = buildDraftFood();
+    if (!nextFood) {
       setError("Enter a food name.");
       return;
     }
@@ -115,8 +139,8 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
     setError(null);
     try {
       await patchMealFoods(targetMeal.id, (foods) => {
-        const exists = foods.some((food) => food.toLowerCase() === nextName.toLowerCase());
-        return exists ? foods : [...foods, nextName];
+        const exists = foods.some((food) => food.toLowerCase() === nextFood.toLowerCase());
+        return exists ? foods : [...foods, nextFood];
       });
       closeDialog();
     } catch (e) {
@@ -179,8 +203,73 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
               value={draftName}
               onChangeText={setDraftName}
               mode="outlined"
+              placeholder="e.g. peanuts, spinach"
               autoFocus
             />
+
+            <View style={styles.pickerSection}>
+              <Text variant="labelLarge" style={styles.pickerLabel}>
+                Amount
+              </Text>
+              <View style={styles.pickerRow}>
+                {PLANT_AMOUNT_PRESETS.map((amount) => {
+                  const selected = draftAmount === amount;
+                  return (
+                    <Pressable
+                      key={amount}
+                      onPress={() => setDraftAmount(amount)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text
+                        variant="labelMedium"
+                        style={[styles.optionChipText, selected && styles.optionChipTextSelected]}
+                      >
+                        {amountLabel(amount)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.pickerSection}>
+              <Text variant="labelLarge" style={styles.pickerLabel}>
+                Unit
+              </Text>
+              <View style={styles.pickerRow}>
+                <Pressable
+                  onPress={() => setDraftUnit(null)}
+                  style={[styles.optionChip, draftUnit == null && styles.optionChipSelected]}
+                >
+                  <Text
+                    variant="labelMedium"
+                    style={[
+                      styles.optionChipText,
+                      draftUnit == null && styles.optionChipTextSelected,
+                    ]}
+                  >
+                    None
+                  </Text>
+                </Pressable>
+                {PLANT_UNIT_OPTIONS.map((unit) => {
+                  const selected = draftUnit === unit;
+                  return (
+                    <Pressable
+                      key={unit}
+                      onPress={() => setDraftUnit(unit)}
+                      style={[styles.optionChip, selected && styles.optionChipSelected]}
+                    >
+                      <Text
+                        variant="labelMedium"
+                        style={[styles.optionChipText, selected && styles.optionChipTextSelected]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
 
             {dialogMode === "add" ? (
               <View style={styles.slotPicker}>
@@ -277,6 +366,35 @@ const styles = StyleSheet.create({
   },
   dialogTitle: {
     letterSpacing: 0.15,
+  },
+  pickerSection: {
+    gap: spacing.xs,
+  },
+  pickerLabel: {
+    opacity: 0.55,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  pickerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  optionChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    backgroundColor: "#F1F3F5",
+  },
+  optionChipSelected: {
+    backgroundColor: "#D8F3DC",
+  },
+  optionChipText: {
+    color: "#636E72",
+  },
+  optionChipTextSelected: {
+    color: "#1B4332",
+    fontWeight: "600",
   },
   dialogActions: {
     flexDirection: "row",

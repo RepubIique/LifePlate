@@ -1,4 +1,5 @@
 import type { FoodClassification } from "./types.js";
+import { parsePlantFoodText, sumPlantServes } from "./plantQuantity.js";
 
 const PLANT_KEYWORDS: Array<{ keyword: string; label: string }> = [
   { keyword: "broccoli", label: "Broccoli" },
@@ -30,6 +31,8 @@ const PLANT_KEYWORDS: Array<{ keyword: string; label: string }> = [
   { keyword: "chickpea", label: "Chickpeas" },
   { keyword: "almond", label: "Almonds" },
   { keyword: "walnut", label: "Walnuts" },
+  { keyword: "peanut", label: "Peanuts" },
+  { keyword: "peanuts", label: "Peanuts" },
   { keyword: "oat", label: "Oats" },
   { keyword: "oats", label: "Oats" },
 ];
@@ -97,7 +100,12 @@ function matchLabels(
 
 /** Plant taxonomy labels matched in a single food name. */
 export function plantLabelsForFood(food: string): string[] {
-  return matchLabels(food.toLowerCase(), PLANT_KEYWORDS);
+  const { name } = parsePlantFoodText(food);
+  return matchLabels(name.toLowerCase(), PLANT_KEYWORDS);
+}
+
+export function resolvedPlantServes(classification: FoodClassification): number {
+  return classification.plantServes ?? classification.plants.length;
 }
 
 function isProcessedMeal(mealName: string, foods: string[]): boolean {
@@ -115,12 +123,15 @@ export function classifyFoods(
   const omega3 = new Set<string>();
 
   for (const food of foods) {
-    const text = food.toLowerCase();
+    const { name } = parsePlantFoodText(food);
+    const text = name.toLowerCase();
     for (const label of matchLabels(text, PLANT_KEYWORDS)) plants.add(label);
     for (const label of matchLabels(text, FERMENTED_KEYWORDS)) fermented.add(label);
     for (const label of matchLabels(text, PREBIOTIC_KEYWORDS)) prebiotic.add(label);
     for (const label of matchLabels(text, OMEGA3_KEYWORDS)) omega3.add(label);
   }
+
+  const plantServes = sumPlantServes(foods, (food) => plantLabelsForFood(food).length > 0);
 
   let processedMealCount = 0;
   const uniqueMeals = [...new Set(mealNames)];
@@ -130,6 +141,7 @@ export function classifyFoods(
 
   return {
     plants: [...plants],
+    plantServes,
     fermented: [...fermented],
     prebiotic: [...prebiotic],
     omega3: [...omega3],

@@ -78,6 +78,7 @@ export function expandDashboard(
   const targets = toExtendedTargets(nutritionTargets);
   const classification: FoodClassification = {
     plants: api.today.plants,
+    plantServes: api.today.plantServes ?? api.today.plants.length,
     fermented: api.today.fermented,
     prebiotic: api.today.prebiotic,
     omega3: [],

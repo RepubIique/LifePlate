@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./plantQuantity.js";
 export * from "./taxonomy.js";
 export * from "./equivalents.js";
 export * from "./targets.js";
