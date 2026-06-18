@@ -476,6 +476,7 @@ export type {
   ExtendedNutritionTargets,
   FoodClassification,
   NutritionGaps,
+  PlantUnit,
 } from "./nutrition/index.js";
 
 export {
