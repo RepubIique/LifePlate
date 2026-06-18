@@ -4,7 +4,7 @@ import { clampMealPortions } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { spacing } from "@/src/theme/lifeplate";
 
-const TOTAL_PORTION_OPTIONS = [2, 3, 4, 5, 6] as const;
+const TOTAL_PORTION_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
 
 type SharedMealPortionsCardProps = {
   totalPortions: number;
@@ -72,16 +72,18 @@ export function SharedMealPortionsCard({
         {TOTAL_PORTION_OPTIONS.map((n) => (
           <PortionChip
             key={n}
-            label={String(n)}
+            label={n === 1 ? "1 portion" : String(n)}
             selected={totalPortions === n}
             onPress={() => {
               onTotalPortionsChange(n);
-              if (portionsEaten > n) onPortionsEatenChange(n);
+              onPortionsEatenChange(n === 1 ? 1 : Math.min(portionsEaten, n));
             }}
           />
         ))}
       </View>
 
+      {totalPortions > 1 ? (
+        <>
       <Text variant="labelLarge" style={styles.sectionLabel}>
         How many did you eat?
       </Text>
@@ -102,6 +104,8 @@ export function SharedMealPortionsCard({
           />
         ) : null}
       </View>
+        </>
+      ) : null}
 
       <Text variant="bodySmall" style={styles.hint}>
         Logging {clampMealPortions(portionsEaten)} of {clampMealPortions(totalPortions)}{" "}

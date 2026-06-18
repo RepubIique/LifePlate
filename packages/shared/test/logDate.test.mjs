@@ -11,12 +11,12 @@ import {
 
 const NOW = new Date("2026-06-14T12:00:00.000Z");
 
-test("todayDateKey returns UTC calendar date", () => {
+test("todayDateKey returns local calendar date", () => {
   assert.equal(todayDateKey(NOW), "2026-06-14");
 });
 
-test("dateKeyFromIso extracts UTC date from ISO string", () => {
-  assert.equal(dateKeyFromIso("2026-06-10T23:30:00.000Z"), "2026-06-10");
+test("dateKeyFromIso extracts local date from ISO string", () => {
+  assert.equal(dateKeyFromIso("2026-06-10T12:00:00.000Z"), "2026-06-10");
 });
 
 test("isValidLogDateKey rejects malformed, future, and too-old dates", () => {
@@ -27,7 +27,7 @@ test("isValidLogDateKey rejects malformed, future, and too-old dates", () => {
   assert.equal(isValidLogDateKey("2026-03-16", NOW), true);
 });
 
-test("loggedAtForDateKey keeps UTC date for meal types", () => {
+test("loggedAtForDateKey keeps local date for meal types", () => {
   for (const mealType of ["breakfast", "lunch", "dinner", "snack", "beverage", null]) {
     const iso = loggedAtForDateKey("2026-06-10", mealType);
     assert.equal(dateKeyFromIso(iso), "2026-06-10", `mealType=${mealType}`);
@@ -45,4 +45,10 @@ test("formatLogDateLabel returns Today, Yesterday, or formatted date", () => {
   const label = formatLogDateLabel("2026-06-10", NOW);
   assert.match(label, /Jun/);
   assert.match(label, /10/);
+});
+
+test("loggedAtForDateKey uses local today for current meals", () => {
+  const earlyMorning = new Date("2026-06-18T02:00:00+08:00");
+  const iso = loggedAtForDateKey(todayDateKey(earlyMorning), "lunch");
+  assert.equal(dateKeyFromIso(iso), "2026-06-18");
 });

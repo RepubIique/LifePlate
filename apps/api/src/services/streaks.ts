@@ -1,3 +1,5 @@
+import { dateKeyFromIso, todayDateKey } from "@lifeplate/shared";
+
 function shiftUtcDayKey(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T12:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -31,7 +33,7 @@ export function computeStreaksFromDayKeys(dayKeys: string[]): {
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateKey();
   let current = 0;
   let cursor = today;
   while (daySet.has(cursor)) {
@@ -43,9 +45,7 @@ export function computeStreaksFromDayKeys(dayKeys: string[]): {
 }
 
 export function mealDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return dateKeyFromIso(date.toISOString());
 }
 
-export function todayDateKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+export { dateKeyFromIso, todayDateKey };

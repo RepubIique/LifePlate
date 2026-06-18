@@ -70,6 +70,12 @@ export function TimelineMealCard({ meal, isLast, onPress, onDelete }: Props) {
                 {meal.mealName}
               </Text>
 
+              {meal.notes?.trim() ? (
+                <Text variant="bodySmall" style={styles.notes} numberOfLines={2}>
+                  {meal.notes.trim()}
+                </Text>
+              ) : null}
+
               {meal.calories != null || meal.protein != null ? (
                 <View style={styles.chips}>
                   {meal.calories != null ? (
@@ -184,6 +190,11 @@ const styles = StyleSheet.create({
   name: {
     letterSpacing: 0.1,
     lineHeight: 22,
+  },
+  notes: {
+    opacity: 0.65,
+    lineHeight: 18,
+    fontStyle: "italic",
   },
   chips: {
     flexDirection: "row",

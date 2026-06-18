@@ -73,6 +73,4 @@ export async function clearCachedDashboard(userId: string): Promise<void> {
   await remove(cacheKey(userId));
 }
 
-export function todayDateKey() {
-  return new Date().toISOString().slice(0, 10);
-}
+export { todayDateKey } from "@lifeplate/shared";

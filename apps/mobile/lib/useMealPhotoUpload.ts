@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { todayDateKey } from "@lifeplate/shared";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useRef, useState } from "react";
@@ -56,7 +57,7 @@ export function useMealPhotoUpload() {
           confidence: String(analysis.confidence),
           coachNudge: analysis.coachNudge,
           estimatedServings: String(analysis.estimatedServings ?? 1),
-          logDate: logDateRef.current ?? "",
+          logDate: logDateRef.current ?? todayDateKey(),
         },
       });
     } catch (e) {

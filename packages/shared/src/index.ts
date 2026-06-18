@@ -377,6 +377,15 @@ export interface MealConfirmRequest {
   portionMeta?: MealPortionMeta;
 }
 
+export const MAX_MEAL_NOTES_LENGTH = 500;
+
+export function normalizeMealNotes(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, MAX_MEAL_NOTES_LENGTH);
+}
+
 export interface MealListSummary {
   id: string;
   mealType: string | null;
@@ -385,6 +394,7 @@ export interface MealListSummary {
   createdAt: string;
   calories?: number | null;
   protein?: number | null;
+  notes?: string | null;
 }
 
 export interface MealListItem extends MealListSummary {
@@ -417,6 +427,8 @@ export interface MealUpdateRequest {
   sodium?: number | null;
   /** ISO timestamp — move the meal to another day. */
   loggedAt?: string;
+  /** Free-form journal note (who you ate with, recipe, etc.). */
+  notes?: string | null;
   portionMeta?: MealPortionMeta | null;
 }
 

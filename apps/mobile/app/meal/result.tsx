@@ -9,11 +9,14 @@ import {
   isLikelySharedMeal,
   loggedAtForDateKey,
   scaleMealForPortions,
+  todayDateKey,
+  dateKeyFromIso,
   type MealMacroTotals,
   type MealType,
 } from "@lifeplate/shared";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
+import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
@@ -70,7 +73,8 @@ export default function MealResultScreen() {
     routeParam(params.imageUrl) ||
     uploadSession?.imageUrl ||
     "";
-  const logDateKey = routeParam(params.logDate);
+  const initialLogDateKey = routeParam(params.logDate) || todayDateKey();
+  const [logDate, setLogDate] = useState(initialLogDateKey);
 
   const initialFoods = useMemo(() => {
     try {
@@ -275,9 +279,7 @@ export default function MealResultScreen() {
           portionsEaten,
           estimatedServings,
         ),
-        loggedAt: logDateKey
-          ? loggedAtForDateKey(logDateKey, mealType)
-          : undefined,
+        loggedAt: loggedAtForDateKey(logDate, mealType),
       });
       if (imageUrl) {
         await saveMealImage(id, imageUrl);
@@ -320,6 +322,11 @@ export default function MealResultScreen() {
       ) : null}
 
       <PremiumCard>
+        <MealLogDateField
+          dateKey={logDate}
+          mealType={mealType}
+          onChange={(loggedAt) => setLogDate(dateKeyFromIso(loggedAt))}
+        />
         <MealTypePicker value={mealType} onChange={setMealType} />
       </PremiumCard>
 

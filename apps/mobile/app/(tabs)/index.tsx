@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, Chip, IconButton, Snackbar, Text } from "react-native-paper";
+import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
 import { dateKeyFromIso, formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
@@ -9,6 +9,7 @@ import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
@@ -70,7 +71,8 @@ export default function HomeScreen() {
     lastAssetRef,
   } = useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const [logDateKey, setLogDateKey] = useState<string | null>(null);
+  const [logDateKey, setLogDateKey] = useState(() => todayDateKey());
+  const [logDatePickerOpen, setLogDatePickerOpen] = useState(false);
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
   useFocusEffect(
@@ -110,19 +112,17 @@ export default function HomeScreen() {
 
       <View style={styles.hero}>
         <PremiumCard>
-          {logDateKey && logDateKey !== todayDateKey() ? (
-            <View style={styles.logDateBanner}>
-              <Chip
-                icon="calendar"
-                onClose={() => {
-                  setLogDateKey(null);
-                  setLogDate(null);
-                }}
-              >
-                Logging for {formatLogDateLabel(logDateKey)}
-              </Chip>
+          <View style={styles.logDateRow}>
+            <View style={styles.logDateCopy}>
+              <Text variant="labelLarge" style={styles.logDateLabel}>
+                Logging for
+              </Text>
+              <Text variant="bodyLarge">{formatLogDateLabel(logDateKey)}</Text>
             </View>
-          ) : null}
+            <Button mode="outlined" compact onPress={() => setLogDatePickerOpen(true)}>
+              Change
+            </Button>
+          </View>
           <Text variant="titleLarge" style={styles.ctaText}>
             What are you eating?
           </Text>
@@ -140,7 +140,7 @@ export default function HomeScreen() {
               icon="camera"
               onPress={() => {
                 setPreferredSource("camera");
-                void pickAndAnalyze(true);
+                void pickAndAnalyze(true, logDateKey);
               }}
               disabled={uploading}
             >
@@ -151,7 +151,7 @@ export default function HomeScreen() {
               icon="image"
               onPress={() => {
                 setPreferredSource("library");
-                void pickAndAnalyze(false);
+                void pickAndAnalyze(false, logDateKey);
               }}
               disabled={uploading}
             >
@@ -173,7 +173,7 @@ export default function HomeScreen() {
       <View style={styles.dashboard}>
         <MealSlotsTracker
           meals={todayMeals}
-          onLogSuggested={() => pickAndAnalyze(preferredSource !== "library")}
+          onLogSuggested={() => pickAndAnalyze(preferredSource !== "library", logDateKey)}
         />
 
         {showDashboardSkeleton ? (
@@ -218,6 +218,16 @@ export default function HomeScreen() {
         )}
       </View>
 
+      <LogDatePickerModal
+        visible={logDatePickerOpen}
+        selectedDateKey={logDateKey}
+        onSelect={(dateKey) => {
+          setLogDateKey(dateKey);
+          setLogDate(dateKey);
+        }}
+        onClose={() => setLogDatePickerOpen(false)}
+      />
+
       <Snackbar
         visible={!!snackbar || !!error}
         onDismiss={() => {
@@ -239,7 +249,19 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  logDateBanner: { marginBottom: spacing.sm },
+  logDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  logDateCopy: { flex: 1, gap: 2 },
+  logDateLabel: {
+    opacity: 0.55,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
   ctaText: { letterSpacing: 0.2 },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },

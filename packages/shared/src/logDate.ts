@@ -1,11 +1,18 @@
 export const MAX_LOG_PAST_DAYS = 90;
 
+function dateKeyFromDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function todayDateKey(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+  return dateKeyFromDate(date);
 }
 
 export function dateKeyFromIso(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10);
+  return dateKeyFromDate(new Date(iso));
 }
 
 export function isValidLogDateKey(dateKey: string, now = new Date()): boolean {
@@ -13,7 +20,7 @@ export function isValidLogDateKey(dateKey: string, now = new Date()): boolean {
   const today = todayDateKey(now);
   if (dateKey > today) return false;
   const min = new Date(now);
-  min.setUTCDate(min.getUTCDate() - MAX_LOG_PAST_DAYS);
+  min.setDate(min.getDate() - MAX_LOG_PAST_DAYS);
   return dateKey >= todayDateKey(min);
 }
 
@@ -21,37 +28,39 @@ export function loggedAtForDateKey(
   dateKey: string,
   mealType?: string | null,
 ): string {
-  // Keep hours on the UTC calendar date so dateKeyFromIso always matches dateKey.
-  // (A late UTC hour like 19:00 spills into the next local day in UTC+8.)
+  const [year, month, day] = dateKey.split("-").map(Number);
   const hour =
     mealType === "breakfast"
-      ? 11
+      ? 8
       : mealType === "lunch"
         ? 12
         : mealType === "dinner"
-          ? 13
+          ? 18
           : mealType === "snack" || mealType === "beverage" || mealType === "dessert"
-            ? 12
+            ? 15
             : 12;
-  return new Date(`${dateKey}T${String(hour).padStart(2, "0")}:00:00.000Z`).toISOString();
+  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
 }
 
 export function recentLogDateKeys(count = 30, now = new Date()): string[] {
   const keys: string[] = [];
   const cursor = new Date(now);
   for (let i = 0; i < count; i++) {
-    keys.push(todayDateKey(cursor));
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    keys.push(dateKeyFromDate(cursor));
+    cursor.setDate(cursor.getDate() - 1);
   }
   return keys;
 }
 
 export function formatLogDateLabel(dateKey: string, now = new Date()): string {
   const today = todayDateKey(now);
-  const yesterday = todayDateKey(new Date(now.getTime() - 86400000));
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = todayDateKey(yesterdayDate);
   if (dateKey === today) return "Today";
   if (dateKey === yesterday) return "Yesterday";
-  const d = new Date(`${dateKey}T12:00:00.000Z`);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
   return d.toLocaleDateString(undefined, {
     weekday: "long",
     month: "short",

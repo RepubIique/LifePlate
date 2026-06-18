@@ -12,6 +12,7 @@ import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
   isMealType,
+  MAX_MEAL_NOTES_LENGTH,
   mealListItemToMacros,
   resolveMealPortionState,
   scaleMealForPortions,
@@ -111,6 +112,7 @@ export default function EditMealScreen() {
   const [sugar, setSugar] = useState("0");
   const [sodium, setSodium] = useState("0");
   const [loggedAt, setLoggedAt] = useState<string>("");
+  const [notes, setNotes] = useState("");
   const [baseMacros, setBaseMacros] = useState<MealMacroTotals>({
     estimatedCalories: 0,
     protein: 0,
@@ -172,6 +174,7 @@ export default function EditMealScreen() {
         setSodium,
       });
       setLoggedAt(m.createdAt);
+      setNotes(m.notes ?? "");
     } catch (e) {
       setMeal(null);
       setSnackbar(friendlyErrorMessage(e));
@@ -216,6 +219,7 @@ export default function EditMealScreen() {
         sugar: toNumber(sugar, 0),
         sodium: toNumber(sodium, 0),
         loggedAt,
+        notes,
         portionMeta: buildMealPortionMeta(
           baseMacros,
           totalPortions,
@@ -293,6 +297,28 @@ export default function EditMealScreen() {
         />
 
         <MealTypePicker value={mealType} onChange={setMealType} />
+
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Journal notes
+        </Text>
+        <Text variant="bodySmall" style={styles.notesHint}>
+          Who you ate with, where you went, or a quick recipe note.
+        </Text>
+        <TextInput
+          label="Notes"
+          value={notes}
+          onChangeText={(text) => setNotes(text.slice(0, MAX_MEAL_NOTES_LENGTH))}
+          mode="outlined"
+          multiline
+          numberOfLines={4}
+          placeholder="e.g. Dinner with Sam at Hawker Centre. Mum's chicken curry — coconut milk, no potatoes."
+          style={styles.notesInput}
+        />
+        {notes.length > MAX_MEAL_NOTES_LENGTH - 50 ? (
+          <Text variant="bodySmall" style={styles.notesCount}>
+            {notes.length}/{MAX_MEAL_NOTES_LENGTH}
+          </Text>
+        ) : null}
 
         <SharedMealPortionsCard
           variant="edit"
@@ -435,6 +461,9 @@ const styles = StyleSheet.create({
   image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
   cardWrap: { paddingHorizontal: spacing.lg },
   sectionTitle: { marginTop: spacing.md, marginBottom: spacing.xs },
+  notesHint: { opacity: 0.65, marginBottom: spacing.sm, lineHeight: 18 },
+  notesInput: { minHeight: 112 },
+  notesCount: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   macroGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   macroInput: { flexBasis: "48%" },

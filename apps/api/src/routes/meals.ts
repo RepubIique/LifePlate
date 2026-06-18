@@ -7,7 +7,7 @@ import type {
   MealRefineRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -254,6 +254,7 @@ export async function mealRoutes(app: FastifyInstance) {
           meal_name: string;
           image_url: string;
           created_at: Date;
+          notes: string | null;
           calories: number | null;
           protein: number | null;
           carbs: number | null;
@@ -264,7 +265,7 @@ export async function mealRoutes(app: FastifyInstance) {
           confidence: string | null;
           foods: string[] | null;
         }>(
-          `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+          `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
                   a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
                   COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
            FROM meals m
@@ -284,6 +285,7 @@ export async function mealRoutes(app: FastifyInstance) {
             mealName: r.meal_name,
             imageUrl: await mealListImageUrl(r.image_url, isPaid),
             createdAt: r.created_at.toISOString(),
+            notes: r.notes,
             calories: r.calories,
             protein: r.protein,
             carbs: r.carbs,
@@ -305,10 +307,11 @@ export async function mealRoutes(app: FastifyInstance) {
         meal_name: string;
         image_url: string;
         created_at: Date;
+        notes: string | null;
         calories: number | null;
         protein: number | null;
       }>(
-        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
                 a.calories, a.protein
          FROM meals m
          LEFT JOIN meal_analysis a ON a.meal_id = m.id
@@ -325,6 +328,7 @@ export async function mealRoutes(app: FastifyInstance) {
           mealName: r.meal_name,
           imageUrl: await mealListImageUrl(r.image_url, isPaid),
           createdAt: r.created_at.toISOString(),
+          notes: r.notes,
           calories: r.calories,
           protein: r.protein,
         })),
@@ -376,6 +380,7 @@ export async function mealRoutes(app: FastifyInstance) {
         meal_name: string;
         image_url: string;
         created_at: Date;
+        notes: string | null;
         calories: number | null;
         protein: number | null;
         carbs: number | null;
@@ -387,7 +392,7 @@ export async function mealRoutes(app: FastifyInstance) {
         foods: string[] | null;
         raw_ai_response: unknown;
       }>(
-        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
                 a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
                 a.raw_ai_response,
                 COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
@@ -411,6 +416,7 @@ export async function mealRoutes(app: FastifyInstance) {
         mealName: r.meal_name,
         imageUrl,
         createdAt: r.created_at.toISOString(),
+        notes: r.notes,
         calories: r.calories,
         protein: r.protein,
         carbs: r.carbs,
@@ -470,17 +476,21 @@ export async function mealRoutes(app: FastifyInstance) {
 
         if (
           body.mealName !== undefined ||
-          body.mealType !== undefined
+          body.mealType !== undefined ||
+          body.notes !== undefined
         ) {
           await client.query(
             `UPDATE meals
              SET meal_name = COALESCE($1, meal_name),
-                 meal_type = COALESCE($2, meal_type)
-             WHERE id = $3 AND user_id = $4`,
+                 meal_type = COALESCE($2, meal_type),
+                 notes = CASE WHEN $5 THEN $3 ELSE notes END
+             WHERE id = $4 AND user_id = $6`,
             [
               body.mealName ?? null,
               body.mealType ?? null,
+              normalizeMealNotes(body.notes),
               id,
+              body.notes !== undefined,
               userId,
             ],
           );
