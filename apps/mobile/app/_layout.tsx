@@ -13,6 +13,9 @@ import { HydrationProvider } from "@/context/HydrationContext";
 import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
+import { assertMobileEnv } from "@/lib/env";
+
+assertMobileEnv();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,7 +59,9 @@ export default function RootLayout() {
               options={{ presentation: "modal", headerShown: true, title: "Edit meal" }}
             />
           </Stack>
-          <AlphaFeedbackBubble />
+          {(__DEV__ || process.env.EXPO_PUBLIC_ENABLE_ALPHA_FEEDBACK === "true") && (
+            <AlphaFeedbackBubble />
+          )}
           </HydrationProvider>
           </NutritionDashboardProvider>
           </PendingLogDateProvider>

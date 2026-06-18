@@ -17,6 +17,7 @@ export function TodayAtGlanceCard({ dashboard, onPressInsights }: Props) {
     essentials.protein.consumed > 0 ||
     essentials.fibre.consumed > 0 ||
     essentials.plants.consumed > 0 ||
+    essentials.carbs.consumed > 0 ||
     essentials.hydration.consumed > 0;
 
   return (
@@ -39,6 +40,7 @@ export function TodayAtGlanceCard({ dashboard, onPressInsights }: Props) {
           protein={essentials.protein}
           fibre={essentials.fibre}
           plants={essentials.plants}
+          carbs={essentials.carbs}
           hydration={essentials.hydration}
           nutritionScore={score}
           hasMeals={hasActivity}

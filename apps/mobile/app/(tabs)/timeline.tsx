@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Snackbar, Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
@@ -53,7 +53,6 @@ export default function TimelineScreen() {
     loadHydration,
     refreshHydration,
     adjustHydration,
-    subscribePersisted,
   } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
@@ -63,10 +62,6 @@ export default function TimelineScreen() {
 
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
-
-  useEffect(() => {
-    return subscribePersisted(() => refreshAfterMealChangeRef.current());
-  }, [subscribePersisted]);
 
   const loadTimeline = useCallback(async () => {
     await Promise.all([loadHydration(), loadMeals()]);

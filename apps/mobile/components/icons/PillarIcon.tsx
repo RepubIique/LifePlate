@@ -22,7 +22,13 @@ type PillarIconProps = {
 };
 
 function resolveKey(pillar: PillarKey | string): PillarKey {
-  if (pillar === "protein" || pillar === "fibre" || pillar === "plants" || pillar === "hydration") {
+  if (
+    pillar === "protein" ||
+    pillar === "fibre" ||
+    pillar === "plants" ||
+    pillar === "carbs" ||
+    pillar === "hydration"
+  ) {
     return pillar;
   }
   return pillarKeyFromLabel(pillar);
@@ -125,10 +131,43 @@ function HydrationIcon({ size = 20, color = PILLAR_COLORS.hydration }: IconProps
   );
 }
 
+function CarbsIcon({ size = 20, color = PILLAR_COLORS.carbs }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 18.5c0-4.4 2.6-8.2 6-9.8 3.4 1.6 6 5.4 6 9.8"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M8.5 14.5h7"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M12 4.5V8"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M9.5 6.8 12 4.5l2.5 2.3"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 const ICONS: Record<PillarKey, (props: IconProps) => ReactElement> = {
   protein: ProteinIcon,
   fibre: FibreIcon,
   plants: PlantsIcon,
+  carbs: CarbsIcon,
   hydration: HydrationIcon,
 };
 

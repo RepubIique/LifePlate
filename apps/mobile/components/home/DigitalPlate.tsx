@@ -5,9 +5,10 @@ import { Text } from "react-native-paper";
 import Svg, { Circle } from "react-native-svg";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
+import { PlateCenterWater } from "@/components/home/PlateCenterWater";
 import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
-import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
+import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -17,8 +18,10 @@ const OUTLINE_STROKE = 3;
 const PLATE_SECTION_COLORS = PILLAR_COLORS;
 const QUARTER = PLATE_SIZE / 2;
 
+type PlatePillarKey = Exclude<PillarKey, "hydration">;
+
 type PlateSection = {
-  key: PillarKey;
+  key: PlatePillarKey;
   pillar: PillarProgress;
   rotation: number;
   color: string;
@@ -29,6 +32,7 @@ type Props = {
   protein: PillarProgress;
   fibre: PillarProgress;
   plants: PillarProgress;
+  carbs: PillarProgress;
   hydration: PillarProgress;
   nutritionScore?: number;
   hasMeals?: boolean;
@@ -170,13 +174,14 @@ export function DigitalPlate({
   protein,
   fibre,
   plants,
+  carbs,
   hydration,
   nutritionScore,
   hasMeals = true,
 }: Props) {
-  const [activeKey, setActiveKey] = useState<PillarKey | null>(null);
+  const [activeKey, setActiveKey] = useState<PlatePillarKey | null>(null);
   const [todayMeals, setTodayMeals] = useState<MealListItem[]>([]);
-  const refreshAfterMealChange = useRefreshAfterMealChange();
+  const refreshMealsAndDashboard = useRefreshMealsAndDashboard();
 
   const loadTodayMeals = useCallback(async () => {
     const meals = await fetchMealsFull();
@@ -189,9 +194,9 @@ export function DigitalPlate({
   }, [activeKey, loadTodayMeals]);
 
   const handlePlantSourcesChanged = useCallback(() => {
-    refreshAfterMealChange();
+    refreshMealsAndDashboard();
     void loadTodayMeals();
-  }, [loadTodayMeals, refreshAfterMealChange]);
+  }, [loadTodayMeals, refreshMealsAndDashboard]);
 
   const sections: PlateSection[] = useMemo(
     () => [
@@ -217,19 +222,19 @@ export function DigitalPlate({
         hitStyle: styles.hitBottomLeft,
       },
       {
-        key: "hydration",
-        pillar: hydration,
+        key: "carbs",
+        pillar: carbs,
         rotation: 180,
-        color: PLATE_SECTION_COLORS.hydration,
+        color: PLATE_SECTION_COLORS.carbs,
         hitStyle: styles.hitTopLeft,
       },
     ],
-    [protein, fibre, plants, hydration],
+    [protein, fibre, plants, carbs],
   );
 
   const pillars = useMemo(
-    () => [protein, fibre, plants, hydration],
-    [protein, fibre, plants, hydration],
+    () => [protein, fibre, plants, carbs],
+    [protein, fibre, plants, carbs],
   );
   const completeness = plateCompleteness(pillars);
   const message = plateMessage(completeness, hasMeals);
@@ -243,8 +248,10 @@ export function DigitalPlate({
   const cx = PLATE_SIZE / 2;
   const cy = PLATE_SIZE / 2;
   const innerRadius = radius - strokeWidth / 2 - 6;
+  const innerDiameter = innerRadius * 2;
+  const hydrationProgress = clampProgress(hydration.progress);
 
-  function openPillar(key: PillarKey) {
+  function openPillar(key: PlatePillarKey) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveKey(key);
   }
@@ -258,7 +265,6 @@ export function DigitalPlate({
       <View style={styles.wrap}>
         <View style={[styles.plateWrap, { width: PLATE_SIZE, height: PLATE_SIZE }]}>
           <Svg width={PLATE_SIZE} height={PLATE_SIZE} pointerEvents="none">
-            <Circle cx={cx} cy={cy} r={innerRadius} fill="#FFFFFF" stroke="#E2E8E4" strokeWidth={1.5} />
             {sections.map(({ key, pillar, rotation, color }) => (
               <QuadrantArc
                 key={key}
@@ -284,12 +290,30 @@ export function DigitalPlate({
             />
           ))}
 
+          <View
+            style={[
+              styles.centerWater,
+              {
+                width: innerDiameter,
+                height: innerDiameter,
+                left: cx - innerRadius,
+                top: cy - innerRadius,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <PlateCenterWater size={innerDiameter} progress={hydrationProgress} />
+          </View>
+
           <View style={styles.center} pointerEvents="none">
             <Text variant="headlineMedium" style={styles.completeness}>
               {hasMeals ? `${completeness}%` : "—"}
             </Text>
             <Text variant="labelMedium" style={styles.centerLabel}>
               Today&apos;s plate
+            </Text>
+            <Text variant="labelSmall" style={styles.hydrationHint}>
+              {hydration.consumed}/{hydration.target} glasses
             </Text>
             {nutritionScore != null && hasMeals ? (
               <Text variant="labelSmall" style={styles.scoreHint}>
@@ -322,12 +346,14 @@ export function DigitalPlate({
       <PillarInsightModal
         visible={activeKey != null}
         pillar={activeSection?.pillar ?? null}
-        hydrationHint={
-          activeKey === "hydration"
-            ? "Use the hydration card below to log glasses of water."
+        todayMeals={
+          activeKey === "plants" ||
+          activeKey === "protein" ||
+          activeKey === "fibre" ||
+          activeKey === "carbs"
+            ? todayMeals
             : undefined
         }
-        todayMeals={activeKey === "plants" ? todayMeals : undefined}
         onPlantSourcesChanged={activeKey === "plants" ? handlePlantSourcesChanged : undefined}
         onClose={closePillar}
       />
@@ -374,17 +400,35 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  centerWater: {
+    position: "absolute",
   },
   completeness: {
     fontWeight: "700",
     letterSpacing: -0.5,
     color: "#1B4332",
+    textShadowColor: "rgba(255, 255, 255, 0.9)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   centerLabel: {
-    opacity: 0.55,
+    opacity: 0.65,
     letterSpacing: 0.4,
     marginTop: 2,
+    textShadowColor: "rgba(255, 255, 255, 0.85)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+  },
+  hydrationHint: {
+    color: "#2F6DAE",
+    opacity: 0.85,
+    marginTop: 4,
+    letterSpacing: 0.2,
+    textShadowColor: "rgba(255, 255, 255, 0.85)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   scoreHint: {
     opacity: 0.45,

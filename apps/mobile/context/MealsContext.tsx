@@ -31,6 +31,7 @@ type MealsContextValue = {
   refreshMeals: () => Promise<void>;
   invalidateMeals: () => void;
   getMealById: (id: string) => MealListSummary | undefined;
+  patchMealLocally: (id: string, patch: Partial<MealListSummary>) => void;
   removeMealLocally: (id: string) => void;
   restoreMealLocally: (meal: MealListSummary) => void;
 };
@@ -125,6 +126,25 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const patchMealLocally = useCallback(
+    (id: string, patch: Partial<MealListSummary>) => {
+      setMeals((prev) => {
+        const index = prev.findIndex((meal) => meal.id === id);
+        if (index < 0) return prev;
+        const next = [...prev];
+        next[index] = { ...next[index], ...patch };
+        if (patch.createdAt) {
+          next.sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
+        }
+        persistMeals(next, fetchedAtRef.current);
+        return next;
+      });
+    },
+    [persistMeals],
+  );
+
   const loadMeals = useCallback(
     async (options?: LoadOptions) => {
       if (!session || !hydrated) return;
@@ -189,6 +209,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       refreshMeals,
       invalidateMeals,
       getMealById,
+      patchMealLocally,
       removeMealLocally,
       restoreMealLocally,
     }),
@@ -200,6 +221,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       refreshMeals,
       invalidateMeals,
       getMealById,
+      patchMealLocally,
       removeMealLocally,
       restoreMealLocally,
     ],

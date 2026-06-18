@@ -18,7 +18,6 @@ import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
@@ -34,16 +33,9 @@ export default function HomeScreen() {
   const { meals, loading: mealsLoading, loadMeals } = useMeals();
   const { dashboard, loading: dashboardLoading, loadDashboard, patchHydration } =
     useNutritionDashboard();
-  const { adjustHydration, syncDate, subscribePersisted } = useHydration();
-  const refreshAfterMealChange = useRefreshAfterMealChange();
-  const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
-  refreshAfterMealChangeRef.current = refreshAfterMealChange;
+  const { adjustHydration, syncDate } = useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
-
-  useEffect(() => {
-    return subscribePersisted(() => refreshAfterMealChangeRef.current());
-  }, [subscribePersisted]);
 
   const handleTodayHydrationDelta = useCallback(
     (delta: number) => {

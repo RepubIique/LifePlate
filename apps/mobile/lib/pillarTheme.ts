@@ -1,9 +1,10 @@
-export type PillarKey = "protein" | "fibre" | "plants" | "hydration";
+export type PillarKey = "protein" | "fibre" | "plants" | "carbs" | "hydration";
 
 export const PILLAR_COLORS: Record<PillarKey, string> = {
   protein: "#1B4332",
   fibre: "#E9A319",
   plants: "#52B788",
+  carbs: "#C46A2A",
   hydration: "#4895EF",
 };
 
@@ -11,7 +12,7 @@ export const PILLAR_COLORS: Record<PillarKey, string> = {
 export const MACRO_NUTRITION_COLORS = {
   protein: PILLAR_COLORS.protein,
   fibre: PILLAR_COLORS.fibre,
-  carbs: PILLAR_COLORS.plants,
+  carbs: PILLAR_COLORS.carbs,
   fat: "#8B5E3C",
 } as const;
 
@@ -19,6 +20,7 @@ const LABEL_TO_KEY: Record<string, PillarKey> = {
   Protein: "protein",
   Fibre: "fibre",
   Plants: "plants",
+  Carbs: "carbs",
   Hydration: "hydration",
 };
 

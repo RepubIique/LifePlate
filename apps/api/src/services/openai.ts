@@ -77,12 +77,20 @@ const MOCK: MealAnalysisResult = {
   estimatedServings: 1,
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+
 function isPlaceholderKey(key: string): boolean {
   const k = key.trim();
   if (!k) return true;
   if (k.includes("your-openai-key")) return true;
   if (k.startsWith("sk-your-")) return true;
   return false;
+}
+
+function assertOpenAiConfigured() {
+  if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
+    throw new Error("OPENAI_API_KEY is not configured");
+  }
 }
 
 function parseVisionResponse(parsed: unknown): MealAnalysisResult {
@@ -115,6 +123,7 @@ export async function analyzeMealImage(
   mimeType: string,
 ): Promise<{ analysis: MealAnalysisResult; raw: unknown }> {
   if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
+    if (isProduction) assertOpenAiConfigured();
     return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
   }
 
@@ -158,6 +167,7 @@ export async function analyzeMealImage(
       "status" in err &&
       (err as { status?: unknown }).status === 401
     ) {
+      if (isProduction) throw new Error("OpenAI authentication failed");
       return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
     }
     try {
@@ -169,6 +179,7 @@ export async function analyzeMealImage(
         "status" in err2 &&
         (err2 as { status?: unknown }).status === 401
       ) {
+        if (isProduction) throw new Error("OpenAI authentication failed");
         return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
       }
       throw err2;

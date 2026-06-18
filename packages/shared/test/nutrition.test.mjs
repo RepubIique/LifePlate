@@ -179,10 +179,38 @@ test("buildComparisonSummary reports momentum when score jumps", () => {
   assert.match(buildComparisonSummary(comparison), /ahead of yesterday/i);
 });
 
+test("computeNutritionScore handles zero targets without NaN", () => {
+  const classification = classifyFoods(["chicken"], ["Lunch"]);
+  const zeroTargets = {
+    ...targets,
+    dailyProteinG: 0,
+    dailyFibreG: 0,
+    dailyPlantServes: 0,
+    dailyHydrationGlasses: 0,
+    dailyCalories: 0,
+  };
+  const score = computeNutritionScore(
+    {
+      calories: 500,
+      protein: 30,
+      carbs: 40,
+      fat: 15,
+      fibre: 5,
+      mealsCount: 1,
+    },
+    zeroTargets,
+    classification,
+    4,
+  );
+  assert.ok(Number.isFinite(score));
+});
+
 test("weeklyGutScore caps at 10 with fermented and prebiotic foods", () => {
   assert.equal(
     weeklyGutScore({
       plants: [],
+      protein: [],
+      fibre: [],
       fermented: ["Yoghurt"],
       prebiotic: ["Chia seeds"],
       omega3: [],

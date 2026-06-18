@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
@@ -29,11 +29,20 @@ import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { deleteMeal, fetchMeal, updateMeal } from "@/lib/api";
+import { deleteMeal, updateMeal } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { loadMealDetail } from "@/lib/loadMealDetail";
 import { leaveMealEditScreen } from "@/lib/mealNavigation";
-import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
+import {
+  getCachedMealDetail,
+  invalidateMealDetail,
+  setCachedMealDetail,
+} from "@/lib/mealDetailCache";
+import {
+  useRefreshAfterMealChange,
+  useRefreshMealsAndDashboard,
+} from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -91,7 +100,8 @@ function applyMealToForm(
 
 export default function EditMealScreen() {
   const { profile } = useAuth();
-  const { removeMealLocally } = useMeals();
+  const { patchMealLocally, removeMealLocally } = useMeals();
+  const refreshMealsAndDashboard = useRefreshMealsAndDashboard();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const [loading, setLoading] = useState(true);
@@ -148,46 +158,62 @@ export default function EditMealScreen() {
     );
   }, [meal, totalPortions, portionsEaten, baseMacros]);
 
-  const load = useCallback(async () => {
+  const applyMealDetail = useCallback((m: MealDetail) => {
+    setMeal(m);
+    const stored = mealListItemToMacros(m);
+    const resolved = resolveMealPortionState(stored, m.portionMeta);
+    setBaseMacros(resolved.baseMacros);
+    setTotalPortions(resolved.totalPortions);
+    setPortionsEaten(resolved.portionsEaten);
+    setEstimatedServings(resolved.estimatedServings);
+    applyMealToForm(m, {
+      setMealName,
+      setMealType,
+      setFoods,
+      setCalories,
+      setProtein,
+      setCarbs,
+      setFat,
+      setFibre,
+      setSugar,
+      setSodium,
+    });
+    setLoggedAt(m.createdAt);
+    setNotes(m.notes ?? "");
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
 
-    setLoading(true);
-    try {
-      const m = await fetchMeal(id);
-      setMeal(m);
-      const stored = mealListItemToMacros(m);
-      const resolved = resolveMealPortionState(stored, m.portionMeta);
-      setBaseMacros(resolved.baseMacros);
-      setTotalPortions(resolved.totalPortions);
-      setPortionsEaten(resolved.portionsEaten);
-      setEstimatedServings(resolved.estimatedServings);
-      applyMealToForm(m, {
-        setMealName,
-        setMealType,
-        setFoods,
-        setCalories,
-        setProtein,
-        setCarbs,
-        setFat,
-        setFibre,
-        setSugar,
-        setSodium,
-      });
-      setLoggedAt(m.createdAt);
-      setNotes(m.notes ?? "");
-    } catch (e) {
-      setMeal(null);
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
+    let cancelled = false;
+    const cached = getCachedMealDetail(id);
+    if (cached) {
+      applyMealDetail(cached);
       setLoading(false);
+      return;
     }
-  }, [id]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+    setLoading(true);
+    setMeal(null);
+
+    loadMealDetail(id)
+      .then((m) => {
+        if (cancelled) return;
+        applyMealDetail(m);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setMeal(null);
+        setSnackbar(friendlyErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, applyMealDetail]);
 
   function addFood() {
     const f = normalizeFood(newFood);
@@ -204,30 +230,73 @@ export default function EditMealScreen() {
   }
 
   async function handleSave() {
-    if (!id) return;
+    if (!id || !meal) return;
     setSaving(true);
     try {
-      await updateMeal(id, {
-        mealName,
-        mealType,
-        foods,
-        calories: toNumber(calories, 0),
-        protein: toNumber(protein, 0),
-        carbs: toNumber(carbs, 0),
-        fat: toNumber(fat, 0),
-        fibre: toNumber(fibre, 0),
-        sugar: toNumber(sugar, 0),
-        sodium: toNumber(sodium, 0),
-        loggedAt,
-        notes,
-        portionMeta: buildMealPortionMeta(
+      const portionMeta =
+        buildMealPortionMeta(
           baseMacros,
           totalPortions,
           portionsEaten,
           estimatedServings,
-        ) ?? null,
+        ) ?? null;
+      const nextCalories = toNumber(calories, 0);
+      const nextProtein = toNumber(protein, 0);
+      const nextCarbs = toNumber(carbs, 0);
+      const nextFat = toNumber(fat, 0);
+      const nextFibre = toNumber(fibre, 0);
+      const nextSugar = toNumber(sugar, 0);
+      const nextSodium = toNumber(sodium, 0);
+      const logDateChanged =
+        mealDateKeyFromIso(loggedAt) !== mealDateKeyFromIso(meal.createdAt);
+
+      await updateMeal(id, {
+        mealName,
+        mealType,
+        foods,
+        calories: nextCalories,
+        protein: nextProtein,
+        carbs: nextCarbs,
+        fat: nextFat,
+        fibre: nextFibre,
+        sugar: nextSugar,
+        sodium: nextSodium,
+        loggedAt,
+        notes,
+        portionMeta,
       });
-      refreshAfterMealChange();
+
+      if (logDateChanged) {
+        invalidateMealDetail(id);
+        refreshAfterMealChange();
+      } else {
+        setCachedMealDetail({
+          ...meal,
+          mealName,
+          mealType,
+          foods,
+          calories: nextCalories,
+          protein: nextProtein,
+          carbs: nextCarbs,
+          fat: nextFat,
+          fibre: nextFibre,
+          sugar: nextSugar,
+          sodium: nextSodium,
+          createdAt: loggedAt,
+          notes: notes || null,
+          portionMeta,
+        });
+        patchMealLocally(id, {
+          mealName,
+          mealType,
+          calories: nextCalories,
+          protein: nextProtein,
+          notes: notes || null,
+          createdAt: loggedAt,
+        });
+        refreshMealsAndDashboard();
+      }
+
       setSnackbar("Saved");
       leaveMealEditScreen(returnTo);
     } catch (e) {
@@ -243,6 +312,7 @@ export default function EditMealScreen() {
     try {
       await deleteMeal(id);
       await deleteMealImage(id);
+      invalidateMealDetail(id);
       removeMealLocally(id);
       refreshAfterMealChange();
       router.replace("/(tabs)/timeline");

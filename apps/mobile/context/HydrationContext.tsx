@@ -34,7 +34,6 @@ type HydrationContextValue = {
   invalidateHydration: () => void;
   syncDate: (dateKey: string, glasses: number) => void;
   adjustHydration: (dateKey: string, delta: number) => void;
-  subscribePersisted: (listener: () => void) => () => void;
 };
 
 const HydrationContext = createContext<HydrationContextValue | null>(null);
@@ -55,7 +54,6 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
   const persistInflightRef = useRef<Set<string>>(new Set());
   const queuedRef = useRef<Map<string, number>>(new Map());
   const hydrationRef = useRef(hydrationByDate);
-  const persistedListenersRef = useRef(new Set<() => void>());
 
   useEffect(() => {
     hydrationRef.current = hydrationByDate;
@@ -114,13 +112,6 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
   const invalidateHydration = useCallback(() => {
     dirtyRef.current = true;
     fetchedAtRef.current = 0;
-  }, []);
-
-  const subscribePersisted = useCallback((listener: () => void) => {
-    persistedListenersRef.current.add(listener);
-    return () => {
-      persistedListenersRef.current.delete(listener);
-    };
   }, []);
 
   const loadHydration = useCallback(
@@ -183,9 +174,6 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
           persistLocal(next, fetchedAtRef.current || Date.now());
           return next;
         });
-        for (const listener of persistedListenersRef.current) {
-          listener();
-        }
       } catch {
         const rollback = confirmedRef.current[dateKey] ?? 0;
         setHydrationByDate((prev) => ({ ...prev, [dateKey]: rollback }));
@@ -272,7 +260,6 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
       invalidateHydration,
       syncDate,
       adjustHydration,
-      subscribePersisted,
     }),
     [
       hydrationByDate,
@@ -282,7 +269,6 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
       invalidateHydration,
       syncDate,
       adjustHydration,
-      subscribePersisted,
     ],
   );
 

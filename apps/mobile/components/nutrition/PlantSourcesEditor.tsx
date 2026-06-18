@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, TextInput } from "react-native-paper";
 import type { MealListItem } from "@lifeplate/shared";
-import { fetchMeal, updateMeal } from "@/lib/api";
+import { loadMealDetail } from "@/lib/loadMealDetail";
+import { patchCachedMealDetail } from "@/lib/mealDetailCache";
+import { updateMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import {
   buildPlantSources,
@@ -80,9 +82,10 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
     mealId: string,
     mutate: (foods: string[]) => string[],
   ) {
-    const meal = await fetchMeal(mealId);
+    const meal = await loadMealDetail(mealId);
     const nextFoods = mutate([...(meal.foods ?? [])]);
     await updateMeal(mealId, { foods: nextFoods });
+    patchCachedMealDetail(mealId, { foods: nextFoods });
     onChanged();
   }
 

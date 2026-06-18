@@ -113,6 +113,9 @@ export interface DashboardTodaySummary {
   totals: DailyTotals;
   plants: string[];
   plantServes?: number;
+  protein: string[];
+  fibre: string[];
+  carbs: string[];
   fermented: string[];
   prebiotic: string[];
 }
@@ -182,6 +185,9 @@ export interface FoodClassification {
   plants: string[];
   /** Sum of per-entry plant amounts; falls back to unique plant count when unset. */
   plantServes?: number;
+  protein: string[];
+  fibre: string[];
+  carbs: string[];
   fermented: string[];
   prebiotic: string[];
   omega3: string[];

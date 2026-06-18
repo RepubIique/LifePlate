@@ -18,6 +18,7 @@ RUN pnpm --filter @lifeplate/shared build && pnpm --filter @lifeplate/api build
 WORKDIR /app/apps/api
 
 ENV NODE_ENV=production
+ENV RUN_MIGRATIONS=true
 
 EXPOSE 3001
 

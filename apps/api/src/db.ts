@@ -16,6 +16,13 @@ const useSsl =
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
   ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+pool.on("error", (err) => {
+  console.error("Unexpected idle database client error", err);
 });
 
 const REQUIRED_USER_COLUMNS = ["weight_kg", "height_cm", "age", "gender"] as const;

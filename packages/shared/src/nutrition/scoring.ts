@@ -23,6 +23,11 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function safeRatio(value: number, target: number): number {
+  if (!Number.isFinite(value) || target <= 0) return 0;
+  return clamp01(value / target);
+}
+
 function pillarStatus(progress: number): PillarStatus {
   if (progress >= 0.85) return "good";
   if (progress >= 0.55) return "moderate";
@@ -66,10 +71,10 @@ export function computeNutritionScore(
   classification: FoodClassification,
   hydrationGlasses: number,
 ): number {
-  const protein = clamp01(totals.protein / targets.dailyProteinG);
-  const fibre = clamp01(totals.fibre / targets.dailyFibreG);
-  const plants = clamp01(resolvedPlantServes(classification) / targets.dailyPlantServes);
-  const hydration = clamp01(hydrationGlasses / targets.dailyHydrationGlasses);
+  const protein = safeRatio(totals.protein, targets.dailyProteinG);
+  const fibre = safeRatio(totals.fibre, targets.dailyFibreG);
+  const plants = safeRatio(resolvedPlantServes(classification), targets.dailyPlantServes);
+  const hydration = safeRatio(hydrationGlasses, targets.dailyHydrationGlasses);
   const energy = energyBalanceProgress(totals.calories, targets.dailyCalories);
   const gut = gutHealthProgress(classification);
 
@@ -99,8 +104,9 @@ export function scoreStatusEmoji(status: ScoreStatus): string {
 export function buildProteinPillar(
   totals: DailyTotals,
   targets: ExtendedNutritionTargets,
+  classification?: FoodClassification,
 ): PillarProgress {
-  const progress = clamp01(totals.protein / targets.dailyProteinG);
+  const progress = safeRatio(totals.protein, targets.dailyProteinG);
   const serveTarget = DEFAULT_PROTEIN_SERVES;
   const serveSize = targets.dailyProteinG / serveTarget;
   const currentServes = serveSize > 0 ? Math.min(serveTarget, Math.round(totals.protein / serveSize)) : 0;
@@ -113,19 +119,21 @@ export function buildProteinPillar(
     serves: { current: currentServes, target: serveTarget },
     progress,
     status: pillarStatus(progress),
+    sources: classification?.protein.slice(0, 6),
     equivalents: formatMacroEquivalents(totals.protein, "protein"),
     stillNeeded: stillNeededForMacro("protein", progress),
     tip: progress >= 0.85
-      ? "Supports muscle, recovery and metabolism"
-      : "Supports muscle, recovery and metabolism",
+      ? "Strong protein intake — supports muscle, recovery and metabolism"
+      : "Protein supports muscle, recovery and metabolism",
   };
 }
 
 export function buildFibrePillar(
   totals: DailyTotals,
   targets: ExtendedNutritionTargets,
+  classification?: FoodClassification,
 ): PillarProgress {
-  const progress = clamp01(totals.fibre / targets.dailyFibreG);
+  const progress = safeRatio(totals.fibre, targets.dailyFibreG);
 
   return {
     label: "Fibre",
@@ -134,6 +142,7 @@ export function buildFibrePillar(
     unit: "g",
     progress,
     status: pillarStatus(progress),
+    sources: classification?.fibre.slice(0, 6),
     equivalents: formatMacroEquivalents(totals.fibre, "fibre"),
     stillNeeded: stillNeededForMacro("fibre", progress),
     tip:
@@ -148,7 +157,7 @@ export function buildPlantsPillar(
   targets: ExtendedNutritionTargets,
 ): PillarProgress {
   const consumed = resolvedPlantServes(classification);
-  const progress = clamp01(consumed / targets.dailyPlantServes);
+  const progress = safeRatio(consumed, targets.dailyPlantServes);
 
   return {
     label: "Plants",
@@ -167,7 +176,7 @@ export function buildHydrationPillar(
   hydrationGlasses: number,
   targets: ExtendedNutritionTargets,
 ): PillarProgress {
-  const progress = clamp01(hydrationGlasses / targets.dailyHydrationGlasses);
+  const progress = safeRatio(hydrationGlasses, targets.dailyHydrationGlasses);
 
   return {
     label: "Hydration",
@@ -192,6 +201,30 @@ export function buildHydrationPillarFromGlasses(
     ...defaultExtendedNutritionTargets(),
     dailyHydrationGlasses,
   });
+}
+
+export function buildCarbsPillar(
+  totals: DailyTotals,
+  targets: ExtendedNutritionTargets,
+  classification?: FoodClassification,
+): PillarProgress {
+  const target = Math.max(80, Math.round(targets.dailyCalories / 8));
+  const progress = safeRatio(totals.carbs, target);
+
+  return {
+    label: "Carbs",
+    consumed: Math.round(totals.carbs),
+    target,
+    unit: "g",
+    progress,
+    status: pillarStatus(progress),
+    sources: classification?.carbs.slice(0, 6),
+    equivalents: formatMacroEquivalents(totals.carbs, "carbs"),
+    tip:
+      progress >= 0.85
+        ? "Carbs are fuelling your day well"
+        : "Whole grains and fruit help sustain energy",
+  };
 }
 
 export function buildEnergyMetrics(totals: DailyTotals): {

@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { PillarProgress } from "@lifeplate/shared";
 import { PillarIcon } from "@/components/icons/PillarIcon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { pillarColorForLabel, pillarKeyFromLabel } from "@/lib/pillarTheme";
+import { buildMacroSources } from "@/lib/macroSources";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { spacing } from "@/src/theme/lifeplate";
 import { BulletList, DetailBlock, FoodChips } from "./shared";
@@ -29,6 +31,21 @@ export function PillarInsightContent({
     ? `${pillar.serves.current} / ${pillar.serves.target} serves`
     : null;
   const pct = Math.round(Math.max(0, Math.min(1, pillar.progress)) * 100);
+
+  const macroSources = useMemo(() => {
+    if (!todayMeals) return [];
+    if (pillar.label === "Protein") return buildMacroSources(todayMeals, "protein");
+    if (pillar.label === "Fibre") return buildMacroSources(todayMeals, "fibre");
+    if (pillar.label === "Carbs") return buildMacroSources(todayMeals, "carbs");
+    return [];
+  }, [pillar.label, todayMeals]);
+
+  const sourceItems =
+    pillar.label === "Protein" || pillar.label === "Fibre" || pillar.label === "Carbs"
+      ? macroSources.length > 0
+        ? macroSources
+        : (pillar.sources ?? [])
+      : (pillar.sources ?? []);
 
   return (
     <View style={styles.content}>
@@ -64,6 +81,13 @@ export function PillarInsightContent({
 
       {pillar.label === "Plants" && todayMeals && onPlantSourcesChanged ? (
         <PlantSourcesEditor meals={todayMeals} onChanged={onPlantSourcesChanged} />
+      ) : pillar.label === "Protein" || pillar.label === "Fibre" || pillar.label === "Carbs" ? (
+        <DetailBlock label="Today's sources">
+          <FoodChips
+            items={sourceItems}
+            emptyLabel="Log meals with identifiable ingredients to see sources here."
+          />
+        </DetailBlock>
       ) : pillar.sources && pillar.sources.length > 0 ? (
         <DetailBlock label="Today's sources">
           <FoodChips items={pillar.sources} />

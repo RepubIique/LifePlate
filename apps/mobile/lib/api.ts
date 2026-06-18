@@ -20,8 +20,10 @@ import { supabase } from "./supabase";
 import { Platform } from "react-native";
 import { ApiError, parseApiError } from "./apiErrors";
 import { notifyUnauthorized } from "./sessionEvents";
+import { getApiUrl } from "./env";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL = getApiUrl();
+const REQUEST_TIMEOUT_MS = 30_000;
 
 async function authHeaders(): Promise<HeadersInit> {
   const { data } = await supabase.auth.getSession();
@@ -54,11 +56,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers,
-  });
-  return handleResponse<T>(res);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+    return handleResponse<T>(res);
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError("Request timed out. Please try again.", 408);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function fetchProfile(): Promise<UserProfile> {

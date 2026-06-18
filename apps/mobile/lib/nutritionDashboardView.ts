@@ -2,6 +2,7 @@ import {
   buildDayComparison,
   buildEnergyMetrics,
   buildGutHealthSummary,
+  buildCarbsPillar,
   buildFibrePillar,
   buildHydrationPillarFromGlasses,
   buildPlantsPillar,
@@ -19,6 +20,7 @@ import {
 
 export type NutritionDashboardView = Omit<NutritionDashboardResponse, "essentials"> & {
   essentials: Omit<NutritionDashboardResponse["essentials"], "hydration"> & {
+    carbs: PillarProgress;
     hydration: PillarProgress;
   };
 };
@@ -79,15 +81,19 @@ export function expandDashboard(
   const classification: FoodClassification = {
     plants: api.today.plants,
     plantServes: api.today.plantServes ?? api.today.plants.length,
+    protein: api.today.protein ?? [],
+    fibre: api.today.fibre ?? [],
+    carbs: api.today.carbs ?? [],
     fermented: api.today.fermented,
     prebiotic: api.today.prebiotic,
     omega3: [],
     processedMealCount: 0,
   };
   const totals = api.today.totals;
-  const protein = buildProteinPillar(totals, targets);
-  const fibre = buildFibrePillar(totals, targets);
+  const protein = buildProteinPillar(totals, targets, classification);
+  const fibre = buildFibrePillar(totals, targets, classification);
   const plants = buildPlantsPillar(classification, targets);
+  const carbs = buildCarbsPillar(totals, targets, classification);
   const hydration = buildHydrationPillarFromGlasses(
     api.hydration.glasses,
     targets.dailyHydrationGlasses,
@@ -114,6 +120,7 @@ export function expandDashboard(
       protein,
       fibre,
       plants,
+      carbs,
       hydration,
     },
     energyBalance: buildEnergyMetrics(totals),

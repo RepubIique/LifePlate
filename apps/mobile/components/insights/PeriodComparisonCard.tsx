@@ -4,18 +4,21 @@ import {
   buildComparisonSummary,
   formatScoreDelta,
   scoreDelta,
+  type ComparisonPillarMetrics,
   type PeriodComparison,
 } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PillarIcon } from "@/components/icons/PillarIcon";
-import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
+import { PILLAR_COLORS } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   comparison: PeriodComparison;
 };
 
-const PILLAR_ROWS: Array<{ key: PillarKey; label: string }> = [
+type ComparisonPillarKey = keyof ComparisonPillarMetrics;
+
+const PILLAR_ROWS: Array<{ key: ComparisonPillarKey; label: string }> = [
   { key: "protein", label: "Protein" },
   { key: "fibre", label: "Fibre" },
   { key: "plants", label: "Plants" },
@@ -59,7 +62,7 @@ function PillarComparisonRow({
   previous,
   showDelta,
 }: {
-  pillarKey: PillarKey;
+  pillarKey: ComparisonPillarKey;
   label: string;
   current: number;
   previous: number;

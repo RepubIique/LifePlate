@@ -23,3 +23,5 @@ services:
         value: gpt-4o-mini
       - key: CORS_ORIGIN
         value: "*"
+      - key: RUN_MIGRATIONS
+        value: "true"

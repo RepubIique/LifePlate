@@ -14,9 +14,6 @@ export class RateLimitError extends Error {
   }
 }
 
-/** @deprecated Use RateLimitError */
-export const UploadRateLimitError = RateLimitError;
-
 async function reserveAttempt(
   userId: string,
   table: "upload_attempts" | "refine_attempts",

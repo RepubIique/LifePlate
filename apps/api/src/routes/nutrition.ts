@@ -23,7 +23,10 @@ export async function nutritionRoutes(app: FastifyInstance) {
     { preHandler: requireAuth },
     async (request) => {
       const { userId } = request as AuthedRequest;
-      const days = request.query.days ? Number(request.query.days) : 60;
+      const parsed = request.query.days ? Number(request.query.days) : 60;
+      const days = Number.isFinite(parsed)
+        ? Math.min(90, Math.max(1, Math.floor(parsed)))
+        : 60;
       const history = await fetchHydrationHistory(userId, days);
       return { days: history };
     },
