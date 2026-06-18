@@ -68,7 +68,7 @@ function MacroRing({
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="#F1F3F5"
+            stroke="#EEF2F0"
             strokeWidth={STROKE}
             fill="none"
           />
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: "#EEF2F0",
     overflow: "hidden",
   },
   barFill: { height: "100%", borderRadius: 5 },

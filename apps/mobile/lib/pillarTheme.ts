@@ -8,12 +8,12 @@ export const PILLAR_COLORS: Record<PillarKey, string> = {
   hydration: "#4895EF",
 };
 
-/** Macro ring/bar colors mapped to the DigitalPlate quadrant palette. */
+/** Macro ring/bar colors aligned with the DigitalPlate pillar palette. */
 export const MACRO_NUTRITION_COLORS = {
   protein: PILLAR_COLORS.protein,
   fibre: PILLAR_COLORS.fibre,
   carbs: PILLAR_COLORS.carbs,
-  fat: "#8B5E3C",
+  fat: "#7B68C8",
 } as const;
 
 const LABEL_TO_KEY: Record<string, PillarKey> = {
