@@ -1,10 +1,13 @@
 import * as Haptics from "expo-haptics";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import Svg, { Circle } from "react-native-svg";
-import type { PillarProgress } from "@lifeplate/shared";
+import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
+import { fetchMealsFull } from "@/lib/api";
+import { filterTodayMeals } from "@/lib/plantSources";
+import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -172,6 +175,23 @@ export function DigitalPlate({
   hasMeals = true,
 }: Props) {
   const [activeKey, setActiveKey] = useState<PillarKey | null>(null);
+  const [todayMeals, setTodayMeals] = useState<MealListItem[]>([]);
+  const refreshAfterMealChange = useRefreshAfterMealChange();
+
+  const loadTodayMeals = useCallback(async () => {
+    const meals = await fetchMealsFull();
+    setTodayMeals(filterTodayMeals(meals));
+  }, []);
+
+  useEffect(() => {
+    if (activeKey == null) return;
+    void loadTodayMeals();
+  }, [activeKey, loadTodayMeals]);
+
+  const handlePlantSourcesChanged = useCallback(() => {
+    refreshAfterMealChange();
+    void loadTodayMeals();
+  }, [loadTodayMeals, refreshAfterMealChange]);
 
   const sections: PlateSection[] = useMemo(
     () => [
@@ -307,6 +327,8 @@ export function DigitalPlate({
             ? "Use the hydration card below to log glasses of water."
             : undefined
         }
+        todayMeals={activeKey === "plants" ? todayMeals : undefined}
+        onPlantSourcesChanged={activeKey === "plants" ? handlePlantSourcesChanged : undefined}
         onClose={closePillar}
       />
     </>

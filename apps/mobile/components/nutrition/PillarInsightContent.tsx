@@ -7,13 +7,22 @@ import { pillarColorForLabel, pillarKeyFromLabel } from "@/lib/pillarTheme";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { spacing } from "@/src/theme/lifeplate";
 import { BulletList, DetailBlock, FoodChips } from "./shared";
+import { PlantSourcesEditor } from "./PlantSourcesEditor";
+import type { MealListItem } from "@lifeplate/shared";
 
 type Props = {
   pillar: PillarProgress;
   hydrationHint?: string;
+  todayMeals?: MealListItem[];
+  onPlantSourcesChanged?: () => void;
 };
 
-export function PillarInsightContent({ pillar, hydrationHint }: Props) {
+export function PillarInsightContent({
+  pillar,
+  hydrationHint,
+  todayMeals,
+  onPlantSourcesChanged,
+}: Props) {
   const fillColor = pillarColorForLabel(pillar.label);
   const sectionKey = pillarKeyFromLabel(pillar.label);
   const serveLine = pillar.serves
@@ -53,7 +62,9 @@ export function PillarInsightContent({ pillar, hydrationHint }: Props) {
 
       <ProgressBar progress={pillar.progress} color={fillColor} height={8} />
 
-      {pillar.sources && pillar.sources.length > 0 ? (
+      {pillar.label === "Plants" && todayMeals && onPlantSourcesChanged ? (
+        <PlantSourcesEditor meals={todayMeals} onChanged={onPlantSourcesChanged} />
+      ) : pillar.sources && pillar.sources.length > 0 ? (
         <DetailBlock label="Today's sources">
           <FoodChips items={pillar.sources} />
         </DetailBlock>

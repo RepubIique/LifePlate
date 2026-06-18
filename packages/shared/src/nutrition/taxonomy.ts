@@ -95,6 +95,11 @@ function matchLabels(
   return [...hits];
 }
 
+/** Plant taxonomy labels matched in a single food name. */
+export function plantLabelsForFood(food: string): string[] {
+  return matchLabels(food.toLowerCase(), PLANT_KEYWORDS);
+}
+
 function isProcessedMeal(mealName: string, foods: string[]): boolean {
   const text = `${mealName} ${foods.join(" ")}`.toLowerCase();
   return PROCESSED_KEYWORDS.some((keyword) => text.includes(keyword));

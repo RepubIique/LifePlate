@@ -481,6 +481,7 @@ export type {
 export {
   classifyFoods,
   countProcessedMeals,
+  plantLabelsForFood,
   formatMacroEquivalents,
   stillNeededForMacro,
   computeDailyProteinTarget,

@@ -1,7 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { PillarProgress } from "@lifeplate/shared";
+import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightContent } from "@/components/nutrition/PillarInsightContent";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -9,10 +9,19 @@ type Props = {
   visible: boolean;
   pillar: PillarProgress | null;
   hydrationHint?: string;
+  todayMeals?: MealListItem[];
+  onPlantSourcesChanged?: () => void;
   onClose: () => void;
 };
 
-export function PillarInsightModal({ visible, pillar, hydrationHint, onClose }: Props) {
+export function PillarInsightModal({
+  visible,
+  pillar,
+  hydrationHint,
+  todayMeals,
+  onPlantSourcesChanged,
+  onClose,
+}: Props) {
   const insets = useSafeAreaInsets();
 
   if (!pillar) return null;
@@ -37,7 +46,12 @@ export function PillarInsightModal({ visible, pillar, hydrationHint, onClose }: 
             />
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            <PillarInsightContent pillar={pillar} hydrationHint={hydrationHint} />
+            <PillarInsightContent
+              pillar={pillar}
+              hydrationHint={hydrationHint}
+              todayMeals={todayMeals}
+              onPlantSourcesChanged={onPlantSourcesChanged}
+            />
           </ScrollView>
         </Pressable>
       </Pressable>
