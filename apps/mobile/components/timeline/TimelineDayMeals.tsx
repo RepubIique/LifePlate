@@ -1,9 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
-import DraggableFlatList, {
-  ScaleDecorator,
-  type RenderItemParams,
-} from "react-native-draggable-flatlist";
+import { View } from "react-native";
 import type { MealListSummary } from "@lifeplate/shared";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 
@@ -22,47 +19,37 @@ export function TimelineDayMeals({
   onPress,
   onDelete,
 }: Props) {
-  const handleDragEnd = useCallback(
-    ({ data }: { data: MealListSummary[] }) => {
-      onReorder(dateKey, data);
+  const canReorder = meals.length > 1;
+
+  const moveMeal = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (toIndex < 0 || toIndex >= meals.length || fromIndex === toIndex) return;
+      const next = [...meals];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onReorder(dateKey, next);
     },
-    [dateKey, onReorder],
+    [dateKey, meals, onReorder],
   );
 
   if (meals.length === 0) return null;
 
-  const canReorder = meals.length > 1;
-
   return (
-    <DraggableFlatList
-      data={meals}
-      keyExtractor={(item) => item.id}
-      onDragBegin={() => {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }}
-      onDragEnd={handleDragEnd}
-      scrollEnabled={false}
-      activationDistance={12}
-      renderItem={({
-        item,
-        drag,
-        isActive,
-        getIndex,
-      }: RenderItemParams<MealListSummary>) => {
-        const index = getIndex() ?? 0;
-        return (
-          <ScaleDecorator activeScale={1.02}>
-            <TimelineMealCard
-              meal={item}
-              isLast={index === meals.length - 1}
-              dragging={isActive}
-              onPress={() => onPress(item.id)}
-              onDragHandleLongPress={canReorder ? drag : undefined}
-              onDelete={() => onDelete(item)}
-            />
-          </ScaleDecorator>
-        );
-      }}
-    />
+    <View>
+      {meals.map((meal, index) => (
+        <TimelineMealCard
+          key={meal.id}
+          meal={meal}
+          showReorder={canReorder}
+          canMoveUp={index > 0}
+          canMoveDown={index < meals.length - 1}
+          onMoveUp={() => moveMeal(index, index - 1)}
+          onMoveDown={() => moveMeal(index, index + 1)}
+          onPress={() => onPress(meal.id)}
+          onDelete={() => onDelete(meal)}
+        />
+      ))}
+    </View>
   );
 }

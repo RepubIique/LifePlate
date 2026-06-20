@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyMealOrderTimestamps,
   dateKeyFromIso,
   formatLogDateLabel,
   isValidLogDateKey,
@@ -67,4 +68,23 @@ test("createdAtForDayPosition keeps top timeline slot latest within the day", ()
   assert.equal(dateKeyFromIso(first), "2026-06-10");
   assert.equal(dateKeyFromIso(last), "2026-06-10");
   assert.ok(new Date(first).getTime() > new Date(last).getTime());
+});
+
+test("applyMealOrderTimestamps only permutes existing timestamps", () => {
+  const dayMeals = [
+    { id: "a", createdAt: "2026-06-10T12:00:00.000Z" },
+    { id: "b", createdAt: "2026-06-10T11:00:00.000Z" },
+    { id: "c", createdAt: "2026-06-10T10:00:00.000Z" },
+  ];
+  const reordered = applyMealOrderTimestamps(
+    [dayMeals[2], dayMeals[0], dayMeals[1]],
+    dayMeals,
+  );
+  assert.deepEqual(
+    reordered.map((meal) => meal.createdAt).sort(),
+    dayMeals.map((meal) => meal.createdAt).sort(),
+  );
+  assert.equal(reordered[0].createdAt, "2026-06-10T12:00:00.000Z");
+  assert.equal(reordered[1].createdAt, "2026-06-10T11:00:00.000Z");
+  assert.equal(reordered[2].createdAt, "2026-06-10T10:00:00.000Z");
 });

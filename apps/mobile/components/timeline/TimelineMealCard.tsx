@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
-import { IconButton, Text } from "react-native-paper";
+import { Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
 import { MealImage } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
@@ -13,11 +13,12 @@ import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meal: MealListSummary;
-  isLast: boolean;
-  dragging?: boolean;
+  showReorder?: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onPress: () => void;
-  /** Long-press on the side drag handle only — starts timeline reorder. */
-  onDragHandleLongPress?: () => void;
   onDelete?: () => void;
 };
 
@@ -31,12 +32,47 @@ function NutritionChip({ label }: { label: string }) {
   );
 }
 
+function ReorderButton({
+  icon,
+  disabled,
+  onPress,
+  label,
+}: {
+  icon: "chevron-up" | "chevron-down";
+  disabled?: boolean;
+  onPress?: () => void;
+  label: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.reorderButton,
+        disabled && styles.reorderButtonDisabled,
+        pressed && !disabled && styles.reorderButtonPressed,
+      ]}
+    >
+      <MaterialCommunityIcons
+        name={icon}
+        size={18}
+        color={disabled ? "#D5DBD8" : "#636E72"}
+      />
+    </Pressable>
+  );
+}
+
 export function TimelineMealCard({
   meal,
-  isLast,
-  dragging = false,
+  showReorder = false,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
   onPress,
-  onDragHandleLongPress,
   onDelete,
 }: Props) {
   const icon = mealTypeIcon(meal.mealType);
@@ -45,42 +81,35 @@ export function TimelineMealCard({
 
   return (
     <View style={styles.row}>
-      <View style={styles.rail}>
-        <View style={styles.dot} />
-        {!isLast ? <View style={styles.line} /> : null}
-      </View>
+      <PremiumCard style={styles.card} noBlur>
+        <View style={styles.cardInner}>
+          {showReorder ? (
+            <View style={styles.reorderCol}>
+              <ReorderButton
+                icon="chevron-up"
+                disabled={!canMoveUp}
+                onPress={onMoveUp}
+                label="Move meal earlier in the day"
+              />
+              <MaterialCommunityIcons
+                name="menu"
+                size={16}
+                color="#B2BEC3"
+                style={styles.gripIcon}
+              />
+              <ReorderButton
+                icon="chevron-down"
+                disabled={!canMoveDown}
+                onPress={onMoveDown}
+                label="Move meal later in the day"
+              />
+            </View>
+          ) : null}
 
-      <View style={styles.cardWrap}>
-        {onDragHandleLongPress ? (
           <Pressable
-            onLongPress={onDragHandleLongPress}
-            delayLongPress={220}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Reorder meal"
-            accessibilityHint="Long press and drag to change order within this day"
-            style={({ pressed }) => [
-              styles.dragHandle,
-              pressed && styles.dragHandlePressed,
-            ]}
+            onPress={onPress}
+            style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}
           >
-            <MaterialCommunityIcons
-              name="menu"
-              size={20}
-              color="#95A5A6"
-            />
-          </Pressable>
-        ) : null}
-
-        <Pressable
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.pressable,
-            pressed && !dragging && styles.pressed,
-            dragging && styles.dragging,
-          ]}
-        >
-          <PremiumCard style={styles.card} noBlur>
             <MealImage
               mealId={meal.id}
               cloudUrl={meal.imageUrl}
@@ -124,84 +153,83 @@ export function TimelineMealCard({
                 </View>
               ) : null}
             </View>
-          </PremiumCard>
-        </Pressable>
+          </Pressable>
 
-        {onDelete ? (
-          <IconButton
-            icon="delete-outline"
-            size={18}
-            iconColor="#636E72"
-            style={styles.delete}
-            onPress={onDelete}
-            accessibilityLabel="Delete meal"
-          />
-        ) : null}
-      </View>
+          {onDelete ? (
+            <Pressable
+              onPress={onDelete}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Delete meal"
+              style={({ pressed }) => [
+                styles.deleteBtn,
+                pressed && styles.deleteBtnPressed,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={20}
+                color="#95A5A6"
+              />
+            </Pressable>
+          ) : null}
+        </View>
+      </PremiumCard>
     </View>
   );
 }
 
-const THUMB = 88;
+const THUMB = 80;
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  rail: {
-    width: 16,
-    alignItems: "center",
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#40916C",
-    marginTop: THUMB / 2 - 5,
-  },
-  line: {
-    flex: 1,
-    width: 2,
-    backgroundColor: "#E2E8E4",
-    marginTop: 4,
-    marginBottom: -spacing.sm,
-    borderRadius: 1,
-  },
-  cardWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 0,
-  },
-  dragHandle: {
-    width: 28,
-    minHeight: THUMB + spacing.sm * 2,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 2,
-    borderRadius: 8,
-  },
-  dragHandlePressed: {
-    backgroundColor: "#EEF2F0",
-  },
-  pressable: { flex: 1 },
-  pressed: { opacity: 0.92 },
-  dragging: {
-    opacity: 0.96,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    marginBottom: spacing.md,
   },
   card: {
-    flexDirection: "row",
-    padding: spacing.sm,
-    gap: spacing.sm,
+    padding: 0,
+    overflow: "hidden",
     backgroundColor: "#FFFFFF",
+  },
+  cardInner: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    minHeight: THUMB + spacing.sm * 2,
+  },
+  reorderCol: {
+    width: 40,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    backgroundColor: "#F7F9F8",
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: "#E2E8E4",
+    paddingVertical: spacing.xs,
+  },
+  gripIcon: {
+    marginVertical: 2,
+  },
+  reorderButton: {
+    width: 32,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  reorderButtonPressed: {
+    backgroundColor: "#E8EDEA",
+  },
+  reorderButtonDisabled: {
+    opacity: 0.45,
+  },
+  main: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  mainPressed: {
+    opacity: 0.94,
   },
   image: {
     width: THUMB,
@@ -267,8 +295,14 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     letterSpacing: 0.1,
   },
-  delete: {
-    margin: 0,
-    marginTop: spacing.sm,
+  deleteBtn: {
+    width: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: "#E2E8E4",
+  },
+  deleteBtnPressed: {
+    backgroundColor: "#FDF2F2",
   },
 });

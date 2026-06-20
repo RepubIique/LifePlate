@@ -564,6 +564,7 @@ export {
   isValidLogDateKey,
   loggedAtForDateKey,
   createdAtForDayPosition,
+  applyMealOrderTimestamps,
   recentLogDateKeys,
   formatLogDateLabel,
   offsetLogDateKey,

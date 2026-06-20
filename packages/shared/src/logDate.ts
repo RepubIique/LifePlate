@@ -59,6 +59,21 @@ export function createdAtForDayPosition(
   return new Date(year, month - 1, day, hours, mins, index, 0).toISOString();
 }
 
+/** Keep each meal on its calendar day — only permute existing timestamps for a new order. */
+export function applyMealOrderTimestamps<T extends { createdAt: string }>(
+  orderedMeals: T[],
+  dayMeals: T[],
+): T[] {
+  const sortedTimestamps = [...dayMeals]
+    .map((meal) => meal.createdAt)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+  return orderedMeals.map((meal, index) => ({
+    ...meal,
+    createdAt: sortedTimestamps[index] ?? meal.createdAt,
+  }));
+}
+
 export function recentLogDateKeys(count = 30, now = new Date()): string[] {
   const keys: string[] = [];
   const cursor = new Date(now);

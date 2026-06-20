@@ -1,32 +1,41 @@
-import { createdAtForDayPosition } from "@lifeplate/shared";
 import type { PoolClient } from "pg";
-import { MEAL_UTC_DAY_SQL } from "./mealLogDate.js";
+import { MEAL_UTC_DAY_DATE_SQL } from "./mealLogDate.js";
 
 export async function reorderMealsForDay(
   client: PoolClient,
   userId: string,
-  dateKey: string,
+  _dateKey: string,
   mealIds: string[],
 ): Promise<void> {
-  const { rows: dayRows } = await client.query<{ id: string }>(
-    `SELECT id FROM meals WHERE user_id = $1 AND ${MEAL_UTC_DAY_SQL} = $2`,
-    [userId, dateKey],
+  const { rows } = await client.query<{
+    id: string;
+    created_at: Date;
+    utc_day: string;
+  }>(
+    `SELECT id, created_at, ${MEAL_UTC_DAY_DATE_SQL} AS utc_day
+     FROM meals
+     WHERE user_id = $1 AND id = ANY($2::uuid[])`,
+    [userId, mealIds],
   );
-  const dayIds = dayRows.map((row) => row.id).sort();
-  const requestedIds = [...mealIds].sort();
 
-  if (
-    dayIds.length !== requestedIds.length ||
-    !dayIds.every((id, index) => id === requestedIds[index])
-  ) {
+  if (rows.length !== mealIds.length) {
     throw new ReorderMealsValidationError(
       "mealIds must include every meal for this day exactly once",
     );
   }
 
-  const loggedAts = mealIds.map((_, index) =>
-    new Date(createdAtForDayPosition(dateKey, index, mealIds.length)),
-  );
+  const utcDays = new Set(rows.map((row) => row.utc_day));
+  if (utcDays.size !== 1) {
+    throw new ReorderMealsValidationError(
+      "mealIds must belong to a single calendar day",
+    );
+  }
+
+  const sortedAts = rows
+    .map((row) => row.created_at)
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  const loggedAts = mealIds.map((_, index) => sortedAts[index]!);
 
   await client.query(
     `UPDATE meals AS m

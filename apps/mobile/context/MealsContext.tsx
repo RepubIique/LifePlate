@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { MealListSummary } from "@lifeplate/shared";
-import { createdAtForDayPosition, dateKeyFromIso } from "@lifeplate/shared";
+import { applyMealOrderTimestamps, dateKeyFromIso } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
 import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
@@ -150,11 +150,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const reorderDayMealsLocally = useCallback(
     (dateKey: string, orderedMeals: MealListSummary[]) => {
       setMeals((prev) => {
-        const otherDays = prev.filter((meal) => dateKeyFromIso(meal.createdAt) !== dateKey);
-        const reordered = orderedMeals.map((meal, index) => ({
-          ...meal,
-          createdAt: createdAtForDayPosition(dateKey, index, orderedMeals.length),
-        }));
+        const dayMeals = prev.filter(
+          (meal) => dateKeyFromIso(meal.createdAt) === dateKey,
+        );
+        const otherDays = prev.filter(
+          (meal) => dateKeyFromIso(meal.createdAt) !== dateKey,
+        );
+        const reordered = applyMealOrderTimestamps(orderedMeals, dayMeals);
         const next = [...otherDays, ...reordered].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );

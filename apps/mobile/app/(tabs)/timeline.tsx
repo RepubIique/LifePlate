@@ -161,6 +161,7 @@ export default function TimelineScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
