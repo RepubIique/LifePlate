@@ -100,6 +100,15 @@ export function friendlyErrorMessage(err: unknown): string {
     if (err.code === "NOT_FRIEND") {
       return "You can only share meals with friends.";
     }
+    if (err.code === "ALREADY_USED") {
+      return "You've already used your streak freeze this month.";
+    }
+    if (err.code === "NOT_NEEDED") {
+      return err.message || "You already logged yesterday — no freeze needed.";
+    }
+    if (err.code === "ALREADY_EXISTS") {
+      return err.message || "A challenge with this friend already exists this week.";
+    }
     if (err.message.includes("Failed to fetch") || err.message.includes("Network request failed")) {
       return "Cannot reach the server. Wait a moment and try again — the API may be waking up.";
     }

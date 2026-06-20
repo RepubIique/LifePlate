@@ -28,6 +28,8 @@ import { clearCachedDayDashboards } from "@/lib/dayDashboardCache";
 import { clearCachedHydration } from "@/lib/hydrationCache";
 import { clearCachedWeekInsights } from "@/lib/weekInsightsCache";
 import { clearCachedFriends } from "@/lib/friendsCache";
+import { clearCachedGamification } from "@/lib/gamificationCache";
+import { clearSeenMilestones } from "@/lib/milestonePrefs";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
@@ -315,6 +317,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void clearCachedHydration(userId);
       void clearCachedWeekInsights(userId);
       void clearCachedFriends(userId);
+      void clearCachedGamification(userId);
+      void clearSeenMilestones(userId);
     }
   }, [session]);
 

@@ -4,6 +4,9 @@ import { RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Text } from "react-native-paper";
 import type { MealPortionMeta } from "@lifeplate/shared";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
+import { CoopChallengeCard } from "@/components/gamification/CoopChallengeCard";
+import { CoopChallengeInviteSection } from "@/components/gamification/CoopChallengeInviteSection";
+import { TogetherStreakSection } from "@/components/gamification/TogetherStreakSection";
 import { FriendCodeCard } from "@/components/friends/FriendCodeCard";
 import { FriendsList } from "@/components/friends/FriendsList";
 import { PendingShareCard } from "@/components/friends/PendingShareCard";
@@ -11,7 +14,16 @@ import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useFriends } from "@/context/FriendsContext";
-import { acceptMealShare, addFriendByCode, declineMealShare, removeFriend } from "@/lib/api";
+import { useGamification } from "@/context/GamificationContext";
+import {
+  acceptCoopChallenge,
+  acceptMealShare,
+  addFriendByCode,
+  declineCoopChallenge,
+  declineMealShare,
+  inviteCoopChallenge,
+  removeFriend,
+} from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { spacing } from "@/src/theme/lifeplate";
@@ -29,25 +41,34 @@ export default function FriendsScreen() {
     refreshFriends,
     patchFriends,
   } = useFriends();
+  const {
+    challenges: coopChallenges,
+    patchGamification,
+    refreshGamification,
+    loadGamification,
+  } = useGamification();
 
   const [addCode, setAddCode] = useState("");
   const [adding, setAdding] = useState(false);
   const [shareBusyId, setShareBusyId] = useState<string | null>(null);
+  const [coopBusyId, setCoopBusyId] = useState<string | null>(null);
+  const [inviteBusyFriendId, setInviteBusyFriendId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       void loadFriends().catch((e) => setSnackbar(friendlyErrorMessage(e)));
-    }, [loadFriends]),
+      void loadGamification();
+    }, [loadFriends, loadGamification]),
   );
 
   const handleRefresh = useCallback(async () => {
     try {
-      await refreshFriends();
+      await Promise.all([refreshFriends(), refreshGamification()]);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     }
-  }, [refreshFriends]);
+  }, [refreshFriends, refreshGamification]);
 
   async function handleAddFriend() {
     const code = addCode.trim();
@@ -86,7 +107,7 @@ export default function FriendsScreen() {
       await acceptMealShare(shareId, portionMeta ? { portionMeta } : undefined);
       patchFriends({ pendingShares: pendingShares.filter((s) => s.id !== shareId) });
       refreshAfterMealChange();
-      setSnackbar("Meal added to your log");
+      setSnackbar("Meal added to your log — thanks for sharing the table");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
@@ -107,7 +128,62 @@ export default function FriendsScreen() {
     }
   }
 
+  async function handleInviteCoop(friendId: string) {
+    setInviteBusyFriendId(friendId);
+    try {
+      const { challenge } = await inviteCoopChallenge({
+        friendId,
+        challengeType: "hydration_5_of_7",
+      });
+      patchGamification({
+        challenges: [challenge, ...coopChallenges.filter((c) => c.id !== challenge.id)],
+      });
+      const friend = friends.find((f) => f.id === friendId);
+      setSnackbar(`Challenge sent to ${friend?.name?.trim() || "your friend"}`);
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setInviteBusyFriendId(null);
+    }
+  }
+
+  async function handleAcceptCoop(challengeId: string) {
+    setCoopBusyId(challengeId);
+    try {
+      const { challenge } = await acceptCoopChallenge(challengeId);
+      patchGamification({
+        challenges: coopChallenges.map((c) => (c.id === challengeId ? challenge : c)),
+      });
+      setSnackbar("Challenge accepted — you've got this together");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setCoopBusyId(null);
+    }
+  }
+
+  async function handleDeclineCoop(challengeId: string) {
+    setCoopBusyId(challengeId);
+    try {
+      await declineCoopChallenge(challengeId);
+      patchGamification({
+        challenges: coopChallenges.filter((c) => c.id !== challengeId),
+      });
+      setSnackbar("Challenge declined");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setCoopBusyId(null);
+    }
+  }
+
   const showInitialLoading = !hydrated || (loading && !friendCode && friends.length === 0);
+  const activeChallengeFriendIds = new Set(
+    coopChallenges
+      .filter((c) => c.status !== "declined")
+      .map((c) => c.friendId),
+  );
+  const inviteableFriends = friends.filter((f) => !activeChallengeFriendIds.has(f.id));
 
   return (
     <Screen
@@ -135,6 +211,33 @@ export default function FriendsScreen() {
             onAddCodeChange={setAddCode}
             onAddFriend={() => void handleAddFriend()}
           />
+
+          <TogetherStreakSection friends={friends} />
+
+          {coopChallenges.length > 0 ? (
+            <>
+              <SectionLabel title="Co-op challenges" />
+              <View style={styles.shareList}>
+                {coopChallenges.map((challenge) => (
+                  <CoopChallengeCard
+                    key={challenge.id}
+                    challenge={challenge}
+                    busy={coopBusyId === challenge.id}
+                    onAccept={handleAcceptCoop}
+                    onDecline={handleDeclineCoop}
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          {inviteableFriends.length > 0 ? (
+            <CoopChallengeInviteSection
+              friends={inviteableFriends}
+              busyFriendId={inviteBusyFriendId}
+              onInvite={(id) => void handleInviteCoop(id)}
+            />
+          ) : null}
 
           {pendingShares.length > 0 ? (
             <>

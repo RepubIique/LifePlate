@@ -1,10 +1,11 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { ComparisonPeriod } from "@lifeplate/shared";
+import { mealLogDateKey, offsetLogDateKey } from "@lifeplate/shared";
 import { GutHealthInsightCard } from "@/components/insights/GutHealthInsightCard";
 import { InsightsStreakCard } from "@/components/insights/InsightsStreakCard";
 import { PeriodComparisonCard } from "@/components/insights/PeriodComparisonCard";
@@ -20,13 +21,16 @@ import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
+import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { currentWeekStartKey } from "@/lib/weekInsightsWindow";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function InsightsScreen() {
   const { profile } = useAuth();
+  const { meals } = useMeals();
   const {
     dashboard,
     loading: dashboardLoading,
@@ -61,6 +65,16 @@ export default function InsightsScreen() {
   }, [refreshDashboard, refreshWeekInsights]);
 
   const weeklyGutStatus = dashboard?.weeklyTrends.find((t) => t.label === "Gut Health")?.status;
+
+  const mealsLastWeek = useMemo(() => {
+    const thisWeekStart = currentWeekStartKey();
+    const lastWeekStart = offsetLogDateKey(thisWeekStart, -7);
+    const lastWeekEnd = offsetLogDateKey(thisWeekStart, -1);
+    return meals.filter((meal) => {
+      const key = mealLogDateKey(meal);
+      return key >= lastWeekStart && key <= lastWeekEnd;
+    }).length;
+  }, [meals]);
 
   return (
     <Screen
@@ -122,6 +136,7 @@ export default function InsightsScreen() {
               currentStreak={profile?.currentStreak ?? 0}
               longestStreak={profile?.longestStreak ?? 0}
               mealsThisWeek={weekInsights?.mealsLogged ?? 0}
+              mealsLastWeek={mealsLastWeek}
             />
 
             <SectionLabel title="Coach" />

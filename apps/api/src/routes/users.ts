@@ -12,6 +12,7 @@ import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { resolveStorageObjectUrl, uploadProfileAvatar } from "../services/storage.js";
 import { invalidateUserImageStorageFlags } from "../services/userFeatures.js";
+import { streakFreezeUsedThisMonth } from "../services/gamificationStats.js";
 
 type UserRow = {
   email: string;
@@ -40,6 +41,7 @@ function toProfile(
   userId: string,
   userEmail: string,
   row: UserRow,
+  streakFreezeAvailable = false,
 ): UserProfile {
   const weightKg = row.weight_kg != null ? Number(row.weight_kg) : null;
   const heightCm = row.height_cm != null ? Number(row.height_cm) : null;
@@ -65,6 +67,7 @@ function toProfile(
     longestStreak: row.longest_streak,
     isPaid: row.is_paid,
     cloudImageBackup: row.cloud_image_backup,
+    streakFreezeAvailable,
   };
 }
 
@@ -89,6 +92,8 @@ async function loadUserRow(userId: string): Promise<UserRow | null> {
 
 async function buildProfile(userId: string, userEmail: string): Promise<UserProfile> {
   const row = await loadUserRow(userId);
+  const streakFreezeAvailable =
+    Boolean(row?.is_paid) && !(await streakFreezeUsedThisMonth(userId));
 
   const profile = toProfile(
     userId,
@@ -108,6 +113,7 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
       is_paid: false,
       cloud_image_backup: false,
     },
+    streakFreezeAvailable,
   );
 
   return profile;

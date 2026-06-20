@@ -8,7 +8,23 @@ type Props = {
   currentStreak: number;
   longestStreak: number;
   mealsThisWeek: number;
+  mealsLastWeek?: number;
 };
+
+function buildEncouragement(mealsThisWeek: number, mealsLastWeek?: number): string | null {
+  if (mealsLastWeek == null) return null;
+  const delta = mealsThisWeek - mealsLastWeek;
+  if (delta > 0) {
+    return `You logged ${mealsThisWeek} meals this week — ${delta} more than last week.`;
+  }
+  if (delta === 0 && mealsThisWeek > 0) {
+    return `You logged ${mealsThisWeek} meals this week — steady as last week.`;
+  }
+  if (mealsThisWeek > 0) {
+    return `You logged ${mealsThisWeek} meals this week. Every log helps your story.`;
+  }
+  return null;
+}
 
 function StatBlock({
   icon,
@@ -32,7 +48,13 @@ function StatBlock({
   );
 }
 
-export function InsightsStreakCard({ currentStreak, longestStreak, mealsThisWeek }: Props) {
+export function InsightsStreakCard({
+  currentStreak,
+  longestStreak,
+  mealsThisWeek,
+  mealsLastWeek,
+}: Props) {
+  const encouragement = buildEncouragement(mealsThisWeek, mealsLastWeek);
   return (
     <PremiumCard style={styles.card} noBlur>
       <Text variant="titleMedium" style={styles.title}>
@@ -41,6 +63,11 @@ export function InsightsStreakCard({ currentStreak, longestStreak, mealsThisWeek
       <Text variant="bodySmall" style={styles.subtitle}>
         Logging regularly builds your health story.
       </Text>
+      {encouragement ? (
+        <Text variant="bodySmall" style={styles.encouragement}>
+          {encouragement}
+        </Text>
+      ) : null}
       <View style={styles.row}>
         <StatBlock icon="fire" value={String(currentStreak)} label="Day streak" />
         <StatBlock icon="trophy-outline" value={String(longestStreak)} label="Best streak" />
@@ -57,6 +84,12 @@ const styles = StyleSheet.create({
   },
   title: { letterSpacing: 0.15, color: "#1B4332" },
   subtitle: { opacity: 0.55, lineHeight: 18 },
+  encouragement: {
+    opacity: 0.7,
+    lineHeight: 18,
+    color: "#1B4332",
+    fontStyle: "italic",
+  },
   row: {
     flexDirection: "row",
     gap: spacing.sm,

@@ -31,10 +31,13 @@ import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { useDayDashboard } from "@/lib/useDayDashboard";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
+import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
+import { MilestoneCelebrationModal } from "@/components/gamification/MilestoneCelebrationModal";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function HomeScreen() {
   const { profile } = useAuth();
+  const { celebration, dismissCelebration, checkCelebrations } = useGamificationCelebrations();
   const { meals, loading: mealsLoading, refreshing: mealsRefreshing, refreshMeals } = useMeals();
   const {
     dashboard,
@@ -357,6 +360,12 @@ export default function HomeScreen() {
       >
         {error ?? snackbar}
       </BottomSnackbar>
+
+      <MilestoneCelebrationModal
+        visible={!!celebration}
+        message={celebration?.message ?? ""}
+        onDismiss={dismissCelebration}
+      />
     </Screen>
   );
 }

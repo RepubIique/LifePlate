@@ -15,6 +15,10 @@ import type {
   MealShareAcceptRequest,
   MealShareExistingRequest,
   MealShareExistingResponse,
+  GamificationStatsResponse,
+  GamificationBundleResponse,
+  CoopChallengeSummary,
+  CoopChallengeInviteRequest,
   MealShareCountResponse,
   MealShareIncomingResponse,
   MealShareRequestSummary,
@@ -414,6 +418,53 @@ export async function shareMealWithFriends(
   return request<MealShareExistingResponse>(`/api/meals/${mealId}/share`, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function fetchGamificationBundle(): Promise<GamificationBundleResponse> {
+  return request<GamificationBundleResponse>("/api/gamification");
+}
+
+/** @deprecated Prefer fetchGamificationBundle — stats are mostly computed client-side. */
+export async function fetchGamificationStats(): Promise<GamificationStatsResponse> {
+  return request<GamificationStatsResponse>("/api/gamification/stats");
+}
+
+/** @deprecated Prefer fetchGamificationBundle. */
+export async function fetchCoopChallenges(): Promise<{ challenges: CoopChallengeSummary[] }> {
+  const bundle = await fetchGamificationBundle();
+  return { challenges: bundle.challenges };
+}
+
+export async function inviteCoopChallenge(
+  body: CoopChallengeInviteRequest,
+): Promise<{ challenge: CoopChallengeSummary }> {
+  return request<{ challenge: CoopChallengeSummary }>("/api/gamification/coop-challenges/invite", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function acceptCoopChallenge(
+  challengeId: string,
+): Promise<{ challenge: CoopChallengeSummary }> {
+  return request<{ challenge: CoopChallengeSummary }>(
+    `/api/gamification/coop-challenges/${challengeId}/accept`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+export async function declineCoopChallenge(challengeId: string): Promise<void> {
+  await request<{ ok: boolean }>(`/api/gamification/coop-challenges/${challengeId}/decline`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function applyStreakFreeze(): Promise<{ logDate: string }> {
+  return request<{ logDate: string }>("/api/gamification/streak-freeze", {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

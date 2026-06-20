@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { MEAL_LOG_DATE_KEY_SQL } from "./mealLogDate.js";
 import { computeStreaksFromDayKeys } from "./streaks.js";
+import { queryStreakFreezeDays } from "./gamificationStats.js";
 
 async function queryDistinctMealDays(
   userId: string,
@@ -24,7 +25,9 @@ export async function syncUserMealStats(
 ): Promise<void> {
   const runner = client ?? pool;
   const dayKeys = await queryDistinctMealDays(userId, client);
-  const streaks = computeStreaksFromDayKeys(dayKeys);
+  const freezeDays = await queryStreakFreezeDays(userId);
+  const mergedDayKeys = [...new Set([...dayKeys, ...freezeDays])];
+  const streaks = computeStreaksFromDayKeys(mergedDayKeys);
   const mealsLogged = await countMeals(userId, client);
 
   await runner.query(

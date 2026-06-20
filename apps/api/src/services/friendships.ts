@@ -3,6 +3,10 @@ import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { ensureUserFriendCode, normalizeFriendCode } from "./friendCodes.js";
 import { listIncomingMealShares } from "./mealShare.js";
+import {
+  queryMealLogDaysByUserIds,
+  togetherStreakForFriend,
+} from "./togetherStreak.js";
 
 export class FriendRequestError extends Error {
   constructor(
@@ -51,10 +55,17 @@ export async function listFriends(userId: string): Promise<FriendSummary[]> {
     [userId],
   );
 
+  if (rows.length === 0) return [];
+
+  const friendIds = rows.map((r) => r.id);
+  const logDaysByUser = await queryMealLogDaysByUserIds([userId, ...friendIds]);
+  const userDays = logDaysByUser.get(userId) ?? [];
+
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     hasAvatar: Boolean(r.avatar_url?.trim()),
+    togetherStreak: togetherStreakForFriend(userDays, logDaysByUser.get(r.id) ?? []),
   }));
 }
 

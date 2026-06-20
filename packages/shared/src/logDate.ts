@@ -110,3 +110,8 @@ export function offsetLogDateKey(dateKey: string, days: number): string {
   d.setDate(d.getDate() + days);
   return dateKeyFromDate(d);
 }
+
+/** Rolling 7-day window start (today minus 6 days). */
+export function currentWeekStartKey(now = new Date()): string {
+  return offsetLogDateKey(todayDateKey(now), -6);
+}

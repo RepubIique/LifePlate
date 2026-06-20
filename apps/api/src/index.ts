@@ -15,6 +15,7 @@ import { nutritionRoutes } from "./routes/nutrition.js";
 import { userRoutes } from "./routes/users.js";
 import { feedbackRoutes } from "./routes/feedback.js";
 import { friendRoutes } from "./routes/friends.js";
+import { gamificationRoutes } from "./routes/gamification.js";
 import { mealShareRoutes } from "./routes/mealShares.js";
 
 assertRuntimeConfig();
@@ -86,6 +87,7 @@ await app.register(nutritionRoutes);
 await app.register(userRoutes);
 await app.register(feedbackRoutes);
 await app.register(friendRoutes);
+await app.register(gamificationRoutes);
 await app.register(mealShareRoutes);
 
 async function shutdown(signal: string) {

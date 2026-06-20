@@ -1,7 +1,10 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import * as Haptics from "expo-haptics";
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
+import { areCorePlatesComplete } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import {
   getFilledSlots,
@@ -20,6 +23,15 @@ export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggest
   const filled = getFilledSlots(meals);
   const suggested = getSuggestedSlot(filled);
   const filledCount = filled.size;
+  const coreComplete = areCorePlatesComplete(filled);
+  const wasCompleteRef = useRef(coreComplete);
+
+  useEffect(() => {
+    if (coreComplete && !wasCompleteRef.current) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    wasCompleteRef.current = coreComplete;
+  }, [coreComplete]);
 
   return (
     <PremiumCard style={styles.card}>
@@ -31,6 +43,15 @@ export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggest
           {filledCount}/{MEAL_SLOTS.length}
         </Text>
       </View>
+
+      {coreComplete ? (
+        <View style={styles.completeBanner}>
+          <MaterialCommunityIcons name="check-circle-outline" size={18} color="#40916C" />
+          <Text variant="bodySmall" style={styles.completeText}>
+            Breakfast, lunch & dinner logged — nice work today.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.slots}>
         {MEAL_SLOTS.map((slot) => {
@@ -118,6 +139,21 @@ const styles = StyleSheet.create({
   },
   title: { letterSpacing: 0.15 },
   count: { opacity: 0.5 },
+  completeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: "#D8F3DC",
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  completeText: {
+    flex: 1,
+    color: "#1B4332",
+    opacity: 0.85,
+    lineHeight: 18,
+  },
   slots: {
     flexDirection: "row",
     gap: spacing.sm,

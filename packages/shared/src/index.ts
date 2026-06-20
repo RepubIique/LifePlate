@@ -431,6 +431,8 @@ export interface FriendSummary {
   id: string;
   name: string | null;
   hasAvatar: boolean;
+  /** Consecutive days both you and this friend logged a meal. */
+  togetherStreak?: number;
 }
 
 export interface FriendsListResponse {
@@ -656,6 +658,7 @@ export {
   recentLogDateKeys,
   formatLogDateLabel,
   offsetLogDateKey,
+  currentWeekStartKey,
   type MealTimelineFields,
 } from "./logDate.js";
 
@@ -707,4 +710,42 @@ export interface UserProfile {
   isPaid: boolean;
   /** When true (and isPaid), new meal photos are copied to cloud storage. */
   cloudImageBackup: boolean;
+  /** Whether a streak freeze can be used this calendar month (Plus only). */
+  streakFreezeAvailable?: boolean;
 }
+
+/** @deprecated Client computes breakfast/notes/hydration locally. */
+export interface GamificationStatsResponse {
+  sharesSentCount: number;
+  breakfastLogDays: number;
+  mealsWithNotesCount: number;
+  hydrationGoalDaysLast7: number;
+}
+
+export {
+  CORE_MEAL_SLOT_KEYS,
+  STREAK_MILESTONE_DAYS,
+  MEALS_MILESTONE_COUNTS,
+  BADGE_DEFINITIONS,
+  MILESTONE_DEFINITIONS,
+  computeTogetherStreakFromDayKeys,
+  areCorePlatesComplete,
+  milestoneMessage,
+  computeUnlockedBadges,
+  computeEligibleMilestones,
+  type CoreMealSlotKey,
+  type MilestoneId,
+  type BadgeId,
+  type CoopChallengeType,
+  type CoopChallengeStatus,
+  type BadgeDefinition,
+  type MilestoneDefinition,
+  type GamificationStatsInput,
+  type CoopChallengeParticipantProgress,
+  type CoopChallengeSummary,
+  type CoopChallengeInviteRequest,
+  type GamificationServerStatsResponse,
+  type GamificationBundleResponse,
+} from "./gamification.js";
+
+export { computeStreaksFromDayKeys } from "./streaks.js";

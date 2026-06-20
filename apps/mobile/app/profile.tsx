@@ -1,8 +1,8 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS, Alert, Platform, RefreshControl, StyleSheet, View } from "react-native";
+import { ActionSheetIOS, Alert, Platform, RefreshControl, Share, StyleSheet, View } from "react-native";
 import { Button, Switch, Text, TextInput } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { Gender, UserProfile } from "@lifeplate/shared";
@@ -13,16 +13,27 @@ import {
 } from "@/components/BodyMetricsForm";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { ProfileStatsRow } from "@/components/profile/ProfileStatsRow";
+import { BadgeShelf } from "@/components/gamification/BadgeShelf";
+import { StreakFreezeCard } from "@/components/gamification/StreakFreezeCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/context/AuthContext";
-import { fetchMealsFull, fetchProfileAvatar, updateProfile, uploadProfileAvatar } from "@/lib/api";
+import { useFriends } from "@/context/FriendsContext";
+import { useGamification } from "@/context/GamificationContext";
+import {
+  applyStreakFreeze,
+  fetchMealsFull,
+  fetchProfileAvatar,
+  updateProfile,
+  uploadProfileAvatar,
+} from "@/lib/api";
 import { getCachedAvatarUri, saveAvatarFromLocalUri } from "@/lib/avatarCache";
 import { authFriendlyErrorMessage, friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { prepareProfileImage } from "@/lib/imagePrep";
 import { spacing } from "@/src/theme/lifeplate";
+import { useGamificationStatsInput } from "@/lib/useGamificationStatsInput";
 
 function applyProfileToForm(
   profile: UserProfile | null | undefined,
@@ -51,6 +62,10 @@ function metricEqual(stored: number | null, draft: number | null): boolean {
 
 export default function ProfileScreen() {
   const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
+  const { friendCode, loadFriends, refreshFriends } = useFriends();
+  const { refreshGamification } = useGamification();
+  const badgeStats = useGamificationStatsInput();
+  const [freezeLoading, setFreezeLoading] = useState(false);
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -70,6 +85,12 @@ export default function ProfileScreen() {
   const [isDirty, setIsDirty] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [linkingProvider, setLinkingProvider] = useState<"apple" | "google" | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadFriends().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadFriends]),
+  );
 
   useEffect(() => {
     setIsDirty(false);
@@ -142,12 +163,14 @@ export default function ProfileScreen() {
       }
 
       await resolveRemoteAvatar(latest);
+      await refreshFriends();
+      await refreshGamification();
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
       setRefreshing(false);
     }
-  }, [refreshProfile, profile, isDirty, resolveRemoteAvatar]);
+  }, [refreshProfile, profile, isDirty, resolveRemoteAvatar, refreshFriends, refreshGamification]);
 
   const canSave = useMemo(() => {
     const n = name.trim();
@@ -305,6 +328,20 @@ export default function ProfileScreen() {
 
   const displayName = name.trim() || profile?.name?.trim() || "Your profile";
 
+  async function handleStreakFreeze() {
+    setFreezeLoading(true);
+    try {
+      await applyStreakFreeze();
+      await refreshProfile();
+      await refreshGamification();
+      setSnackbar("Streak freeze applied for yesterday");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setFreezeLoading(false);
+    }
+  }
+
   async function handleLinkProvider(provider: "apple" | "google") {
     setLinkingProvider(provider);
     try {
@@ -357,6 +394,28 @@ export default function ProfileScreen() {
           <Text variant="bodyMedium" style={styles.heroEmail}>
             {profile?.email ?? "Your account"}
           </Text>
+          <View style={styles.friendCodeBlock}>
+            <Text variant="bodySmall" style={styles.friendCodeLabel}>
+              Friend code
+            </Text>
+            <View style={styles.friendCodeRow}>
+              <Text variant="titleMedium" style={styles.friendCode}>
+                {friendCode || "------"}
+              </Text>
+              <Button
+                mode="text"
+                compact
+                onPress={() =>
+                  void Share.share({ message: friendCode || "" }).then(() =>
+                    setSnackbar("Friend code ready to share"),
+                  )
+                }
+                disabled={!friendCode}
+              >
+                Share
+              </Button>
+            </View>
+          </View>
           <Text variant="bodySmall" style={styles.avatarHint}>
             Tap photo to update
           </Text>
@@ -366,6 +425,21 @@ export default function ProfileScreen() {
           mealsLogged={profile?.mealsLogged ?? 0}
           currentStreak={profile?.currentStreak ?? 0}
           longestStreak={profile?.longestStreak ?? 0}
+        />
+
+        {badgeStats ? (
+          <>
+            <SectionLabel title="Badges" subtitle="Quiet wins from showing up" />
+            <BadgeShelf stats={badgeStats} />
+          </>
+        ) : null}
+
+        <SectionLabel title="Streak" />
+        <StreakFreezeCard
+          available={profile?.streakFreezeAvailable ?? false}
+          isPaid={profile?.isPaid ?? false}
+          loading={freezeLoading}
+          onUse={() => void handleStreakFreeze()}
         />
 
         <SectionLabel title="About you" />
@@ -526,6 +600,22 @@ const styles = StyleSheet.create({
     color: "#1B4332",
   },
   heroEmail: { opacity: 0.6 },
+  friendCodeBlock: {
+    alignItems: "center",
+    marginTop: spacing.sm,
+    gap: 2,
+  },
+  friendCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  friendCodeLabel: { opacity: 0.5 },
+  friendCode: {
+    letterSpacing: 2,
+    color: "#1B4332",
+    fontWeight: "600",
+  },
   avatarHint: { opacity: 0.45, marginTop: 2 },
   formCard: { gap: spacing.sm },
   switchRow: {
