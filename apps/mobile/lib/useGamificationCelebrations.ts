@@ -1,8 +1,9 @@
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MilestoneId } from "@lifeplate/shared";
 import { computeEligibleMilestones, milestoneMessage } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
+import { milestoneEligibilityKey } from "@/lib/computeLocalGamificationStats";
 import { loadSeenMilestones, markMilestoneSeen } from "@/lib/milestonePrefs";
 import { useGamificationStatsInput } from "@/lib/useGamificationStatsInput";
 
@@ -14,6 +15,16 @@ export function useGamificationCelebrations(enabled = true) {
     null,
   );
   const checkingRef = useRef(false);
+  const shownThisSessionRef = useRef<Set<MilestoneId>>(new Set());
+
+  const eligibilityKey = useMemo(
+    () => (statsInput ? milestoneEligibilityKey(statsInput) : null),
+    [statsInput],
+  );
+
+  useEffect(() => {
+    shownThisSessionRef.current = new Set();
+  }, [userId]);
 
   const checkCelebrations = useCallback(async () => {
     if (!enabled || !userId || !statsInput || checkingRef.current) return;
@@ -21,9 +32,12 @@ export function useGamificationCelebrations(enabled = true) {
     try {
       const seen = await loadSeenMilestones(userId);
       const eligible = computeEligibleMilestones(statsInput);
-      const next = eligible.find((id) => !seen.has(id));
+      const next = eligible.find(
+        (id) => !seen.has(id) && !shownThisSessionRef.current.has(id),
+      );
       if (!next) return;
 
+      shownThisSessionRef.current.add(next);
       await markMilestoneSeen(userId, next);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCelebration({ id: next, message: milestoneMessage(next) });
@@ -35,16 +49,9 @@ export function useGamificationCelebrations(enabled = true) {
   const dismissCelebration = useCallback(() => setCelebration(null), []);
 
   useEffect(() => {
-    if (!statsInput) return;
+    if (!eligibilityKey) return;
     void checkCelebrations();
-  }, [
-    statsInput?.currentStreak,
-    statsInput?.mealsLogged,
-    statsInput?.sharesSentCount,
-    statsInput?.hydrationGoalDaysLast7,
-    checkCelebrations,
-    statsInput,
-  ]);
+  }, [eligibilityKey, checkCelebrations]);
 
   return { celebration, dismissCelebration, checkCelebrations };
 }

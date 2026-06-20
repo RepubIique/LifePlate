@@ -52,3 +52,13 @@ export function milestoneNeedsServerStats(id: string): boolean {
 export function mightNeedHydrationMilestone(hydrationGoalDaysLast7: number): boolean {
   return hydrationGoalDaysLast7 >= 5;
 }
+
+/** Stable key for stats that can unlock milestones — ignores hydration glass count noise. */
+export function milestoneEligibilityKey(stats: GamificationStatsInput): string {
+  return [
+    stats.currentStreak,
+    stats.mealsLogged,
+    stats.sharesSentCount,
+    stats.hydrationGoalDaysLast7,
+  ].join("|");
+}

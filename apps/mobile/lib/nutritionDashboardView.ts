@@ -1,5 +1,6 @@
 import {
   buildCoachSummary,
+  buildComparisonPillars,
   buildDayComparison,
   buildEnergyMetrics,
   buildFoodRecommendations,
@@ -155,12 +156,7 @@ export function expandDashboard(
     score,
     totals.mealsCount,
     hasActivity,
-    {
-      protein: Math.round(protein.progress * 100),
-      fibre: Math.round(fibre.progress * 100),
-      plants: Math.round(plants.progress * 100),
-      hydration: Math.round(hydration.progress * 100),
-    },
+    buildComparisonPillars(totals, classification, api.hydration.glasses, targets),
   );
 
   return {
