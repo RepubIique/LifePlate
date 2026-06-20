@@ -12,7 +12,7 @@ export function TimelineSearchBar({ value, onChangeText }: Props) {
     <View style={styles.wrap}>
       <TextInput
         mode="outlined"
-        placeholder="Search meals or days"
+        placeholder="Search meals, days, or source"
         value={value}
         onChangeText={onChangeText}
         dense
@@ -27,7 +27,7 @@ export function TimelineSearchBar({ value, onChangeText }: Props) {
         autoCorrect={false}
         autoCapitalize="none"
         returnKeyType="search"
-        accessibilityLabel="Search meals or days"
+        accessibilityLabel="Search meals, days, or source"
       />
     </View>
   );

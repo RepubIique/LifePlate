@@ -122,6 +122,26 @@ test("mealMatchesTimelineSearch matches meal name, type, notes, and shared by", 
   assert.equal(mealMatchesTimelineSearch(entry, "   "), true);
 });
 
+test("mealMatchesTimelineSearch matches homecook and eat out meal sources", () => {
+  const home: MealListSummary = {
+    ...meal("1", new Date().toISOString(), "lunch"),
+    mealName: "Salad",
+    mealSource: "home_cooked",
+  };
+  const out: MealListSummary = {
+    ...meal("2", new Date().toISOString(), "dinner"),
+    mealName: "Burger",
+    mealSource: "takeaway",
+  };
+
+  assert.equal(mealMatchesTimelineSearch(home, "homecook"), true);
+  assert.equal(mealMatchesTimelineSearch(home, "home cook"), true);
+  assert.equal(mealMatchesTimelineSearch(out, "eat out"), true);
+  assert.equal(mealMatchesTimelineSearch(out, "eating out"), true);
+  assert.equal(mealMatchesTimelineSearch(out, "takeaway"), true);
+  assert.equal(mealMatchesTimelineSearch(home, "eating out"), false);
+});
+
 test("timelineDayMatchesSearch matches day labels, subtitles, and date keys", () => {
   assert.equal(
     timelineDayMatchesSearch(

@@ -1,6 +1,7 @@
 import {
   formatLogDateLabel,
   mealLogDateKey,
+  mealSourceLabel,
   mealTypeLabel,
   offsetLogDateKey,
   todayDateKey,
@@ -66,6 +67,21 @@ export function buildTimelineDayGroups(
     });
 }
 
+export function mealSourceSearchTerms(
+  mealSource: MealListSummary["mealSource"],
+): string[] {
+  if (!mealSource) return [];
+
+  const terms = [mealSourceLabel(mealSource), mealSource.replace(/_/g, " ")];
+  if (mealSource === "home_cooked") {
+    terms.push("home cook", "homecook");
+  }
+  if (mealSource === "takeaway") {
+    terms.push("eat out", "eating out");
+  }
+  return terms;
+}
+
 export function mealMatchesTimelineSearch(meal: MealListSummary, query: string): boolean {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return true;
@@ -75,6 +91,7 @@ export function mealMatchesTimelineSearch(meal: MealListSummary, query: string):
     formatMealTypeLabel(meal.mealType),
     meal.sharedByName,
     notesSearchText(meal.notes),
+    ...mealSourceSearchTerms(meal.mealSource),
   ];
 
   return haystacks.some((text) => (text ?? "").toLowerCase().includes(normalized));
