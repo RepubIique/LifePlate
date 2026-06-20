@@ -1,19 +1,31 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
-
-import { Text, View } from '@/components/Themed';
+import { router, Stack } from "expo-router";
+import { Image, StyleSheet, View } from "react-native";
+import { Button, Text } from "react-native-paper";
+import { Screen } from "@/components/Screen";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen doesn't exist.</Text>
-
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
-        </Link>
-      </View>
+      <Stack.Screen options={{ title: "Not found" }} />
+      <Screen>
+        <View style={styles.container}>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text variant="headlineSmall" style={styles.title}>
+            This screen doesn&apos;t exist
+          </Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            The link may be outdated or the page was moved.
+          </Text>
+          <Button mode="contained" onPress={() => router.replace("/(tabs)")}>
+            Go to home
+          </Button>
+        </View>
+      </Screen>
     </>
   );
 }
@@ -21,20 +33,12 @@ export default function NotFoundScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    padding: spacing.xl,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#2e78b7',
-  },
+  logo: { width: 72, height: 72 },
+  title: { color: "#1B4332", textAlign: "center" },
+  subtitle: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

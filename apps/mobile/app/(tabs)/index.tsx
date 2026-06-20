@@ -10,6 +10,7 @@ import {
   todayDateKey,
 } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
+import { HomeMealsEmptyState } from "@/components/home/HomeMealsEmptyState";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const {
     dashboard: dayDashboard,
     loading: dayDashboardLoading,
+    loadFailed: dayDashboardLoadFailed,
     refresh: refreshDayDashboard,
     patchHydration: patchDayHydration,
   } = useDayDashboard({
@@ -85,6 +87,9 @@ export default function HomeScreen() {
   const mealsTitle = isViewingToday
     ? "Today's meals"
     : `${formatLogDateLabel(logDateKey)}'s meals`;
+  const slotsTitle = isViewingToday
+    ? "Today's plates"
+    : `${formatLogDateLabel(logDateKey)}'s plates`;
 
   const handleHydrationDelta = useCallback(
     (delta: number) => {
@@ -244,8 +249,20 @@ export default function HomeScreen() {
       <View style={styles.dashboard}>
         <MealSlotsTracker
           meals={dayMeals}
+          title={slotsTitle}
           onLogSuggested={() => pickAndAnalyze(preferredSource !== "library", logDateKey)}
         />
+
+        {!isViewingToday && dayDashboardLoadFailed && !dayDashboard && !dayDashboardLoading ? (
+          <PremiumCard style={styles.errorCard}>
+            <Text variant="bodyMedium" style={styles.errorText}>
+              Couldn&apos;t load nutrition for {formatLogDateLabel(logDateKey).toLowerCase()}.
+            </Text>
+            <Button mode="outlined" onPress={() => void refreshDayDashboard()}>
+              Try again
+            </Button>
+          </PremiumCard>
+        ) : null}
 
         {showDashboardSkeleton ? (
           <HomeDashboardSkeleton />
@@ -270,11 +287,20 @@ export default function HomeScreen() {
           {mealsTitle}
         </Text>
         {!showMealsSkeleton && !mealsLoading && dayMeals.length === 0 ? (
-          <Text variant="bodyMedium" style={styles.emptyMeals}>
-            {isViewingToday
-              ? "No meals yet today. Snap a photo or log without one."
-              : `No meals logged for ${formatLogDateLabel(logDateKey).toLowerCase()}.`}
-          </Text>
+          <HomeMealsEmptyState
+            title={isViewingToday ? "No meals yet today" : "Nothing logged"}
+            subtitle={
+              isViewingToday
+                ? "Snap a photo or describe what you ate — you can edit before saving."
+                : `No meals logged for ${formatLogDateLabel(logDateKey).toLowerCase()}.`
+            }
+            onLogPhoto={
+              isViewingToday
+                ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
+                : undefined
+            }
+            onLogText={isViewingToday ? () => setTextLogOpen(true) : undefined}
+          />
         ) : null}
         {showMealsSkeleton ? (
           <HomeMealsSkeleton />
@@ -350,5 +376,6 @@ const styles = StyleSheet.create({
   },
   section: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, paddingTop: spacing.xs },
   sectionTitle: { marginBottom: spacing.md, letterSpacing: 0.15 },
-  emptyMeals: { opacity: 0.6, marginBottom: spacing.sm },
+  errorCard: { gap: spacing.sm, alignItems: "flex-start" },
+  errorText: { opacity: 0.7, lineHeight: 22 },
 });

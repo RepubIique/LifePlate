@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApiError, friendlyErrorMessage, parseApiError } from "../apiErrors";
+import {
+  ApiError,
+  authFriendlyErrorMessage,
+  friendlyErrorMessage,
+  mediaPermissionMessage,
+  parseApiError,
+} from "../apiErrors";
 
 test("parseApiError reads JSON message and code", () => {
   const err = parseApiError(
@@ -39,4 +45,24 @@ test("friendlyErrorMessage maps auth and guardrail codes", () => {
 
 test("friendlyErrorMessage returns generic Error message", () => {
   assert.equal(friendlyErrorMessage(new Error("Network down")), "Network down");
+});
+
+test("authFriendlyErrorMessage maps common Supabase auth errors", () => {
+  assert.match(
+    authFriendlyErrorMessage(new Error("Invalid login credentials")),
+    /doesn't match/i,
+  );
+  assert.match(
+    authFriendlyErrorMessage(new Error("User already registered")),
+    /already exists/i,
+  );
+  assert.match(
+    authFriendlyErrorMessage(new Error("Email not confirmed")),
+    /confirm your email/i,
+  );
+});
+
+test("mediaPermissionMessage explains settings when permanently denied", () => {
+  assert.match(mediaPermissionMessage("camera", false), /open settings/i);
+  assert.match(mediaPermissionMessage("library", true), /allow/i);
 });

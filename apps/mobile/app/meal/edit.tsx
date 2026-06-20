@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Alert, StyleSheet, View } from "react-native";
 import {
   Button,
   Chip,
@@ -11,6 +11,7 @@ import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
+  clampMealPortions,
   isMealType,
   MAX_MEAL_REANALYZES,
   mealListItemToMacros,
@@ -30,9 +31,10 @@ import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
+import { ShareWithFriendsPicker } from "@/components/meal/ShareWithFriendsPicker";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { attachMealPhoto, deleteMeal, reanalyzeMeal, updateMeal } from "@/lib/api";
+import { attachMealPhoto, deleteMeal, reanalyzeMeal, shareMealWithFriends, updateMeal } from "@/lib/api";
 import { deleteMealImage, getLocalMealImageUri, saveMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { loadMealDetail } from "@/lib/loadMealDetail";
@@ -143,6 +145,15 @@ export default function EditMealScreen() {
   const [totalPortions, setTotalPortions] = useState(1);
   const [portionsEaten, setPortionsEaten] = useState(1);
   const [estimatedServings, setEstimatedServings] = useState<number | undefined>();
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+
+  const handleShareTotalPeopleChange = useCallback((count: number) => {
+    const nextTotal = clampMealPortions(Math.max(2, count));
+    setTotalPortions(nextTotal);
+    setPortionsEaten((prev) => Math.min(prev, nextTotal));
+  }, []);
+
+  const canShareMeal = !meal?.sharedByUserId;
 
   const attachPhoto = useCallback(
     async (prepared: { uri: string; mimeType: string; fileName: string }) => {
@@ -357,6 +368,14 @@ export default function EditMealScreen() {
         portionMeta,
       });
 
+      let sharesSent = 0;
+      if (canShareMeal && selectedFriendIds.length > 0) {
+        const shareResult = await shareMealWithFriends(id, {
+          shareWithFriendIds: selectedFriendIds,
+        });
+        sharesSent = shareResult.sharesSent;
+      }
+
       if (logDateChanged) {
         invalidateMealDetail(id);
         refreshAfterMealChange();
@@ -390,13 +409,31 @@ export default function EditMealScreen() {
         refreshMealsAndDashboard();
       }
 
-      setSnackbar("Saved");
+      if (sharesSent > 0) {
+        setSnackbar(
+          `Saved and sent to ${sharesSent} friend${sharesSent === 1 ? "" : "s"} for review`,
+        );
+      } else {
+        setSnackbar("Saved");
+      }
       leaveMealEditScreen(returnTo);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
       setSaving(false);
     }
+  }
+
+  function confirmDelete() {
+    if (!id) return;
+    Alert.alert(
+      "Delete this meal?",
+      "This removes it from your timeline. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => void handleDelete() },
+      ],
+    );
   }
 
   async function handleDelete() {
@@ -616,6 +653,16 @@ export default function EditMealScreen() {
       </PremiumCard>
       </View>
 
+      {canShareMeal ? (
+        <View style={styles.cardWrap}>
+          <ShareWithFriendsPicker
+            selectedFriendIds={selectedFriendIds}
+            onSelectionChange={setSelectedFriendIds}
+            onTotalPeopleChange={handleShareTotalPeopleChange}
+          />
+        </View>
+      ) : null}
+
       <View style={styles.actions}>
         <Button mode="contained" onPress={handleSave} loading={saving}>
           Save changes
@@ -626,7 +673,7 @@ export default function EditMealScreen() {
         <Button
           mode="text"
           textColor={premium.danger}
-          onPress={handleDelete}
+          onPress={confirmDelete}
           loading={deleting}
           disabled={saving}
         >

@@ -6,6 +6,7 @@ import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GOALS, isOnboardingComplete, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { OnboardingStepLabel } from "@/components/OnboardingStepLabel";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -55,6 +56,7 @@ export default function GoalScreen() {
         subtitle="We’ll tailor your experience. You can change this later."
       />
       <View style={[styles.body, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <OnboardingStepLabel step={1} total={2} />
         {profileLoading && !profile ? (
           <>
             {[0, 1, 2].map((index) => (

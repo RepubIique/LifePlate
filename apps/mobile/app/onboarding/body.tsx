@@ -6,6 +6,7 @@ import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isOnboardingComplete, type Gender } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { OnboardingStepLabel } from "@/components/OnboardingStepLabel";
 import {
   BodyMetricsForm,
   isBodyMetricsFormComplete,
@@ -83,6 +84,7 @@ export default function BodyMetricsOnboardingScreen() {
         subtitle="We use this to personalise your daily fibre and nutrition targets."
       />
       <View style={[styles.body, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <OnboardingStepLabel step={2} total={2} />
         {profileLoading && !profile ? (
           <PremiumCard noBlur style={styles.skeletonCard}>
             {[0, 1, 2].map((index) => (
@@ -119,6 +121,11 @@ export default function BodyMetricsOnboardingScreen() {
         >
           Continue
         </Button>
+        {!canContinue && !profileLoading ? (
+          <Text variant="bodySmall" style={styles.disabledHint}>
+            Fill in weight, height, age, and gender to continue.
+          </Text>
+        ) : null}
         <Button
           mode="text"
           onPress={async () => {
@@ -145,5 +152,6 @@ const styles = StyleSheet.create({
   genderRow: { flexDirection: "row", gap: spacing.sm },
   note: { opacity: 0.65, lineHeight: 18 },
   cta: { marginTop: spacing.sm },
+  disabledHint: { opacity: 0.5, textAlign: "center" },
   signOut: { alignSelf: "flex-start" },
 });

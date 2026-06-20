@@ -1,11 +1,13 @@
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { todayDateKey } from "@lifeplate/shared";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useRef, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
+import { Alert } from "react-native";
 import { uploadMealImage, analyzeMealText } from "@/lib/api";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
@@ -122,7 +124,18 @@ export function useMealPhotoUpload() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setError("Permission required to access photos or camera.");
+        const message = mediaPermissionMessage(
+          useCamera ? "camera" : "library",
+          permission.canAskAgain,
+        );
+        if (permission.canAskAgain === false) {
+          Alert.alert("Permission needed", message, [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => void Linking.openSettings() },
+          ]);
+        } else {
+          setError(message);
+        }
         return;
       }
 

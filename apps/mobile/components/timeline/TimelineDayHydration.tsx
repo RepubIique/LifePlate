@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import { PillarIcon } from "@/components/icons/PillarIcon";
@@ -40,7 +41,10 @@ export function TimelineDayHydration({
           size={16}
           mode="contained-tonal"
           containerColor="#F1F3F5"
-          onPress={onDecrement}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onDecrement();
+          }}
           disabled={glasses <= 0}
         />
         <IconButton
@@ -49,7 +53,10 @@ export function TimelineDayHydration({
           mode="contained"
           containerColor="#1B4332"
           iconColor="#FFFFFF"
-          onPress={onIncrement}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onIncrement();
+          }}
           disabled={glasses >= 24}
         />
       </View>

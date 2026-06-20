@@ -82,6 +82,11 @@ export function TextLogModal({
                 disabled={loading}
                 autoFocus
               />
+              {!description.trim() ? (
+                <Text variant="bodySmall" style={styles.hint}>
+                  Be specific — ingredients and portions help us estimate better.
+                </Text>
+              ) : null}
               <View style={styles.actions}>
                 <Button mode="contained" onPress={onSubmit} loading={loading} disabled={!canSubmit}>
                   Analyze meal
@@ -125,6 +130,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     lineHeight: 22,
     marginBottom: spacing.xs,
+  },
+  hint: {
+    opacity: 0.5,
+    lineHeight: 18,
   },
   actions: {
     gap: spacing.xs,

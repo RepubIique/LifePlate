@@ -1,7 +1,8 @@
-import type { FriendSummary } from "@lifeplate/shared";
+import type { FriendSummary, FriendsListResponse } from "@lifeplate/shared";
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { ensureUserFriendCode, normalizeFriendCode } from "./friendCodes.js";
+import { listIncomingMealShares } from "./mealShare.js";
 
 export class FriendRequestError extends Error {
   constructor(
@@ -107,8 +108,16 @@ export async function removeFriend(userId: string, friendId: string): Promise<vo
   ]);
 }
 
-export async function getFriendsListResponse(userId: string) {
-  const friendCode = await ensureUserFriendCode(userId);
-  const friends = await listFriends(userId);
-  return { friendCode, friends };
+export async function getFriendsSocialResponse(userId: string): Promise<FriendsListResponse> {
+  const [friendCode, friends, pendingShares] = await Promise.all([
+    ensureUserFriendCode(userId),
+    listFriends(userId),
+    listIncomingMealShares(userId),
+  ]);
+  return { friendCode, friends, pendingShares };
+}
+
+/** @deprecated Use getFriendsSocialResponse */
+export async function getFriendsListResponse(userId: string): Promise<FriendsListResponse> {
+  return getFriendsSocialResponse(userId);
 }

@@ -1,8 +1,8 @@
-import { useFocusEffect, useNavigation } from "expo-router";
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Text } from "react-native-paper";
-import type { FriendSummary, MealPortionMeta, MealShareRequestSummary } from "@lifeplate/shared";
+import type { MealPortionMeta } from "@lifeplate/shared";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { FriendCodeCard } from "@/components/friends/FriendCodeCard";
 import { FriendsList } from "@/components/friends/FriendsList";
@@ -10,72 +10,44 @@ import { PendingShareCard } from "@/components/friends/PendingShareCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import {
-  acceptMealShare,
-  addFriendByCode,
-  declineMealShare,
-  fetchFriends,
-  fetchIncomingMealShares,
-  fetchIncomingMealShareCount,
-  removeFriend,
-} from "@/lib/api";
+import { useFriends } from "@/context/FriendsContext";
+import { acceptMealShare, addFriendByCode, declineMealShare, removeFriend } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function FriendsScreen() {
-  const navigation = useNavigation();
   const refreshAfterMealChange = useRefreshAfterMealChange();
+  const {
+    friendCode,
+    friends,
+    pendingShares,
+    loading,
+    refreshing,
+    hydrated,
+    loadFriends,
+    refreshFriends,
+    patchFriends,
+  } = useFriends();
 
-  const [friendCode, setFriendCode] = useState("");
-  const [friends, setFriends] = useState<FriendSummary[]>([]);
-  const [pendingShares, setPendingShares] = useState<MealShareRequestSummary[]>([]);
   const [addCode, setAddCode] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [shareBusyId, setShareBusyId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    const [friendsData, shares, count] = await Promise.all([
-      fetchFriends(),
-      fetchIncomingMealShares(),
-      fetchIncomingMealShareCount(),
-    ]);
-    setFriendCode(friendsData.friendCode);
-    setFriends(friendsData.friends);
-    setPendingShares(shares);
-    navigation.setOptions({
-      tabBarBadge: count > 0 ? count : undefined,
-    });
-  }, [navigation]);
-
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      void loadData()
-        .catch((e) => setSnackbar(friendlyErrorMessage(e)))
-        .finally(() => setLoading(false));
-    }, [loadData]),
+      void loadFriends().catch((e) => setSnackbar(friendlyErrorMessage(e)));
+    }, [loadFriends]),
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      tabBarBadge: pendingShares.length > 0 ? pendingShares.length : undefined,
-    });
-  }, [navigation, pendingShares.length]);
-
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
     try {
-      await loadData();
+      await refreshFriends();
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setRefreshing(false);
     }
-  }, [loadData]);
+  }, [refreshFriends]);
 
   async function handleAddFriend() {
     const code = addCode.trim();
@@ -84,12 +56,12 @@ export default function FriendsScreen() {
     try {
       const { friend } = await addFriendByCode(code);
       setAddCode("");
-      setFriends((prev) => {
-        if (prev.some((f) => f.id === friend.id)) return prev;
-        return [...prev, friend].sort((a, b) =>
-          (a.name ?? a.id).localeCompare(b.name ?? b.id),
-        );
-      });
+      const nextFriends = [...friends];
+      if (!nextFriends.some((f) => f.id === friend.id)) {
+        nextFriends.push(friend);
+        nextFriends.sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
+      }
+      patchFriends({ friends: nextFriends });
       setSnackbar(`Added ${friend.name?.trim() || "friend"}`);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -101,7 +73,7 @@ export default function FriendsScreen() {
   async function handleRemoveFriend(friendId: string) {
     try {
       await removeFriend(friendId);
-      setFriends((prev) => prev.filter((f) => f.id !== friendId));
+      patchFriends({ friends: friends.filter((f) => f.id !== friendId) });
       setSnackbar("Friend removed");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -112,11 +84,9 @@ export default function FriendsScreen() {
     setShareBusyId(shareId);
     try {
       await acceptMealShare(shareId, portionMeta ? { portionMeta } : undefined);
-      setPendingShares((prev) => prev.filter((s) => s.id !== shareId));
+      patchFriends({ pendingShares: pendingShares.filter((s) => s.id !== shareId) });
       refreshAfterMealChange();
       setSnackbar("Meal added to your log");
-      const count = await fetchIncomingMealShareCount();
-      navigation.setOptions({ tabBarBadge: count > 0 ? count : undefined });
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
@@ -128,9 +98,7 @@ export default function FriendsScreen() {
     setShareBusyId(shareId);
     try {
       await declineMealShare(shareId);
-      setPendingShares((prev) => prev.filter((s) => s.id !== shareId));
-      const count = await fetchIncomingMealShareCount();
-      navigation.setOptions({ tabBarBadge: count > 0 ? count : undefined });
+      patchFriends({ pendingShares: pendingShares.filter((s) => s.id !== shareId) });
       setSnackbar("Share declined");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -138,6 +106,8 @@ export default function FriendsScreen() {
       setShareBusyId(null);
     }
   }
+
+  const showInitialLoading = !hydrated || (loading && !friendCode && friends.length === 0);
 
   return (
     <Screen
@@ -152,7 +122,7 @@ export default function FriendsScreen() {
         subtitle="Share meals without running AI twice"
       />
 
-      {loading ? (
+      {showInitialLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator />
         </View>

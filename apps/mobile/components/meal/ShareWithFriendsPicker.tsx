@@ -1,10 +1,9 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Chip, Text } from "react-native-paper";
-import type { FriendSummary } from "@lifeplate/shared";
+import { useFriends } from "@/context/FriendsContext";
 import { PremiumCard } from "@/components/PremiumCard";
-import { fetchFriends } from "@/lib/api";
 import { spacing } from "@/src/theme/lifeplate";
 
 type ShareWithFriendsPickerProps = {
@@ -18,17 +17,11 @@ export function ShareWithFriendsPicker({
   onSelectionChange,
   onTotalPeopleChange,
 }: ShareWithFriendsPickerProps) {
-  const [friends, setFriends] = useState<FriendSummary[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const { friends, hydrated, loadFriends } = useFriends();
 
   useEffect(() => {
-    void fetchFriends()
-      .then((data) => {
-        setFriends(data.friends);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, []);
+    void loadFriends();
+  }, [loadFriends]);
 
   useEffect(() => {
     onTotalPeopleChange?.(1 + selectedFriendIds.length);
@@ -42,7 +35,7 @@ export function ShareWithFriendsPicker({
     onSelectionChange([...selectedFriendIds, friendId]);
   }
 
-  if (!loaded) return null;
+  if (!hydrated) return null;
 
   return (
     <PremiumCard style={styles.card}>

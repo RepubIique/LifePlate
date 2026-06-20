@@ -22,7 +22,7 @@ export default function WelcomeScreen() {
         </PremiumCard>
       </View>
       <View style={styles.actions}>
-        <Button mode="contained" onPress={() => router.push("/(auth)/sign-in")}>
+        <Button mode="contained" onPress={() => router.push("/(auth)/sign-in?mode=signup")}>
           Get Started
         </Button>
         <Button mode="outlined" onPress={() => router.push("/(auth)/sign-in")}>

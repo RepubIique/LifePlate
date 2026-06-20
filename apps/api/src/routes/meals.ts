@@ -7,6 +7,7 @@ import type {
   MealRefineRequest,
   MealReanalyzeRequest,
   MealReorderRequest,
+  MealShareExistingRequest,
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
@@ -39,6 +40,7 @@ import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealP
 import {
   createMealShareRequests,
   MealShareError,
+  shareExistingMealWithFriends,
   validateShareFriendIds,
 } from "../services/mealShare.js";
 import { uploadMealImage } from "../services/storage.js";
@@ -672,11 +674,13 @@ export async function mealRoutes(app: FastifyInstance) {
         foods: string[];
         raw_ai_response: unknown;
         reanalyze_count: number;
+        shared_by_user_id: string | null;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 m.log_date::text AS log_date, m.sort_index, m.notes,
                 m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
-                m.confidence, m.foods, m.raw_ai_response, m.reanalyze_count
+                m.confidence, m.foods, m.raw_ai_response, m.reanalyze_count,
+                m.shared_by_user_id
          FROM meals m
          WHERE m.user_id = $1 AND m.id = $2`,
         [userId, id],
@@ -709,6 +713,7 @@ export async function mealRoutes(app: FastifyInstance) {
         portionMeta,
         reanalyzeCount: r.reanalyze_count,
         reanalyzeRemaining: mealReanalyzeRemaining(r.reanalyze_count),
+        sharedByUserId: r.shared_by_user_id,
       };
     },
   );
@@ -771,6 +776,33 @@ export async function mealRoutes(app: FastifyInstance) {
         };
       } catch (err) {
         if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: MealShareExistingRequest }>(
+    "/api/meals/:id/share",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { id } = request.params;
+
+      try {
+        const result = await shareExistingMealWithFriends(
+          userId,
+          id,
+          request.body?.shareWithFriendIds,
+        );
+        return result;
+      } catch (err) {
+        if (err instanceof MealShareError) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,

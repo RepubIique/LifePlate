@@ -3,7 +3,72 @@ export type NotesSelection = { start: number; end: number };
 export type NotesInlineSegment =
   | { kind: "text"; text: string }
   | { kind: "bold"; text: string }
-  | { kind: "italic"; text: string };
+  | { kind: "italic"; text: string }
+  | { kind: "mention"; name: string; friendId: string };
+
+const FRIEND_MENTION_PATTERN = /^@\[([^\]]*)\]\(([0-9a-f-]{36})\)/i;
+
+export function friendMentionLabel(name: string | null | undefined): string {
+  return name?.trim() || "Friend";
+}
+
+export function formatFriendMention(friend: { id: string; name: string | null }): string {
+  const label = friendMentionLabel(friend.name).replace(/[\[\]]/g, "");
+  return `@[${label}](${friend.id})`;
+}
+
+export function getActiveMentionQuery(
+  text: string,
+  cursor: number,
+): { query: string; start: number } | null {
+  const safeCursor = Math.max(0, Math.min(cursor, text.length));
+  const before = text.slice(0, safeCursor);
+  const atIndex = before.lastIndexOf("@");
+  if (atIndex === -1) return null;
+  if (atIndex > 0 && !/\s/.test(before[atIndex - 1]!)) return null;
+
+  const queryPart = before.slice(atIndex + 1);
+  if (queryPart.startsWith("[") || queryPart.includes("](")) return null;
+
+  return { query: queryPart, start: atIndex };
+}
+
+export function insertFriendMention(
+  text: string,
+  selection: NotesSelection,
+  friend: { id: string; name: string | null },
+  maxLength: number,
+): { text: string; selection: NotesSelection } {
+  const { start } = clampNotesSelection(text, selection);
+  const active = getActiveMentionQuery(text, start);
+  const token = formatFriendMention(friend);
+
+  if (active) {
+    const before = text.slice(0, active.start);
+    const after = text.slice(start);
+    const nextText = `${before}${token} ${after}`.slice(0, maxLength);
+    const pos = Math.min(before.length + token.length + 1, nextText.length);
+    return { text: nextText, selection: { start: pos, end: pos } };
+  }
+
+  const { end } = clampNotesSelection(text, selection);
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+  const nextText = `${before}${token} ${after}`.slice(0, maxLength);
+  const pos = Math.min(before.length + token.length + 1, nextText.length);
+  return { text: nextText, selection: { start: pos, end: pos } };
+}
+
+export function filterFriendsForMention<T extends { id: string; name: string | null }>(
+  friends: T[],
+  query: string,
+): T[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return friends;
+  return friends.filter((friend) =>
+    friendMentionLabel(friend.name).toLowerCase().includes(normalized),
+  );
+}
 
 export function clampNotesSelection(text: string, selection: NotesSelection): NotesSelection {
   const len = text.length;
@@ -76,6 +141,17 @@ export function parseInlineNotes(text: string): NotesInlineSegment[] {
   let i = 0;
 
   while (i < text.length) {
+    const mentionMatch = text.slice(i).match(FRIEND_MENTION_PATTERN);
+    if (mentionMatch) {
+      segments.push({
+        kind: "mention",
+        name: mentionMatch[1] ?? "",
+        friendId: mentionMatch[2] ?? "",
+      });
+      i += mentionMatch[0].length;
+      continue;
+    }
+
     if (text.startsWith("**", i)) {
       const end = text.indexOf("**", i + 2);
       if (end !== -1) {
@@ -95,7 +171,12 @@ export function parseInlineNotes(text: string): NotesInlineSegment[] {
     }
 
     let j = i + 1;
-    while (j < text.length && text[j] !== "*" && !text.startsWith("**", j)) {
+    while (
+      j < text.length &&
+      text[j] !== "*" &&
+      text[j] !== "@" &&
+      !text.startsWith("**", j)
+    ) {
       j += 1;
     }
     segments.push({ kind: "text", text: text.slice(i, j) });

@@ -18,7 +18,8 @@ import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
 import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
-import { deleteMeal, fetchIncomingMealShareCount, reorderMeals } from "@/lib/api";
+import { useFriends } from "@/context/FriendsContext";
+import { deleteMeal, reorderMeals } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
@@ -48,6 +49,7 @@ export default function TimelineScreen() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
   refreshAfterMealChangeRef.current = refreshAfterMealChange;
+  const { pendingShareCount, loadFriends } = useFriends();
   const {
     hydrationByDate,
     syncingDate,
@@ -56,7 +58,6 @@ export default function TimelineScreen() {
   } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
-  const [pendingShareCount, setPendingShareCount] = useState(0);
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
@@ -66,10 +67,8 @@ export default function TimelineScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void fetchIncomingMealShareCount()
-        .then(setPendingShareCount)
-        .catch(() => setPendingShareCount(0));
-    }, []),
+      void loadFriends().catch(() => undefined);
+    }, [loadFriends]),
   );
 
   function confirmDelete(meal: MealListSummary) {

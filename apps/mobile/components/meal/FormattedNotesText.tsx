@@ -28,6 +28,13 @@ export function FormattedNotesText({ value, style, variant = "bodySmall", number
             </Text>
           );
         }
+        if (segment.kind === "mention") {
+          return (
+            <Text key={index} style={styles.mention}>
+              @{segment.name}
+            </Text>
+          );
+        }
         return segment.text;
       })}
     </Text>
@@ -37,4 +44,5 @@ export function FormattedNotesText({ value, style, variant = "bodySmall", number
 const styles = StyleSheet.create({
   bold: { fontWeight: "700" },
   italic: { fontStyle: "italic" },
+  mention: { color: "#40916C", fontWeight: "600" },
 });

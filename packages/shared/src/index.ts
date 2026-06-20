@@ -436,6 +436,7 @@ export interface FriendSummary {
 export interface FriendsListResponse {
   friendCode: string;
   friends: FriendSummary[];
+  pendingShares: MealShareRequestSummary[];
 }
 
 export interface AddFriendRequest {
@@ -473,6 +474,14 @@ export interface MealShareIncomingResponse {
 
 export interface MealShareCountResponse {
   count: number;
+}
+
+export interface MealShareExistingRequest {
+  shareWithFriendIds: string[];
+}
+
+export interface MealShareExistingResponse {
+  sharesSent: number;
 }
 
 export const MAX_MEAL_NOTES_LENGTH = 500;

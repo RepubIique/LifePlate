@@ -13,6 +13,8 @@ import type {
   MealReanalyzeRequest,
   MealReanalyzeResponse,
   MealShareAcceptRequest,
+  MealShareExistingRequest,
+  MealShareExistingResponse,
   MealShareCountResponse,
   MealShareIncomingResponse,
   MealShareRequestSummary,
@@ -382,8 +384,8 @@ export async function removeFriend(friendId: string): Promise<void> {
 }
 
 export async function fetchIncomingMealShares(): Promise<MealShareRequestSummary[]> {
-  const data = await request<MealShareIncomingResponse>("/api/meal-shares/incoming");
-  return data.shares;
+  const data = await fetchFriends();
+  return data.pendingShares;
 }
 
 export async function fetchIncomingMealShareCount(): Promise<number> {
@@ -403,6 +405,16 @@ export async function acceptMealShare(
 
 export async function declineMealShare(shareId: string): Promise<void> {
   await request<{ ok: boolean }>(`/api/meal-shares/${shareId}/decline`, { method: "POST" });
+}
+
+export async function shareMealWithFriends(
+  mealId: string,
+  body: MealShareExistingRequest,
+): Promise<MealShareExistingResponse> {
+  return request<MealShareExistingResponse>(`/api/meals/${mealId}/share`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function refineMeal(

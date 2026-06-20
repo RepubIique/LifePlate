@@ -1,15 +1,27 @@
 import { Redirect, type Href } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
+import { Button, Text } from "react-native-paper";
 import { isOnboardingComplete } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function Index() {
-  const { session, profile, loading, profileLoading } = useAuth();
+  const { session, profile, loading, profileLoading, loadProfile, signOut } = useAuth();
+  const [retrying, setRetrying] = useState(false);
 
   if (loading || (session && profileLoading && !profile)) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator />
+      <View style={styles.boot}>
+        <Image
+          source={require("@/assets/images/logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color="#40916C" />
+        <Text variant="bodySmall" style={styles.bootHint}>
+          Loading your plate…
+        </Text>
       </View>
     );
   }
@@ -18,9 +30,44 @@ export default function Index() {
     return <Redirect href="/(auth)/welcome" />;
   }
 
-  // Profile fetch failed and no local cache — go to app, not onboarding.
   if (!profile) {
-    return <Redirect href="/(tabs)" />;
+    return (
+      <View style={styles.boot}>
+        <Image
+          source={require("@/assets/images/logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text variant="titleMedium" style={styles.errorTitle}>
+          Couldn&apos;t load your profile
+        </Text>
+        <Text variant="bodyMedium" style={styles.errorBody}>
+          Check your connection and try again.
+        </Text>
+        <Button
+          mode="contained"
+          loading={retrying}
+          onPress={async () => {
+            setRetrying(true);
+            try {
+              await loadProfile({ force: true });
+            } finally {
+              setRetrying(false);
+            }
+          }}
+        >
+          Retry
+        </Button>
+        <Button
+          mode="text"
+          onPress={async () => {
+            await signOut();
+          }}
+        >
+          Sign out
+        </Button>
+      </View>
+    );
   }
 
   if (isOnboardingComplete(profile)) {
@@ -33,3 +80,18 @@ export default function Index() {
 
   return <Redirect href={"/onboarding/body" as Href} />;
 }
+
+const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.xl,
+    gap: spacing.md,
+    backgroundColor: "#FFFFFF",
+  },
+  logo: { width: 88, height: 88 },
+  bootHint: { opacity: 0.5 },
+  errorTitle: { color: "#1B4332", textAlign: "center" },
+  errorBody: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
+});

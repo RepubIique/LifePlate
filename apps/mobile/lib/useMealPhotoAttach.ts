@@ -1,7 +1,9 @@
+import * as Linking from "expo-linking";
 import * as ImagePicker from "expo-image-picker";
+import { Alert } from "react-native";
 import { useCallback, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource } from "@/lib/uploadPrefs";
@@ -42,7 +44,18 @@ export function useMealPhotoAttach(attachPhoto: AttachPhotoFn) {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setError("Permission required to access photos or camera.");
+        const message = mediaPermissionMessage(
+          useCamera ? "camera" : "library",
+          permission.canAskAgain,
+        );
+        if (permission.canAskAgain === false) {
+          Alert.alert("Permission needed", message, [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => void Linking.openSettings() },
+          ]);
+        } else {
+          setError(message);
+        }
         return;
       }
 

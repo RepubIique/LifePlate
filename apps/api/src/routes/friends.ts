@@ -5,14 +5,14 @@ import { requireAuth } from "../auth.js";
 import {
   FriendRequestError,
   addFriendByCode,
-  getFriendsListResponse,
+  getFriendsSocialResponse,
   removeFriend,
 } from "../services/friendships.js";
 
 export async function friendRoutes(app: FastifyInstance) {
   app.get("/api/friends", { preHandler: requireAuth }, async (request) => {
     const { userId } = request as AuthedRequest;
-    return getFriendsListResponse(userId);
+    return getFriendsSocialResponse(userId);
   });
 
   app.post<{ Body: AddFriendRequest }>(

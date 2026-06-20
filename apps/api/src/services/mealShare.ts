@@ -12,7 +12,7 @@ import {
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { onMealDataChanged } from "./mealSideEffects.js";
-import { mergeRawAiPortionMeta } from "./mealPortions.js";
+import { extractMealPortionMeta, mergeRawAiPortionMeta } from "./mealPortions.js";
 import { areFriends } from "./friendships.js";
 
 export class MealShareError extends Error {
@@ -26,14 +26,39 @@ export class MealShareError extends Error {
   }
 }
 
-function resolveBaseMacros(
-  body: MealConfirmRequest,
-  draftRawAi: unknown,
-): MealMacroTotals {
-  if (body.portionMeta?.baseMacros) {
-    return body.portionMeta.baseMacros;
+function resolveBaseMacrosFromSnapshot(snapshot: MealShareSnapshot): MealMacroTotals {
+  if (snapshot.portionMeta?.baseMacros) {
+    return snapshot.portionMeta.baseMacros;
   }
   return {
+    estimatedCalories: snapshot.estimatedCalories,
+    protein: snapshot.protein,
+    carbs: snapshot.carbs,
+    fat: snapshot.fat,
+    fibre: snapshot.fibre,
+    sugar: snapshot.sugar,
+    sodium: snapshot.sodium,
+  };
+}
+
+export type MealShareSnapshot = {
+  mealName: string;
+  foods: string[];
+  estimatedCalories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fibre: number;
+  sugar: number;
+  sodium: number;
+  confidence: number;
+  portionMeta?: MealPortionMeta | null;
+};
+
+function confirmBodyToSnapshot(body: MealConfirmRequest): MealShareSnapshot {
+  return {
+    mealName: body.mealName,
+    foods: body.foods,
     estimatedCalories: body.estimatedCalories,
     protein: body.protein,
     carbs: body.carbs,
@@ -41,6 +66,8 @@ function resolveBaseMacros(
     fibre: body.fibre,
     sugar: body.sugar,
     sodium: body.sodium,
+    confidence: body.confidence,
+    portionMeta: body.portionMeta,
   };
 }
 
@@ -95,12 +122,39 @@ export async function createMealShareRequests(
     loggedAt: Date;
   },
 ): Promise<number> {
-  const { friendIds } = params;
+  return createMealShareRequestsFromSnapshot(client, {
+    fromUserId: params.fromUserId,
+    sourceMealId: params.sourceMealId,
+    friendIds: params.friendIds,
+    snapshot: confirmBodyToSnapshot(params.body),
+    rawAiResponse: params.draftRawAi,
+    mealType: params.mealType,
+    imageUrl: params.imageUrl,
+    logDate: params.logDate,
+    loggedAt: params.loggedAt,
+  });
+}
+
+export async function createMealShareRequestsFromSnapshot(
+  client: PoolClient,
+  params: {
+    fromUserId: string;
+    sourceMealId: string;
+    friendIds: string[];
+    snapshot: MealShareSnapshot;
+    rawAiResponse: unknown;
+    mealType: MealType | string | null;
+    imageUrl: string;
+    logDate: string;
+    loggedAt: Date;
+  },
+): Promise<number> {
+  const { friendIds, snapshot } = params;
   if (friendIds.length === 0) return 0;
 
-  const baseMacros = resolveBaseMacros(params.body, params.draftRawAi);
+  const baseMacros = resolveBaseMacrosFromSnapshot(snapshot);
   const totalPeople = 1 + friendIds.length;
-  const estimatedServings = params.body.portionMeta?.estimatedServings;
+  const estimatedServings = snapshot.portionMeta?.estimatedServings;
 
   for (const friendId of friendIds) {
     const { portionMeta, macros } = friendSharePortionMeta(
@@ -108,7 +162,7 @@ export async function createMealShareRequests(
       totalPeople,
       estimatedServings,
     );
-    const rawAiResponse = mergeRawAiPortionMeta(params.draftRawAi, portionMeta);
+    const rawAiResponse = mergeRawAiPortionMeta(params.rawAiResponse, portionMeta);
 
     await client.query(
       `INSERT INTO meal_share_requests (
@@ -123,7 +177,7 @@ export async function createMealShareRequests(
         friendId,
         params.sourceMealId,
         params.mealType,
-        params.body.mealName,
+        snapshot.mealName,
         params.imageUrl,
         params.logDate,
         params.loggedAt,
@@ -134,8 +188,8 @@ export async function createMealShareRequests(
         macros.fibre,
         macros.sugar,
         macros.sodium,
-        params.body.confidence,
-        params.body.foods,
+        snapshot.confidence,
+        snapshot.foods,
         rawAiResponse,
         JSON.stringify(portionMeta),
       ],
@@ -143,6 +197,117 @@ export async function createMealShareRequests(
   }
 
   return friendIds.length;
+}
+
+type ExistingMealShareRow = {
+  id: string;
+  meal_type: string | null;
+  meal_name: string;
+  image_url: string;
+  created_at: Date;
+  log_date: string;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  fibre: number | null;
+  sugar: number | null;
+  sodium: number | null;
+  confidence: string | null;
+  foods: string[];
+  raw_ai_response: unknown;
+  shared_by_user_id: string | null;
+};
+
+export async function shareExistingMealWithFriends(
+  userId: string,
+  mealId: string,
+  friendIdsInput: string[] | undefined,
+): Promise<{ sharesSent: number }> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const friendIds = await validateShareFriendIds(userId, friendIdsInput, client);
+    if (friendIds.length === 0) {
+      throw new MealShareError("No friends to share with", 400, "NO_FRIENDS");
+    }
+
+    const { rows } = await client.query<ExistingMealShareRow>(
+      `SELECT id, meal_type, meal_name, image_url, created_at, log_date::text AS log_date,
+              calories, protein, carbs, fat, fibre, sugar, sodium, confidence, foods,
+              raw_ai_response, shared_by_user_id
+       FROM meals
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [mealId, userId],
+    );
+
+    const meal = rows[0];
+    if (!meal) {
+      throw new MealShareError("Meal not found", 404);
+    }
+    if (meal.shared_by_user_id) {
+      throw new MealShareError(
+        "Only meals you logged can be shared with friends",
+        400,
+        "NOT_SHAREABLE",
+      );
+    }
+
+    const { rows: pendingRows } = await client.query<{ to_user_id: string }>(
+      `SELECT to_user_id
+       FROM meal_share_requests
+       WHERE source_meal_id = $1 AND status = 'pending' AND to_user_id = ANY($2::uuid[])`,
+      [mealId, friendIds],
+    );
+    const alreadyPending = new Set(pendingRows.map((r) => r.to_user_id));
+    const toShare = friendIds.filter((id) => !alreadyPending.has(id));
+
+    if (toShare.length === 0) {
+      throw new MealShareError(
+        "This meal is already pending for the selected friends",
+        409,
+        "ALREADY_PENDING",
+      );
+    }
+
+    const portionMeta = extractMealPortionMeta(meal.raw_ai_response);
+    const snapshot: MealShareSnapshot = {
+      mealName: meal.meal_name,
+      foods: meal.foods ?? [],
+      estimatedCalories: meal.calories ?? 0,
+      protein: meal.protein ?? 0,
+      carbs: meal.carbs ?? 0,
+      fat: meal.fat ?? 0,
+      fibre: meal.fibre ?? 0,
+      sugar: meal.sugar ?? 0,
+      sodium: meal.sodium ?? 0,
+      confidence: meal.confidence ? Number(meal.confidence) : 0,
+      portionMeta,
+    };
+
+    const sharesSent = await createMealShareRequestsFromSnapshot(client, {
+      fromUserId: userId,
+      sourceMealId: mealId,
+      friendIds: toShare,
+      snapshot,
+      rawAiResponse: meal.raw_ai_response,
+      mealType: meal.meal_type,
+      imageUrl: meal.image_url ?? "",
+      logDate: meal.log_date,
+      loggedAt: meal.created_at,
+    });
+
+    await client.query("COMMIT");
+    return { sharesSent };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 type ShareRow = {

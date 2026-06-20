@@ -7,12 +7,14 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
+import { FriendsProvider } from "@/context/FriendsContext";
 import { MealsProvider } from "@/context/MealsContext";
 import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
 import { WeekInsightsProvider } from "@/context/WeekInsightsContext";
 import { HydrationProvider } from "@/context/HydrationContext";
 import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
+import { AlphaWelcomeModal } from "@/components/AlphaWelcomeModal";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 import { assertMobileEnv } from "@/lib/env";
 
@@ -40,6 +42,7 @@ export default function RootLayout() {
       <PaperProvider theme={lifeplateTheme}>
         <AuthProvider>
           <MealsProvider>
+          <FriendsProvider>
           <PendingLogDateProvider>
           <NutritionDashboardProvider>
           <WeekInsightsProvider>
@@ -63,10 +66,12 @@ export default function RootLayout() {
             />
           </Stack>
           <AlphaFeedbackBubble />
+          <AlphaWelcomeModal />
           </HydrationProvider>
           </WeekInsightsProvider>
           </NutritionDashboardProvider>
           </PendingLogDateProvider>
+          </FriendsProvider>
           </MealsProvider>
         </AuthProvider>
       </PaperProvider>

@@ -24,6 +24,44 @@ export function parseApiError(body: string, status: number): ApiError {
   }
 }
 
+export function authFriendlyErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+    return "Email or password doesn't match. Check and try again.";
+  }
+  if (lower.includes("user already registered") || lower.includes("already been registered")) {
+    return "An account with this email already exists. Sign in instead.";
+  }
+  if (lower.includes("password") && lower.includes("least")) {
+    return "Password must be at least 6 characters.";
+  }
+  if (lower.includes("email") && (lower.includes("invalid") || lower.includes("valid"))) {
+    return "Enter a valid email address.";
+  }
+  if (lower.includes("signup") && lower.includes("disabled")) {
+    return "Email sign-up isn't available right now. Try Apple or Google instead.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Confirm your email first, then sign in.";
+  }
+
+  return msg || "Couldn't sign you in. Try again.";
+}
+
+export function mediaPermissionMessage(
+  kind: "camera" | "library" | "either",
+  canAskAgain?: boolean,
+): string {
+  const what =
+    kind === "camera" ? "camera" : kind === "library" ? "photo library" : "camera or photos";
+  if (canAskAgain === false) {
+    return `LifePlate needs ${what} access. Open Settings to enable it.`;
+  }
+  return `Allow ${what} access to log meals with photos.`;
+}
+
 export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return "Session expired. Please sign in again.";
@@ -52,6 +90,15 @@ export function friendlyErrorMessage(err: unknown): string {
     }
     if (err.code === "INVALID_IMAGE") {
       return "Please upload a photo of your meal (JPEG or PNG).";
+    }
+    if (err.code === "NOT_SHAREABLE") {
+      return "Only meals you logged yourself can be shared with friends.";
+    }
+    if (err.code === "ALREADY_PENDING") {
+      return err.message || "This meal is already waiting for those friends to accept.";
+    }
+    if (err.code === "NOT_FRIEND") {
+      return "You can only share meals with friends.";
     }
     if (err.message.includes("Failed to fetch") || err.message.includes("Network request failed")) {
       return "Cannot reach the server. Wait a moment and try again — the API may be waking up.";

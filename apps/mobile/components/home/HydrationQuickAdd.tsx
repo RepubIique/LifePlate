@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import type { PillarProgress } from "@lifeplate/shared";
@@ -47,7 +48,10 @@ export function HydrationQuickAdd({
               size={18}
               mode="contained-tonal"
               containerColor="rgba(255, 255, 255, 0.9)"
-              onPress={onDecrement}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onDecrement();
+              }}
               disabled={pillar.consumed <= 0}
             />
             <IconButton
@@ -56,7 +60,10 @@ export function HydrationQuickAdd({
               mode="contained"
               containerColor="#1B4332"
               iconColor="#FFFFFF"
-              onPress={onIncrement}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onIncrement();
+              }}
               disabled={pillar.consumed >= pillar.target}
             />
           </View>

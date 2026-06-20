@@ -12,10 +12,11 @@ import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meals: MealListSummary[];
+  title?: string;
   onLogSuggested?: () => void;
 };
 
-export function MealSlotsTracker({ meals, onLogSuggested }: Props) {
+export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggested }: Props) {
   const filled = getFilledSlots(meals);
   const suggested = getSuggestedSlot(filled);
   const filledCount = filled.size;
@@ -24,7 +25,7 @@ export function MealSlotsTracker({ meals, onLogSuggested }: Props) {
     <PremiumCard style={styles.card}>
       <View style={styles.header}>
         <Text variant="titleMedium" style={styles.title}>
-          Today&apos;s plates
+          {title}
         </Text>
         <Text variant="labelLarge" style={styles.count}>
           {filledCount}/{MEAL_SLOTS.length}

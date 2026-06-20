@@ -26,6 +26,8 @@ import { clearCachedMeals } from "@/lib/mealsCache";
 import { clearCachedDashboard } from "@/lib/dashboardCache";
 import { clearCachedDayDashboards } from "@/lib/dayDashboardCache";
 import { clearCachedHydration } from "@/lib/hydrationCache";
+import { clearCachedWeekInsights } from "@/lib/weekInsightsCache";
+import { clearCachedFriends } from "@/lib/friendsCache";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
 
@@ -46,8 +48,8 @@ type AuthContextValue = {
   patchProfile: (patch: Partial<UserProfile>) => void;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithProvider: (provider: "apple" | "google") => Promise<void>;
-  linkProvider: (provider: "apple" | "google") => Promise<void>;
+  signInWithProvider: (provider: "apple" | "google") => Promise<boolean>;
+  linkProvider: (provider: "apple" | "google") => Promise<boolean>;
   signOut: () => Promise<void>;
 };
 
@@ -269,7 +271,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (code) {
         await supabase.auth.exchangeCodeForSession(code);
       }
+      return true;
     }
+    return false;
   }, []);
 
   const linkProvider = useCallback(async (provider: "apple" | "google") => {
@@ -290,7 +294,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (code) {
         await supabase.auth.exchangeCodeForSession(code);
       }
+      return true;
     }
+    return false;
   }, []);
 
   const signOut = useCallback(async () => {
@@ -307,6 +313,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void clearCachedDashboard(userId);
       void clearCachedDayDashboards(userId);
       void clearCachedHydration(userId);
+      void clearCachedWeekInsights(userId);
+      void clearCachedFriends(userId);
     }
   }, [session]);
 

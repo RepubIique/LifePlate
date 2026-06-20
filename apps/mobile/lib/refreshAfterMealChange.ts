@@ -2,18 +2,21 @@ import { useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
+import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { invalidateAllMealDetails } from "@/lib/mealDetailCache";
 
 /** Meals + dashboard only — for edits that don't change streak / meals logged. */
 export function useRefreshMealsAndDashboard() {
   const { refreshMeals } = useMeals();
   const { invalidateDashboard, refreshDashboard } = useNutritionDashboard();
+  const { invalidateWeekInsights } = useWeekInsights();
 
   return useCallback(() => {
     void refreshMeals();
     invalidateDashboard();
     void refreshDashboard();
-  }, [refreshMeals, invalidateDashboard, refreshDashboard]);
+    invalidateWeekInsights();
+  }, [refreshMeals, invalidateDashboard, refreshDashboard, invalidateWeekInsights]);
 }
 
 /** Full sync after create, delete, or log-date changes (streak / profile stats). */

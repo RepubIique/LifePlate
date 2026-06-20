@@ -6,6 +6,7 @@ import { spacing } from "@/src/theme/lifeplate";
 export function InsightsSkeleton() {
   return (
     <>
+      <Skeleton width="30%" height={14} />
       <View style={styles.periodRow}>
         {[0, 1, 2].map((index) => (
           <Skeleton key={index} width={72} height={36} borderRadius={10} />
@@ -31,11 +32,33 @@ export function InsightsSkeleton() {
         <Skeleton width="80%" height={14} />
       </PremiumCard>
 
+      <Skeleton width="35%" height={14} style={styles.sectionGap} />
+
       <PremiumCard noBlur style={styles.card}>
-        <Skeleton width="42%" height={20} />
+        <Skeleton width="40%" height={20} />
+        {[0, 1, 2, 3].map((index) => (
+          <View key={index} style={styles.statRow}>
+            <Skeleton width="55%" height={14} />
+            <Skeleton width={72} height={18} />
+          </View>
+        ))}
+        <Skeleton width="100%" height={64} borderRadius={14} style={styles.gap} />
+      </PremiumCard>
+
+      <PremiumCard noBlur style={styles.card}>
+        <Skeleton width="45%" height={20} />
+        {[0, 1, 2, 3, 4].map((index) => (
+          <View key={index} style={styles.statRow}>
+            <Skeleton width="60%" height={16} />
+            <Skeleton width={88} height={28} borderRadius={999} />
+          </View>
+        ))}
+      </PremiumCard>
+
+      <PremiumCard noBlur style={styles.card}>
+        <Skeleton width="38%" height={20} />
         <Skeleton width="100%" height={14} style={styles.gap} />
-        <Skeleton width="92%" height={14} style={styles.gap} />
-        <Skeleton width="78%" height={14} />
+        <Skeleton width="100%" height={36} borderRadius={999} />
       </PremiumCard>
     </>
   );
@@ -46,6 +69,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
+  sectionGap: { marginTop: spacing.xs },
   card: {
     gap: spacing.md,
   },
@@ -58,6 +82,12 @@ const styles = StyleSheet.create({
   comparisonCol: {
     alignItems: "center",
     flex: 1,
+  },
+  statRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   gap: { marginTop: spacing.sm },
 });

@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
+import { useFriends } from "@/context/FriendsContext";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 
 export default function TabLayout() {
+  const { pendingShareCount } = useFriends();
+
   return (
     <Tabs
       screenOptions={{
@@ -54,6 +57,7 @@ export default function TabLayout() {
         name="friends"
         options={{
           title: "Friends",
+          tabBarBadge: pendingShareCount > 0 ? pendingShareCount : undefined,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
           ),

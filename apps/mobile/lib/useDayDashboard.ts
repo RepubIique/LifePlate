@@ -34,6 +34,7 @@ export function useDayDashboard({
   onErrorRef.current = onError;
   const [dashboard, setDashboard] = useState<NutritionDashboardView | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [diskHydrated, setDiskHydrated] = useState(false);
   const memoryRef = useRef<Map<string, DayDashboardCacheEntry>>(new Map());
   const inflightRef = useRef<Promise<void> | null>(null);
@@ -107,8 +108,12 @@ export function useDayDashboard({
           persistEntry(targetDateKey, entry);
           if (enabled && targetDateKey === dateKey) {
             applyCachedEntry(entry);
+            setLoadFailed(false);
           }
         } catch (error) {
+          if (enabled && targetDateKey === dateKey) {
+            setLoadFailed(true);
+          }
           onErrorRef.current?.(error);
           throw error;
         } finally {
@@ -132,6 +137,7 @@ export function useDayDashboard({
     if (!enabled) {
       setDashboard(null);
       setLoading(false);
+      setLoadFailed(false);
       return;
     }
 
@@ -199,6 +205,7 @@ export function useDayDashboard({
   return {
     dashboard,
     loading: loading || (enabled && !diskHydrated && !memoryRef.current.has(dateKey)),
+    loadFailed,
     refresh,
     patchHydration,
   };
