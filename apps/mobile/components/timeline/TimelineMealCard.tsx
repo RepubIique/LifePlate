@@ -87,13 +87,16 @@ export function TimelineMealCard({
                 </Text>
               ) : null}
 
-              {meal.calories != null || meal.protein != null ? (
+              {meal.calories != null || meal.protein != null || meal.fibre != null ? (
                 <View style={styles.chips}>
                   {meal.calories != null ? (
                     <NutritionChip label={`${meal.calories} kcal`} />
                   ) : null}
                   {meal.protein != null ? (
                     <NutritionChip label={`${meal.protein}g protein`} />
+                  ) : null}
+                  {meal.fibre != null ? (
+                    <NutritionChip label={`${meal.fibre}g fibre`} />
                   ) : null}
                 </View>
               ) : null}
