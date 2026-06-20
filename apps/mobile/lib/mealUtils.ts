@@ -44,7 +44,9 @@ export function buildTimelineDayGroups(
           day: "numeric",
         }),
         isToday: dateKey === todayKey,
-        meals: dayMeals,
+        meals: dayMeals.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        ),
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });

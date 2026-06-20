@@ -14,7 +14,9 @@ import { spacing } from "@/src/theme/lifeplate";
 type Props = {
   meal: MealListSummary;
   isLast: boolean;
+  dragging?: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
   onDelete?: () => void;
 };
 
@@ -28,7 +30,14 @@ function NutritionChip({ label }: { label: string }) {
   );
 }
 
-export function TimelineMealCard({ meal, isLast, onPress, onDelete }: Props) {
+export function TimelineMealCard({
+  meal,
+  isLast,
+  dragging = false,
+  onPress,
+  onLongPress,
+  onDelete,
+}: Props) {
   const icon = mealTypeIcon(meal.mealType);
   const typeLabel = formatMealTypeLabel(meal.mealType);
   const time = formatMealTime(meal.createdAt);
@@ -43,7 +52,13 @@ export function TimelineMealCard({ meal, isLast, onPress, onDelete }: Props) {
       <View style={styles.cardWrap}>
         <Pressable
           onPress={onPress}
-          style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
+          onLongPress={onLongPress}
+          delayLongPress={180}
+          style={({ pressed }) => [
+            styles.pressable,
+            pressed && !dragging && styles.pressed,
+            dragging && styles.dragging,
+          ]}
         >
           <PremiumCard style={styles.card} noBlur>
             <MealImage
@@ -142,6 +157,14 @@ const styles = StyleSheet.create({
   },
   pressable: { flex: 1 },
   pressed: { opacity: 0.92 },
+  dragging: {
+    opacity: 0.96,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
   card: {
     flexDirection: "row",
     padding: spacing.sm,

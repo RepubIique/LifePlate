@@ -125,6 +125,31 @@ export async function updateDraftAnalysis(
   return (rowCount ?? 0) > 0;
 }
 
+export async function updateDraftImage(
+  draftId: string,
+  userId: string,
+  input: { imageUrl: string; imageBuffer: Buffer; mimeType: string },
+): Promise<boolean> {
+  const expiresAt = new Date(Date.now() + TTL_MS);
+  const { rowCount } = await pool.query(
+    `UPDATE meal_drafts
+     SET image_url = $3,
+         image_data = $4,
+         mime_type = $5,
+         expires_at = $6
+     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
+    [
+      draftId,
+      userId,
+      input.imageUrl,
+      input.imageBuffer,
+      input.mimeType,
+      expiresAt,
+    ],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function getDraftImage(
   draft: Draft,
 ): Promise<{ buffer: Buffer; mimeType: string }> {

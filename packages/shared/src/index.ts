@@ -355,6 +355,11 @@ export interface MealUploadResponse extends MealAnalysisResult {
   coachNudge: string;
 }
 
+export interface MealPhotoAttachResponse {
+  /** Cloud URL when paid cloud backup is enabled; empty when photos stay on device. */
+  imageUrl: string;
+}
+
 export interface MealConfirmResponse {
   id: string;
 }
@@ -456,6 +461,11 @@ export interface MealUpdateRequest {
   portionMeta?: MealPortionMeta | null;
 }
 
+export interface MealReorderRequest {
+  dateKey: string;
+  mealIds: string[];
+}
+
 export interface HydrationDayRecord {
   date: string;
   glasses: number;
@@ -553,6 +563,7 @@ export {
   dateKeyFromIso,
   isValidLogDateKey,
   loggedAtForDateKey,
+  createdAtForDayPosition,
   recentLogDateKeys,
   formatLogDateLabel,
   offsetLogDateKey,

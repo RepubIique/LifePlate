@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, TextInput } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
@@ -18,19 +18,22 @@ import {
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MealImagePlaceholder } from "@/components/MealImage";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
+import { MealPhotoAttachSection } from "@/components/meal/MealPhotoAttachSection";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
-import { confirmMeal, refineMeal } from "@/lib/api";
+import { attachDraftPhoto, confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import {
   clearMealUploadSession,
   getMealUploadSession,
   routeParam,
+  saveMealUploadSession,
 } from "@/lib/mealUploadSession";
 import { saveMealImage } from "@/lib/mealImages";
+import { useMealPhotoAttach } from "@/lib/useMealPhotoAttach";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
@@ -73,9 +76,16 @@ export default function MealResultScreen() {
   );
   const isTextLog =
     routeParam(params.isTextLog) === "true" || uploadSession?.isTextLog === true;
-  const imageUrl =
-    uploadSession?.localImageUri ||
+  const [localImageUri, setLocalImageUri] = useState(
+    () => uploadSession?.localImageUri || "",
+  );
+  const [cloudImageUrl, setCloudImageUrl] = useState(
+    () => uploadSession?.imageUrl || routeParam(params.imageUrl) || "",
+  );
+  const displayImageUri =
+    localImageUri ||
     routeParam(params.imageUrl) ||
+    cloudImageUrl ||
     uploadSession?.imageUrl ||
     "";
   const initialLogDateKey = routeParam(params.logDate) || todayDateKey();
@@ -137,6 +147,35 @@ export default function MealResultScreen() {
   const [refining, setRefining] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+
+  const attachPhoto = useCallback(
+    async (prepared: { uri: string; mimeType: string; fileName: string }) => {
+      const result = await attachDraftPhoto(draftId, prepared);
+      setLocalImageUri(prepared.uri);
+      const nextCloudUrl = result.imageUrl || "";
+      setCloudImageUrl(nextCloudUrl);
+      const session = getMealUploadSession(draftId);
+      if (session) {
+        saveMealUploadSession(draftId, {
+          ...session,
+          localImageUri: prepared.uri,
+          imageUrl: nextCloudUrl,
+        });
+      }
+    },
+    [draftId],
+  );
+
+  const {
+    attaching: attachingPhoto,
+    error: attachPhotoError,
+    setError: setAttachPhotoError,
+    pickPhoto,
+  } = useMealPhotoAttach(attachPhoto);
+
+  useEffect(() => {
+    if (attachPhotoError) setSnackbar(attachPhotoError);
+  }, [attachPhotoError]);
 
   const likelySharedMeal = useMemo(
     () =>
@@ -266,7 +305,7 @@ export default function MealResultScreen() {
     try {
       const { id } = await confirmMeal({
         draftId,
-        imageUrl: uploadSession?.imageUrl || undefined,
+        imageUrl: cloudImageUrl || undefined,
         mealName,
         mealType,
         foods,
@@ -286,8 +325,8 @@ export default function MealResultScreen() {
         ),
         loggedAt: loggedAtForDateKey(logDate, mealType),
       });
-      if (imageUrl) {
-        await saveMealImage(id, imageUrl);
+      if (localImageUri || displayImageUri) {
+        await saveMealImage(id, localImageUri || displayImageUri);
       }
       clearMealUploadSession(draftId);
       refreshAfterMealChange();
@@ -310,13 +349,26 @@ export default function MealResultScreen() {
         <MealTypePicker value={mealType} onChange={setMealType} />
       </PremiumCard>
 
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.image} />
+      {isTextLog && !displayImageUri ? (
+        <MealPhotoAttachSection
+          mealType={mealType}
+          attaching={attachingPhoto}
+          onPickCamera={() => {
+            setAttachPhotoError(null);
+            void pickPhoto(true);
+          }}
+          onPickLibrary={() => {
+            setAttachPhotoError(null);
+            void pickPhoto(false);
+          }}
+        />
+      ) : displayImageUri ? (
+        <Image source={{ uri: displayImageUri }} style={styles.image} />
       ) : (
         <MealImagePlaceholder
           mealType={mealType}
           style={styles.image}
-          placeholderIconSize={56}
+          iconSize={56}
         />
       )}
 
@@ -478,13 +530,15 @@ export default function MealResultScreen() {
         </Text>
       </PremiumCard>
 
-      {!isTextLog ? (
+      {displayImageUri || !isTextLog ? (
         <PremiumCard>
           <Text variant="titleMedium" style={styles.quickFixTitle}>
             Quick fix
           </Text>
           <Text variant="bodySmall" style={styles.quickFixSub}>
-            One detail about this plate—we&apos;ll re-analyze the same photo.
+            {isTextLog
+              ? "One detail about this meal—we'll re-check using your photo."
+              : "One detail about this plate—we'll re-analyze the same photo."}
           </Text>
           <TextInput
             label="What should change?"
@@ -499,7 +553,7 @@ export default function MealResultScreen() {
             icon="auto-fix"
             onPress={handleRefine}
             loading={refining}
-            disabled={refining || saving}
+            disabled={refining || saving || attachingPhoto}
             style={styles.refineBtn}
           >
             Refine analysis
@@ -508,10 +562,10 @@ export default function MealResultScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Button mode="contained" onPress={handleConfirm} loading={saving} disabled={refining}>
+        <Button mode="contained" onPress={handleConfirm} loading={saving} disabled={refining || attachingPhoto}>
           Confirm
         </Button>
-        <Button mode="outlined" onPress={() => setEditing((e) => !e)} disabled={refining}>
+        <Button mode="outlined" onPress={() => setEditing((e) => !e)} disabled={refining || attachingPhoto}>
           {editing ? "Done editing" : "Edit"}
         </Button>
       </View>

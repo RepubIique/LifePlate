@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { MealListSummary } from "@lifeplate/shared";
+import { createdAtForDayPosition, dateKeyFromIso } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
 import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
@@ -32,6 +33,7 @@ type MealsContextValue = {
   invalidateMeals: () => void;
   getMealById: (id: string) => MealListSummary | undefined;
   patchMealLocally: (id: string, patch: Partial<MealListSummary>) => void;
+  reorderDayMealsLocally: (dateKey: string, orderedMeals: MealListSummary[]) => void;
   removeMealLocally: (id: string) => void;
   restoreMealLocally: (meal: MealListSummary) => void;
 };
@@ -145,6 +147,24 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     [persistMeals],
   );
 
+  const reorderDayMealsLocally = useCallback(
+    (dateKey: string, orderedMeals: MealListSummary[]) => {
+      setMeals((prev) => {
+        const otherDays = prev.filter((meal) => dateKeyFromIso(meal.createdAt) !== dateKey);
+        const reordered = orderedMeals.map((meal, index) => ({
+          ...meal,
+          createdAt: createdAtForDayPosition(dateKey, index, orderedMeals.length),
+        }));
+        const next = [...otherDays, ...reordered].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        persistMeals(next, fetchedAtRef.current);
+        return next;
+      });
+    },
+    [persistMeals],
+  );
+
   const loadMeals = useCallback(
     async (options?: LoadOptions) => {
       if (!session || !hydrated) return;
@@ -215,6 +235,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       invalidateMeals,
       getMealById,
       patchMealLocally,
+      reorderDayMealsLocally,
       removeMealLocally,
       restoreMealLocally,
     }),
@@ -227,6 +248,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       invalidateMeals,
       getMealById,
       patchMealLocally,
+      reorderDayMealsLocally,
       removeMealLocally,
       restoreMealLocally,
     ],

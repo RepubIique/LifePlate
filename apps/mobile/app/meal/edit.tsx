@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import {
   Button,
   Chip,
@@ -18,6 +18,7 @@ import {
   scaleMealForPortions,
   type MealMacroTotals,
 } from "@lifeplate/shared";
+import { MealPhotoAttachSection } from "@/components/meal/MealPhotoAttachSection";
 import { MealLogDateField, mealDateKeyFromIso } from "@/components/meal/MealLogDateField";
 import { EditMealSkeleton } from "@/components/skeletons/EditMealSkeleton";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
@@ -29,8 +30,8 @@ import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { deleteMeal, updateMeal } from "@/lib/api";
-import { deleteMealImage } from "@/lib/mealImages";
+import { attachMealPhoto, deleteMeal, updateMeal } from "@/lib/api";
+import { deleteMealImage, getLocalMealImageUri, saveMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { loadMealDetail } from "@/lib/loadMealDetail";
 import { leaveMealEditScreen } from "@/lib/mealNavigation";
@@ -43,6 +44,7 @@ import {
   useRefreshAfterMealChange,
   useRefreshMealsAndDashboard,
 } from "@/lib/refreshAfterMealChange";
+import { useMealPhotoAttach } from "@/lib/useMealPhotoAttach";
 import { premium } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -123,6 +125,8 @@ export default function EditMealScreen() {
   const [sodium, setSodium] = useState("0");
   const [loggedAt, setLoggedAt] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [attachedImageUri, setAttachedImageUri] = useState("");
+  const [resolvedImageUri, setResolvedImageUri] = useState<string | null>(null);
   const [baseMacros, setBaseMacros] = useState<MealMacroTotals>({
     estimatedCalories: 0,
     protein: 0,
@@ -135,6 +139,52 @@ export default function EditMealScreen() {
   const [totalPortions, setTotalPortions] = useState(1);
   const [portionsEaten, setPortionsEaten] = useState(1);
   const [estimatedServings, setEstimatedServings] = useState<number | undefined>();
+
+  const attachPhoto = useCallback(
+    async (prepared: { uri: string; mimeType: string; fileName: string }) => {
+      if (!id) return;
+      const result = await attachMealPhoto(id, prepared);
+      await saveMealImage(id, prepared.uri);
+      setAttachedImageUri(prepared.uri);
+      patchMealLocally(id, { imageUrl: result.imageUrl || "" });
+      if (meal) {
+        setMeal({ ...meal, imageUrl: result.imageUrl || "" });
+        setCachedMealDetail({ ...meal, imageUrl: result.imageUrl || "" });
+      }
+      refreshMealsAndDashboard();
+    },
+    [id, meal, patchMealLocally, refreshMealsAndDashboard],
+  );
+
+  const {
+    attaching: attachingPhoto,
+    error: attachPhotoError,
+    setError: setAttachPhotoError,
+    pickPhoto,
+  } = useMealPhotoAttach(attachPhoto);
+
+  useEffect(() => {
+    if (attachPhotoError) setSnackbar(attachPhotoError);
+  }, [attachPhotoError]);
+
+  useEffect(() => {
+    if (!meal?.id) {
+      setResolvedImageUri(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const local = await getLocalMealImageUri(meal.id);
+      if (cancelled) return;
+      const cloud = meal.imageUrl?.trim();
+      setResolvedImageUri(attachedImageUri || local || cloud || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [meal?.id, meal?.imageUrl, attachedImageUri]);
+
+  const showPhotoAttach = Boolean(meal && !attachedImageUri && !resolvedImageUri);
 
   const macroSetters = {
     setCalories,
@@ -344,16 +394,37 @@ export default function EditMealScreen() {
       ) : meal ? (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
-      <View style={styles.imageWrap}>
-        <MealImage
-          mealId={meal.id}
-          cloudUrl={meal.imageUrl}
-          mealType={mealType}
-          style={styles.image}
-          placeholderStyle={styles.imagePlaceholder}
-          placeholderIconSize={56}
-        />
-      </View>
+      {showPhotoAttach ? (
+        <View style={styles.imageWrap}>
+          <MealPhotoAttachSection
+            mealType={mealType}
+            attaching={attachingPhoto}
+            onPickCamera={() => {
+              setAttachPhotoError(null);
+              void pickPhoto(true);
+            }}
+            onPickLibrary={() => {
+              setAttachPhotoError(null);
+              void pickPhoto(false);
+            }}
+          />
+        </View>
+      ) : (
+        <View style={styles.imageWrap}>
+          {attachedImageUri ? (
+            <Image source={{ uri: attachedImageUri }} style={styles.image} />
+          ) : (
+            <MealImage
+              mealId={meal.id}
+              cloudUrl={meal.imageUrl}
+              mealType={mealType}
+              style={styles.image}
+              placeholderStyle={styles.imagePlaceholder}
+              placeholderIconSize={56}
+            />
+          )}
+        </View>
+      )}
 
       <View style={styles.cardWrap}>
       <PremiumCard>

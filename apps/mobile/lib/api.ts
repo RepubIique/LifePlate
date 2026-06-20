@@ -5,9 +5,11 @@ import type {
   MealListItem,
   MealListSummary,
   MealDetail,
+  MealPhotoAttachResponse,
   MealRefineResponse,
   MealUploadResponse,
   MealUpdateRequest,
+  MealReorderRequest,
   NutritionDashboardApiResponse,
   ProfileAvatarResponse,
   ProfilePatchResponse,
@@ -177,6 +179,13 @@ export async function updateMeal(id: string, body: MealUpdateRequest): Promise<v
   });
 }
 
+export async function reorderMeals(body: MealReorderRequest): Promise<void> {
+  await request("/api/meals/reorder", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export async function deleteMeal(id: string): Promise<void> {
   await request(`/api/meals/${id}`, { method: "DELETE" });
 }
@@ -257,6 +266,83 @@ export async function uploadMealImage(input: {
   }
 
   return JSON.parse(result.body) as MealUploadResponse;
+}
+
+async function uploadMealPhotoMultipart<T>(
+  path: string,
+  input: {
+    uri: string;
+    mimeType?: string | null;
+    fileName?: string | null;
+  },
+): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    notifyUnauthorized();
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  const mimeType = input.mimeType ?? "image/jpeg";
+  const fileName = input.fileName ?? (mimeType.includes("png") ? "meal.png" : "meal.jpg");
+
+  if (Platform.OS === "web") {
+    const form = new FormData();
+    const blob = await (await fetch(input.uri)).blob();
+    form.append("file", blob, fileName);
+
+    const res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    return handleResponse<T>(res);
+  }
+
+  const file = new File(input.uri);
+  const result = await file.upload(`${API_URL}${path}`, {
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (result.status < 200 || result.status >= 300) {
+    const err = parseApiError(result.body, result.status);
+    if (err.status === 401) notifyUnauthorized();
+    throw err;
+  }
+
+  return JSON.parse(result.body) as T;
+}
+
+export async function attachDraftPhoto(
+  draftId: string,
+  input: {
+    uri: string;
+    mimeType?: string | null;
+    fileName?: string | null;
+  },
+): Promise<MealPhotoAttachResponse> {
+  return uploadMealPhotoMultipart<MealPhotoAttachResponse>(
+    `/api/meals/drafts/${draftId}/photo`,
+    input,
+  );
+}
+
+export async function attachMealPhoto(
+  mealId: string,
+  input: {
+    uri: string;
+    mimeType?: string | null;
+    fileName?: string | null;
+  },
+): Promise<MealPhotoAttachResponse> {
+  return uploadMealPhotoMultipart<MealPhotoAttachResponse>(
+    `/api/meals/${mealId}/photo`,
+    input,
+  );
 }
 
 export async function confirmMeal(body: MealConfirmRequest): Promise<{ id: string }> {

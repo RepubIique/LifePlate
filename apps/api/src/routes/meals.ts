@@ -5,10 +5,11 @@ import type {
   MealListSummary,
   MealPatchResponse,
   MealRefineRequest,
+  MealReorderRequest,
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { createdAtForDayPosition, dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -20,6 +21,7 @@ import {
   getDraftImage,
   saveDraft,
   draftHasImage,
+  updateDraftImage,
 } from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
@@ -27,6 +29,7 @@ import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../s
 import { analyzeMealImage, analyzeMealText, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
+import { MEAL_UTC_DAY_SQL } from "../services/mealLogDate.js";
 import { uploadMealImage } from "../services/storage.js";
 import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
 import {
@@ -188,6 +191,63 @@ export async function mealRoutes(app: FastifyInstance) {
         }
         throw err;
       }
+    },
+  );
+
+  app.post<{ Params: { draftId: string } }>(
+    "/api/meals/drafts/:draftId/photo",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { draftId } = request.params;
+
+      const draft = await getDraft(draftId, userId);
+      if (!draft) {
+        return reply.code(404).send({ error: "Draft not found or expired" });
+      }
+
+      const file = await request.file();
+      if (!file) {
+        return reply.code(400).send({ error: "No image provided" });
+      }
+
+      const buffer = await file.toBuffer();
+      const mimeType = file.mimetype || "image/jpeg";
+
+      try {
+        validateUploadImage(buffer, mimeType);
+      } catch (err) {
+        if (err instanceof MealGuardrailError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+
+      const storageFlags = await loadUserImageStorageFlags(userId);
+      let imageUrl = "";
+
+      if (shouldUploadMealToCloud(storageFlags)) {
+        try {
+          imageUrl = await uploadMealImage(userId, buffer, mimeType);
+        } catch (err) {
+          request.log.error(err, "Draft photo cloud upload failed — continuing with device-only photo");
+        }
+      }
+
+      const updated = await updateDraftImage(draftId, userId, {
+        imageUrl,
+        imageBuffer: buffer,
+        mimeType,
+      });
+      if (!updated) {
+        return reply.code(404).send({ error: "Draft not found or expired" });
+      }
+
+      return { imageUrl };
     },
   );
 
@@ -395,6 +455,128 @@ export async function mealRoutes(app: FastifyInstance) {
       );
 
       return { meals };
+    },
+  );
+
+  app.post<{ Body: MealReorderRequest }>(
+    "/api/meals/reorder",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const dateKey = request.body?.dateKey?.trim() ?? "";
+      const mealIds = request.body?.mealIds ?? [];
+
+      if (!isValidLogDateKey(dateKey)) {
+        return reply.code(400).send({ error: "Invalid dateKey" });
+      }
+      if (!Array.isArray(mealIds) || mealIds.length === 0) {
+        return reply.code(400).send({ error: "mealIds is required" });
+      }
+      if (new Set(mealIds).size !== mealIds.length) {
+        return reply.code(400).send({ error: "Duplicate mealIds" });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+
+        const { rows: dayRows } = await client.query<{ id: string }>(
+          `SELECT id FROM meals WHERE user_id = $1 AND ${MEAL_UTC_DAY_SQL} = $2`,
+          [userId, dateKey],
+        );
+        const dayIds = dayRows.map((row) => row.id).sort();
+        const requestedIds = [...mealIds].sort();
+
+        if (
+          dayIds.length !== requestedIds.length ||
+          !dayIds.every((id, index) => id === requestedIds[index])
+        ) {
+          await client.query("ROLLBACK");
+          return reply.code(400).send({
+            error: "mealIds must include every meal for this day exactly once",
+          });
+        }
+
+        for (let index = 0; index < mealIds.length; index++) {
+          const mealId = mealIds[index];
+          const loggedAt = new Date(createdAtForDayPosition(dateKey, index, mealIds.length));
+          await client.query(
+            `UPDATE meals SET created_at = $1 WHERE id = $2 AND user_id = $3`,
+            [loggedAt, mealId, userId],
+          );
+        }
+
+        await client.query("COMMIT");
+        await onMealDataChanged(userId, {
+          mealCreatedAt: new Date(createdAtForDayPosition(dateKey, 0, mealIds.length)),
+        });
+
+        return { ok: true };
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/meals/:id/photo",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { id } = request.params;
+
+      const { rows } = await pool.query<{ image_url: string | null }>(
+        `SELECT image_url FROM meals WHERE id = $1 AND user_id = $2`,
+        [id, userId],
+      );
+      if (!rows[0]) {
+        return reply.code(404).send({ error: "Not found" });
+      }
+      if (rows[0].image_url?.trim()) {
+        return reply.code(400).send({ error: "Meal already has a photo" });
+      }
+
+      const file = await request.file();
+      if (!file) {
+        return reply.code(400).send({ error: "No image provided" });
+      }
+
+      const buffer = await file.toBuffer();
+      const mimeType = file.mimetype || "image/jpeg";
+
+      try {
+        validateUploadImage(buffer, mimeType);
+      } catch (err) {
+        if (err instanceof MealGuardrailError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+
+      const storageFlags = await loadUserImageStorageFlags(userId);
+      let imageUrl = "";
+
+      if (shouldUploadMealToCloud(storageFlags)) {
+        try {
+          imageUrl = await uploadMealImage(userId, buffer, mimeType);
+        } catch (err) {
+          request.log.error(err, "Meal photo cloud upload failed — continuing with device-only photo");
+        }
+      }
+
+      await pool.query(
+        `UPDATE meals SET image_url = $1 WHERE id = $2 AND user_id = $3`,
+        [imageUrl, id, userId],
+      );
+
+      return { imageUrl };
     },
   );
 

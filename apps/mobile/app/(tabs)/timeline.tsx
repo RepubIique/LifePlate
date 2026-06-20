@@ -1,15 +1,15 @@
 import { router } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealListSummary } from "@lifeplate/shared";
-import { todayDateKey } from "@lifeplate/shared";
+import { todayDateKey, dateKeyFromIso } from "@lifeplate/shared";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
+import { TimelineDayMeals } from "@/components/timeline/TimelineDayMeals";
 import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
 import { TimelineDayHydration } from "@/components/timeline/TimelineDayHydration";
 import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
-import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
 import { TimelineSkeleton } from "@/components/skeletons/TimelineSkeleton";
 import { PremiumHeader } from "@/components/PremiumHeader";
@@ -18,7 +18,7 @@ import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
 import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
-import { deleteMeal } from "@/lib/api";
+import { deleteMeal, reorderMeals } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
@@ -40,6 +40,7 @@ export default function TimelineScreen() {
     refreshMeals,
     removeMealLocally,
     restoreMealLocally,
+    reorderDayMealsLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const { uploading, uploadStage, error, setError, retryLastAsset, lastAssetRef } =
@@ -109,6 +110,28 @@ export default function TimelineScreen() {
     adjustHydration(dateKey, 1);
   }
 
+  const handleDayMealsReorder = useCallback(
+    (dateKey: string, orderedMeals: MealListSummary[]) => {
+      const previous = meals
+        .filter((meal) => dateKeyFromIso(meal.createdAt) === dateKey)
+        .sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      reorderDayMealsLocally(dateKey, orderedMeals);
+      void reorderMeals({
+        dateKey,
+        mealIds: orderedMeals.map((meal) => meal.id),
+      })
+        .then(() => refreshAfterMealChange())
+        .catch(async (e) => {
+          reorderDayMealsLocally(dateKey, previous);
+          await refreshMeals();
+          setSnackbar(friendlyErrorMessage(e));
+        });
+    },
+    [meals, reorderDayMealsLocally, refreshAfterMealChange, refreshMeals],
+  );
+
   const groups = useMemo(
     () => buildTimelineDayGroups(meals, hydrationByDate),
     [meals, hydrationByDate],
@@ -169,15 +192,13 @@ export default function TimelineScreen() {
               onIncrement={() => adjustHydration(group.dateKey, 1)}
               onDecrement={() => adjustHydration(group.dateKey, -1)}
             />
-            {group.meals.map((meal, index) => (
-              <TimelineMealCard
-                key={meal.id}
-                meal={meal}
-                isLast={index === group.meals.length - 1}
-                onPress={() => openMealEdit(meal.id, "timeline")}
-                onDelete={() => scheduleDelete(meal)}
-              />
-            ))}
+            <TimelineDayMeals
+              dateKey={group.dateKey}
+              meals={group.meals}
+              onReorder={handleDayMealsReorder}
+              onPress={(mealId) => openMealEdit(mealId, "timeline")}
+              onDelete={scheduleDelete}
+            />
             <Button
               mode="text"
               icon="plus"

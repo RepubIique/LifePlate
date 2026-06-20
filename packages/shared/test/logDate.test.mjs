@@ -5,6 +5,7 @@ import {
   formatLogDateLabel,
   isValidLogDateKey,
   loggedAtForDateKey,
+  createdAtForDayPosition,
   offsetLogDateKey,
   recentLogDateKeys,
   todayDateKey,
@@ -58,4 +59,12 @@ test("loggedAtForDateKey preserves local calendar date for early-morning meals",
   const dateKey = todayDateKey(earlyMorning);
   const iso = loggedAtForDateKey(dateKey, "lunch");
   assert.equal(dateKeyFromIso(iso), dateKey);
+});
+
+test("createdAtForDayPosition keeps top timeline slot latest within the day", () => {
+  const first = createdAtForDayPosition("2026-06-10", 0, 3);
+  const last = createdAtForDayPosition("2026-06-10", 2, 3);
+  assert.equal(dateKeyFromIso(first), "2026-06-10");
+  assert.equal(dateKeyFromIso(last), "2026-06-10");
+  assert.ok(new Date(first).getTime() > new Date(last).getTime());
 });
