@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
 } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealDetail, MealListItem, MealSource, MealType } from "@lifeplate/shared";
 import {
@@ -106,6 +107,7 @@ function applyMealToForm(
 }
 
 export default function EditMealScreen() {
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { patchMealLocally, removeMealLocally } = useMeals();
   const refreshDashboardOnly = useRefreshDashboardOnly();
@@ -491,7 +493,10 @@ export default function EditMealScreen() {
           <EditMealSkeleton />
         </>
       ) : meal ? (
-    <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}
+    >
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
 
       <MealPhotoAttachSection
@@ -741,7 +746,7 @@ export default function EditMealScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#FFFFFF" },
   scroll: { flex: 1, backgroundColor: "#FFFFFF" },
-  container: { paddingBottom: spacing.xl, gap: spacing.sm },
+  container: { gap: spacing.sm },
   cardWrap: { paddingHorizontal: spacing.lg },
   sectionCard: { gap: spacing.sm },
   metaGroup: { gap: spacing.md, marginTop: spacing.xs },

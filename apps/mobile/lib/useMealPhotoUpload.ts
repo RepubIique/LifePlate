@@ -6,9 +6,19 @@ import * as ImagePicker from "expo-image-picker";
 import { useCallback, useRef, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { Alert } from "react-native";
+import { useAuth } from "@/context/AuthContext";
 import { uploadMealImage, analyzeMealText } from "@/lib/api";
-import { friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
+import {
+  isRetryableError,
+  mealFlowErrorMessage,
+  mediaPermissionMessage,
+} from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
+import {
+  clearPendingUpload,
+  savePendingPhotoUpload,
+  savePendingTextLog,
+} from "@/lib/mealPendingStorage";
 import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
@@ -23,10 +33,14 @@ export function uploadStageLabel(stage: UploadStage): string {
 }
 
 export function useMealPhotoUpload() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
   const logDateRef = useRef<string | null>(null);
   const lastAssetRef = useRef<ImagePickerAsset | null>(null);
+  const lastTextLogRef = useRef<{ description: string; logDateKey: string } | null>(null);
 
   const setLogDate = useCallback((dateKey: string | null) => {
     logDateRef.current = dateKey;
@@ -37,6 +51,10 @@ export function useMealPhotoUpload() {
       analysis: Awaited<ReturnType<typeof uploadMealImage>>,
       options?: { isTextLog?: boolean; localImageUri?: string },
     ) => {
+      if (userId) {
+        void clearPendingUpload(userId);
+      }
+      lastTextLogRef.current = null;
       saveMealUploadSession(analysis.draftId, {
         ...analysis,
         localImageUri: options?.localImageUri,
@@ -63,26 +81,40 @@ export function useMealPhotoUpload() {
         },
       });
     },
-    [],
+    [userId],
   );
 
   const processAsset = useCallback(
     async (asset: ImagePickerAsset) => {
       setError(null);
+      setCanRetry(false);
       setUploadStage("preparing");
+      let prepared: Awaited<ReturnType<typeof prepareMealImage>> | null = null;
+      const logDateKey = logDateRef.current ?? todayDateKey();
       try {
-        const prepared = await prepareMealImage(asset.uri);
+        prepared = await prepareMealImage(asset.uri);
         setUploadStage("analyzing");
         const analysis = await uploadMealImage(prepared);
         navigateToResult(analysis, { localImageUri: prepared.uri });
       } catch (e) {
-        setError(friendlyErrorMessage(e));
+        const retryable = isRetryableError(e);
+        setCanRetry(retryable);
+        setError(mealFlowErrorMessage(e, "upload"));
+        if (retryable && userId) {
+          const photoUri = prepared?.uri ?? asset.uri;
+          void savePendingPhotoUpload(userId, {
+            photoUri,
+            mimeType: prepared?.mimeType ?? "image/jpeg",
+            fileName: prepared?.fileName ?? "meal.jpg",
+            logDateKey,
+          });
+        }
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setUploadStage("idle");
       }
     },
-    [navigateToResult],
+    [navigateToResult, userId],
   );
 
   const logWithText = useCallback(
@@ -90,6 +122,7 @@ export function useMealPhotoUpload() {
       const trimmed = description.trim();
       if (!trimmed) {
         setError("Describe what you ate first.");
+        setCanRetry(false);
         return;
       }
 
@@ -97,19 +130,27 @@ export function useMealPhotoUpload() {
         logDateRef.current = logDate;
       }
 
+      const logDateKey = logDateRef.current ?? todayDateKey();
       setError(null);
+      setCanRetry(false);
       setUploadStage("analyzing-text");
+      lastTextLogRef.current = { description: trimmed, logDateKey };
       try {
         const analysis = await analyzeMealText(trimmed);
         navigateToResult(analysis, { isTextLog: true });
       } catch (e) {
-        setError(friendlyErrorMessage(e));
+        const retryable = isRetryableError(e);
+        setCanRetry(retryable);
+        setError(mealFlowErrorMessage(e, "analyze-text"));
+        if (retryable && userId) {
+          void savePendingTextLog(userId, trimmed, logDateKey);
+        }
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setUploadStage("idle");
       }
     },
-    [navigateToResult],
+    [navigateToResult, userId],
   );
 
   const pickAndAnalyze = useCallback(
@@ -134,6 +175,7 @@ export function useMealPhotoUpload() {
           ]);
         } else {
           setError(message);
+          setCanRetry(false);
         }
         return;
       }
@@ -166,12 +208,23 @@ export function useMealPhotoUpload() {
 
   const retryLastAsset = useCallback(async () => {
     const asset = lastAssetRef.current;
-    if (asset) await processAsset(asset);
-  }, [processAsset]);
+    if (asset) {
+      await processAsset(asset);
+      return;
+    }
+    const textLog = lastTextLogRef.current;
+    if (textLog) {
+      await logWithText(textLog.description, textLog.logDateKey);
+    }
+  }, [logWithText, processAsset]);
+
+  const hasRetryTarget = Boolean(lastAssetRef.current || lastTextLogRef.current);
 
   return {
     uploadStage,
     error,
+    canRetry,
+    hasRetryTarget,
     uploading: uploadStage !== "idle",
     logDateRef,
     setLogDate,

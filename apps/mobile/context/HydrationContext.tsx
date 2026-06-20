@@ -8,8 +8,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { AppState } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { fetchHydrationHistory, updateHydration } from "@/lib/api";
+import { isRetryableError } from "@/lib/apiErrors";
 import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   clearCachedHydration,
@@ -29,11 +31,14 @@ type LoadOptions = {
 type HydrationContextValue = {
   hydrationByDate: Record<string, number>;
   syncingDate: string | null;
+  syncFailedDate: string | null;
   loadHydration: (options?: LoadOptions) => Promise<void>;
   refreshHydration: () => Promise<void>;
   invalidateHydration: () => void;
   syncDate: (dateKey: string, glasses: number) => void;
   adjustHydration: (dateKey: string, delta: number) => void;
+  retryHydrationSync: (dateKey: string) => Promise<void>;
+  dismissSyncFailure: () => void;
 };
 
 const HydrationContext = createContext<HydrationContextValue | null>(null);
@@ -43,6 +48,7 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
   const userId = session?.user.id;
   const [hydrationByDate, setHydrationByDate] = useState<Record<string, number>>({});
   const [syncingDate, setSyncingDate] = useState<string | null>(null);
+  const [syncFailedDate, setSyncFailedDate] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const fetchedAtRef = useRef(0);
@@ -53,6 +59,7 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
   const pendingGlassesRef = useRef<Map<string, number>>(new Map());
   const persistInflightRef = useRef<Set<string>>(new Set());
   const queuedRef = useRef<Map<string, number>>(new Map());
+  const failedSyncRef = useRef<Map<string, number>>(new Map());
   const hydrationRef = useRef(hydrationByDate);
 
   useEffect(() => {
@@ -63,11 +70,13 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
     if (!userId) {
       setHydrationByDate({});
       setSyncingDate(null);
+      setSyncFailedDate(null);
       setHydrated(false);
       fetchedAtRef.current = 0;
       dirtyRef.current = false;
       inflightRef.current = null;
       confirmedRef.current = {};
+      failedSyncRef.current.clear();
       return;
     }
 
@@ -174,14 +183,26 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
       try {
         const { glasses: saved } = await updateHydration(glasses, dateKey);
         confirmedRef.current[dateKey] = saved;
+        failedSyncRef.current.delete(dateKey);
+        setSyncFailedDate((current) => (current === dateKey ? null : current));
         setHydrationByDate((prev) => {
           const next = { ...prev, [dateKey]: saved };
           persistLocal(next, fetchedAtRef.current || Date.now());
           return next;
         });
-      } catch {
-        const rollback = confirmedRef.current[dateKey] ?? 0;
-        setHydrationByDate((prev) => ({ ...prev, [dateKey]: rollback }));
+      } catch (err) {
+        if (isRetryableError(err)) {
+          failedSyncRef.current.set(dateKey, glasses);
+          setSyncFailedDate(dateKey);
+          setHydrationByDate((prev) => {
+            const next = { ...prev, [dateKey]: glasses };
+            persistLocal(next, fetchedAtRef.current || Date.now());
+            return next;
+          });
+        } else {
+          const rollback = confirmedRef.current[dateKey] ?? 0;
+          setHydrationByDate((prev) => ({ ...prev, [dateKey]: rollback }));
+        }
       } finally {
         persistInflightRef.current.delete(dateKey);
         setSyncingDate((current) => (current === dateKey ? null : current));
@@ -195,6 +216,32 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
     },
     [persistLocal],
   );
+
+  const retryHydrationSync = useCallback(
+    async (dateKey: string) => {
+      const glasses =
+        failedSyncRef.current.get(dateKey) ??
+        hydrationRef.current[dateKey] ??
+        confirmedRef.current[dateKey];
+      if (glasses === undefined) return;
+      await persistDate(dateKey, glasses);
+    },
+    [persistDate],
+  );
+
+  const dismissSyncFailure = useCallback(() => {
+    setSyncFailedDate(null);
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active" || failedSyncRef.current.size === 0) return;
+      for (const [dateKey, glasses] of failedSyncRef.current.entries()) {
+        void persistDate(dateKey, glasses);
+      }
+    });
+    return () => sub.remove();
+  }, [persistDate]);
 
   const schedulePersist = useCallback(
     (dateKey: string, glasses: number) => {
@@ -260,20 +307,26 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
     () => ({
       hydrationByDate,
       syncingDate,
+      syncFailedDate,
       loadHydration,
       refreshHydration,
       invalidateHydration,
       syncDate,
       adjustHydration,
+      retryHydrationSync,
+      dismissSyncFailure,
     }),
     [
       hydrationByDate,
       syncingDate,
+      syncFailedDate,
       loadHydration,
       refreshHydration,
       invalidateHydration,
       syncDate,
       adjustHydration,
+      retryHydrationSync,
+      dismissSyncFailure,
     ],
   );
 

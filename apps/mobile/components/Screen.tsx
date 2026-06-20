@@ -28,10 +28,9 @@ export function KeyboardAvoidingScrollView({
   children,
   style,
   contentContainerStyle,
-  keyboardVerticalOffset = 0,
   ...rest
 }: KeyboardAvoidingScrollViewProps) {
-  const scrollView = (
+  return (
     <ScrollView
       style={[styles.fill, style]}
       contentContainerStyle={contentContainerStyle}
@@ -42,20 +41,6 @@ export function KeyboardAvoidingScrollView({
     >
       {children}
     </ScrollView>
-  );
-
-  if (Platform.OS !== "ios") {
-    return scrollView;
-  }
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.fill}
-      behavior="padding"
-      keyboardVerticalOffset={keyboardVerticalOffset}
-    >
-      {scrollView}
-    </KeyboardAvoidingView>
   );
 }
 
@@ -76,7 +61,12 @@ export function Screen({
         paddingBottom: insets.bottom + spacing.lg,
         paddingHorizontal: spacing.lg,
       }
-    : { paddingTop: insets.top };
+    : scroll
+      ? {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + spacing.lg,
+        }
+      : { paddingTop: insets.top };
 
   const shell = (body: ReactNode) => (
     <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
@@ -85,29 +75,14 @@ export function Screen({
   );
 
   if (scroll) {
-    const scrollBody = (
+    return shell(
       <KeyboardAvoidingScrollView
         style={styles.fill}
         contentContainerStyle={[paddingStyle, style]}
-        keyboardVerticalOffset={keyboardVerticalOffset}
         refreshControl={refreshControl}
       >
         {children}
-      </KeyboardAvoidingScrollView>
-    );
-
-    if (Platform.OS !== "ios") {
-      return shell(scrollBody);
-    }
-
-    return shell(
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior="padding"
-        keyboardVerticalOffset={keyboardVerticalOffset}
-      >
-        {scrollBody}
-      </KeyboardAvoidingView>,
+      </KeyboardAvoidingScrollView>,
     );
   }
 

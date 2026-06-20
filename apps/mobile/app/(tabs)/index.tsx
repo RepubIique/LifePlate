@@ -25,7 +25,7 @@ import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, hydrationSyncErrorMessage } from "@/lib/apiErrors";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { useDayDashboard } from "@/lib/useDayDashboard";
@@ -48,7 +48,8 @@ export default function HomeScreen() {
     patchHydration,
   } = useNutritionDashboard();
   const { loadGamification } = useGamification();
-  const { adjustHydration, syncDate } = useHydration();
+  const { adjustHydration, syncDate, syncFailedDate, retryHydrationSync, dismissSyncFailure } =
+    useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
 
@@ -149,6 +150,7 @@ export default function HomeScreen() {
   const {
     uploadStage,
     error,
+    canRetry,
     uploading,
     setLogDate,
     setError,
@@ -156,11 +158,17 @@ export default function HomeScreen() {
     logWithText,
     retryLastAsset,
     lastAssetRef,
+    hasRetryTarget,
   } = useMealPhotoUpload();
 
   useEffect(() => {
     getLastPhotoSource().then(setPreferredSource);
   }, []);
+
+  useEffect(() => {
+    if (!syncFailedDate) return;
+    setSnackbar(hydrationSyncErrorMessage());
+  }, [syncFailedDate]);
 
   useFocusEffect(
     useCallback(() => {
@@ -377,12 +385,18 @@ export default function HomeScreen() {
         onDismiss={() => {
           setSnackbar(null);
           setError(null);
+          dismissSyncFailure();
         }}
-        duration={error ? 6000 : 4000}
+        duration={error || syncFailedDate ? 6000 : 4000}
         action={
-          error && lastAssetRef.current
+          error && canRetry && hasRetryTarget
             ? { label: "Retry", onPress: () => void retryLastAsset() }
-            : undefined
+            : syncFailedDate
+              ? {
+                  label: "Retry",
+                  onPress: () => void retryHydrationSync(syncFailedDate),
+                }
+              : undefined
         }
       >
         {error ?? snackbar}

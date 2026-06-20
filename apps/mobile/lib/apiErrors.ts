@@ -62,6 +62,58 @@ export function mediaPermissionMessage(
   return `Allow ${what} access to log meals with photos.`;
 }
 
+export function isRetryableError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    if (err.status === 401 || err.status === 413) return false;
+    if (
+      err.code === "NOT_FOOD" ||
+      err.code === "UNCLEAR_PHOTO" ||
+      err.code === "INVALID_IMAGE" ||
+      err.code === "REANALYZE_LIMIT"
+    ) {
+      return false;
+    }
+    if (err.status === 429 || err.code === "RATE_LIMITED") return false;
+    if (err.status >= 500 || err.status === 408) return true;
+    if (
+      err.message.includes("Failed to fetch") ||
+      err.message.includes("Network request failed")
+    ) {
+      return true;
+    }
+    return false;
+  }
+  if (err instanceof Error) {
+    const lower = err.message.toLowerCase();
+    return (
+      lower.includes("network") ||
+      lower.includes("fetch") ||
+      lower.includes("timeout") ||
+      lower.includes("abort")
+    );
+  }
+  return false;
+}
+
+export type MealFlowContext = "upload" | "analyze-text" | "confirm";
+
+export function mealFlowErrorMessage(err: unknown, context: MealFlowContext): string {
+  if (!isRetryableError(err)) {
+    return friendlyErrorMessage(err);
+  }
+  if (context === "confirm") {
+    return "Couldn't save your meal yet. It's still on this screen — tap Save again when you're back online.";
+  }
+  if (context === "analyze-text") {
+    return "Couldn't estimate your meal right now. Check your connection and tap Retry.";
+  }
+  return "Couldn't analyze your photo right now. Your photo is still here — tap Retry.";
+}
+
+export function hydrationSyncErrorMessage(): string {
+  return "Couldn't sync hydration. Tap Retry when you're back online.";
+}
+
 export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return "Session expired. Please sign in again.";

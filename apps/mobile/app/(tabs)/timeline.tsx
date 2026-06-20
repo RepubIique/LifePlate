@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
@@ -24,7 +24,7 @@ import { useFriends } from "@/context/FriendsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { deleteMeal, reorderMeals } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, hydrationSyncErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoUpload, uploadStageLabel } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
@@ -47,7 +47,7 @@ export default function TimelineScreen() {
     reorderDayMealsLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
-  const { uploading, uploadStage, error, setError, retryLastAsset, lastAssetRef } =
+  const { uploading, uploadStage, error, canRetry, hasRetryTarget, setError, retryLastAsset, lastAssetRef } =
     useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
@@ -57,8 +57,11 @@ export default function TimelineScreen() {
   const {
     hydrationByDate,
     syncingDate,
+    syncFailedDate,
     refreshHydration,
     adjustHydration,
+    retryHydrationSync,
+    dismissSyncFailure,
   } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
@@ -66,6 +69,11 @@ export default function TimelineScreen() {
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
+
+  useEffect(() => {
+    if (!syncFailedDate) return;
+    setSnackbar(hydrationSyncErrorMessage());
+  }, [syncFailedDate]);
 
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
@@ -330,14 +338,20 @@ export default function TimelineScreen() {
         onDismiss={() => {
           setError(null);
           setSnackbar(null);
+          dismissSyncFailure();
         }}
-        duration={error ? 6000 : UNDO_MS}
+        duration={error || syncFailedDate ? 6000 : UNDO_MS}
         action={
-          error && lastAssetRef.current
+          error && canRetry && hasRetryTarget
             ? { label: "Retry", onPress: () => void retryLastAsset() }
-            : pendingRef.current.size > 0 && !error
-              ? { label: "Undo", onPress: undoDelete }
-              : undefined
+            : syncFailedDate
+              ? {
+                  label: "Retry",
+                  onPress: () => void retryHydrationSync(syncFailedDate),
+                }
+              : pendingRef.current.size > 0 && !error
+                ? { label: "Undo", onPress: undoDelete }
+                : undefined
         }
       >
         {error ?? snackbar}

@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, TextInput } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   buildMealPortionMeta,
@@ -25,7 +26,12 @@ import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { ShareWithFriendsPicker } from "@/components/meal/ShareWithFriendsPicker";
 import { useAuth } from "@/context/AuthContext";
 import { attachDraftPhoto, confirmMeal, refineMeal } from "@/lib/api";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, isRetryableError, mealFlowErrorMessage } from "@/lib/apiErrors";
+import {
+  clearPendingConfirm,
+  savePendingConfirm,
+  type PendingMealConfirmForm,
+} from "@/lib/mealPendingStorage";
 import {
   clearMealUploadSession,
   getMealUploadSession,
@@ -48,7 +54,9 @@ function normalizeFood(value: string) {
 }
 
 export default function MealResultScreen() {
-  const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { profile, session } = useAuth();
+  const userId = session?.user.id;
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const params = useLocalSearchParams<{
     draftId: string;
@@ -131,7 +139,83 @@ export default function MealResultScreen() {
   const [refining, setRefining] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [confirmRetryable, setConfirmRetryable] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+
+  function buildPendingConfirmForm(): PendingMealConfirmForm {
+    return {
+      draftId,
+      mealName,
+      mealType,
+      foods,
+      calories: toNumber(calories, 0),
+      protein: toNumber(protein, 0),
+      carbs: toNumber(carbs, 0),
+      fat: toNumber(fat, 0),
+      fibre: toNumber(fibre, 0),
+      sugar: toNumber(sugar, 0),
+      sodium: toNumber(sodium, 0),
+      confidence,
+      logDate,
+      totalPortions,
+      portionsEaten,
+      cloudImageUrl,
+      localImageUri,
+      isTextLog,
+      selectedFriendIds,
+      baseMacros,
+      coachNudge,
+    };
+  }
+
+  async function handleConfirm() {
+    setSaving(true);
+    setConfirmRetryable(false);
+    try {
+      const { id } = await confirmMeal({
+        draftId,
+        imageUrl: cloudImageUrl || undefined,
+        mealName,
+        mealType,
+        foods,
+        estimatedCalories: toNumber(calories, 0),
+        protein: toNumber(protein, 0),
+        carbs: toNumber(carbs, 0),
+        fat: toNumber(fat, 0),
+        fibre: toNumber(fibre, 0),
+        sugar: toNumber(sugar, 0),
+        sodium: toNumber(sodium, 0),
+        confidence,
+        portionMeta: buildMealPortionMeta(
+          baseMacros,
+          totalPortions,
+          portionsEaten,
+        ),
+        loggedAt: loggedAtForDateKey(logDate, mealType),
+        shareWithFriendIds:
+          selectedFriendIds.length > 0 ? selectedFriendIds : undefined,
+      });
+      if (localImageUri || displayImageUri) {
+        await saveMealImage(id, localImageUri || displayImageUri);
+      }
+      if (userId) {
+        await clearPendingConfirm(userId);
+      }
+      clearMealUploadSession(draftId);
+      refreshAfterMealChange();
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)/timeline");
+    } catch (e) {
+      const retryable = isRetryableError(e);
+      setConfirmRetryable(retryable);
+      setSnackbar(mealFlowErrorMessage(e, "confirm"));
+      if (retryable && userId) {
+        await savePendingConfirm(userId, buildPendingConfirmForm());
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const attachPhoto = useCallback(
     async (prepared: { uri: string; mimeType: string; fileName: string }) => {
@@ -239,48 +323,11 @@ export default function MealResultScreen() {
     }
   }
 
-  async function handleConfirm() {
-    setSaving(true);
-    try {
-      const { id } = await confirmMeal({
-        draftId,
-        imageUrl: cloudImageUrl || undefined,
-        mealName,
-        mealType,
-        foods,
-        estimatedCalories: toNumber(calories, 0),
-        protein: toNumber(protein, 0),
-        carbs: toNumber(carbs, 0),
-        fat: toNumber(fat, 0),
-        fibre: toNumber(fibre, 0),
-        sugar: toNumber(sugar, 0),
-        sodium: toNumber(sodium, 0),
-        confidence,
-        portionMeta: buildMealPortionMeta(
-          baseMacros,
-          totalPortions,
-          portionsEaten,
-        ),
-        loggedAt: loggedAtForDateKey(logDate, mealType),
-        shareWithFriendIds:
-          selectedFriendIds.length > 0 ? selectedFriendIds : undefined,
-      });
-      if (localImageUri || displayImageUri) {
-        await saveMealImage(id, localImageUri || displayImageUri);
-      }
-      clearMealUploadSession(draftId);
-      refreshAfterMealChange();
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)/timeline");
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
-    <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}
+    >
       <PremiumCard>
         <MealLogDateField
           dateKey={logDate}
@@ -513,7 +560,19 @@ export default function MealResultScreen() {
         </Button>
       </View>
 
-      <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
+      <BottomSnackbar
+        visible={!!snackbar}
+        onDismiss={() => {
+          setSnackbar(null);
+          setConfirmRetryable(false);
+        }}
+        duration={confirmRetryable ? 8000 : 4000}
+        action={
+          confirmRetryable
+            ? { label: "Retry", onPress: () => void handleConfirm() }
+            : undefined
+        }
+      >
         {snackbar}
       </BottomSnackbar>
     </KeyboardAvoidingScrollView>
@@ -522,7 +581,7 @@ export default function MealResultScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: "#FFFFFF" },
-  container: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
+  container: { padding: spacing.lg, gap: spacing.md },
   image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
   coachLabel: { opacity: 0.55, letterSpacing: 0.8, textTransform: "uppercase" },
   coachText: { marginTop: spacing.xs, lineHeight: 24 },
