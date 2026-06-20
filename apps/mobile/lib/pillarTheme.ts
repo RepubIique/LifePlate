@@ -1,11 +1,13 @@
+import { palette } from "@/src/theme/palette";
+
 export type PillarKey = "protein" | "fibre" | "plants" | "carbs" | "hydration";
 
 export const PILLAR_COLORS: Record<PillarKey, string> = {
-  protein: "#722F37",
-  fibre: "#E9A319",
-  plants: "#52B788",
-  carbs: "#C46A2A",
-  hydration: "#D7F0FB",
+  protein: palette.terracotta,
+  fibre: palette.softOrange,
+  plants: palette.sage,
+  carbs: palette.coral,
+  hydration: palette.hydrationBlue,
 };
 
 /** Macro ring/bar colors aligned with the DigitalPlate pillar palette. */
@@ -13,7 +15,7 @@ export const MACRO_NUTRITION_COLORS = {
   protein: PILLAR_COLORS.protein,
   fibre: PILLAR_COLORS.fibre,
   carbs: PILLAR_COLORS.carbs,
-  fat: "#7B68C8",
+  fat: palette.slateBlue,
 } as const;
 
 const LABEL_TO_KEY: Record<string, PillarKey> = {

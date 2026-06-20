@@ -1,4 +1,5 @@
 import { MD3LightTheme, configureFonts } from "react-native-paper";
+import { palette, semantic, tints } from "./palette";
 
 const fontConfig = configureFonts({
   config: {
@@ -12,24 +13,34 @@ export const lifeplateTheme = {
   fonts: fontConfig,
   colors: {
     ...MD3LightTheme.colors,
-    primary: "#1B4332",
-    onPrimary: "#FFFFFF",
-    primaryContainer: "#D8F3DC",
-    onPrimaryContainer: "#1B4332",
-    secondary: "#40916C",
-    background: "#FFFFFF",
-    surface: "#FFFFFF",
-    surfaceVariant: "#F8F9FA",
-    onSurface: "#2D3436",
-    onSurfaceVariant: "#636E72",
-    outline: "#E9ECEF",
-    outlineVariant: "#F1F3F5",
+    primary: semantic.primary,
+    onPrimary: semantic.textOnPrimary,
+    primaryContainer: semantic.primaryContainer,
+    onPrimaryContainer: semantic.primary,
+    secondary: semantic.secondary,
+    onSecondary: semantic.textOnPrimary,
+    secondaryContainer: tints.creamLight,
+    onSecondaryContainer: semantic.primary,
+    tertiary: semantic.tertiary,
+    onTertiary: semantic.textOnDark,
+    tertiaryContainer: tints.tealLight,
+    onTertiaryContainer: semantic.primary,
+    background: semantic.background,
+    surface: semantic.surface,
+    surfaceVariant: semantic.surfaceWarm,
+    onSurface: semantic.text,
+    onSurfaceVariant: semantic.textMuted,
+    outline: semantic.border,
+    outlineVariant: tints.sageLight,
+    error: semantic.danger,
     elevation: {
       ...MD3LightTheme.colors.elevation,
-      level1: "#FFFFFF",
+      level1: semantic.surface,
     },
   },
 };
+
+export { palette, semantic, tints } from "./palette";
 
 export const spacing = {
   xs: 8,

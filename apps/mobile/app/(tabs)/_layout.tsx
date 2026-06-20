@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { useFriends } from "@/context/FriendsContext";
-import { lifeplateTheme } from "@/src/theme/lifeplate";
+import { lifeplateTheme, palette, semantic, tints } from "@/src/theme/lifeplate";
 
 export default function TabLayout() {
   const { pendingShareCount } = useFriends();
@@ -12,13 +12,13 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: lifeplateTheme.colors.primary,
-        tabBarInactiveTintColor: "#636E72",
+        tabBarInactiveTintColor: semantic.textMuted,
         tabBarBackground: () => (
           <View style={[StyleSheet.absoluteFill, styles.tabBarBackground]} />
         ),
         tabBarStyle: {
           backgroundColor: "transparent",
-          borderTopColor: "#F1F3F5",
+          borderTopColor: tints.sageLight,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -69,6 +69,6 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBarBackground: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.white,
   },
 });

@@ -1,12 +1,13 @@
 import { StyleSheet } from "react-native";
+import { palette, semantic, tints } from "./palette";
 import { spacing } from "./lifeplate";
 
 export const premium = {
   cardRadius: 20,
   imageRadius: 16,
-  borderColor: "#F1F3F5",
-  muted: "#636E72",
-  danger: "#c0392b",
+  borderColor: tints.sageLight,
+  muted: semantic.textMuted,
+  danger: semantic.danger,
 };
 
 export const premiumStyles = StyleSheet.create({
@@ -33,7 +34,7 @@ export const premiumStyles = StyleSheet.create({
   },
   mealCard: {
     marginBottom: spacing.sm,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.white,
     borderColor: premium.borderColor,
     borderRadius: 10,
   },
@@ -46,6 +47,6 @@ export const premiumStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 8,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: tints.sageLight,
   },
 });
