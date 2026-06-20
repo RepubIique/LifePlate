@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   computeNutritionTargets,
   inferMealType,
-  isLikelySharedMeal,
   scaleMealForPortions,
 } from "../dist/index.js";
 
@@ -51,12 +50,6 @@ test("scaleMealForPortions scales macros to portions eaten", () => {
   assert.equal(scaled.protein, 10);
   assert.equal(scaled.carbs, 20);
   assert.equal(scaled.fat, 8);
-});
-
-test("isLikelySharedMeal detects multi-serving and high-calorie meals", () => {
-  assert.equal(isLikelySharedMeal({ estimatedCalories: 500, estimatedServings: 2 }), true);
-  assert.equal(isLikelySharedMeal({ estimatedCalories: 1200 }, 2000), true);
-  assert.equal(isLikelySharedMeal({ estimatedCalories: 400, estimatedServings: 1 }, 2000), false);
 });
 
 test("inferMealType maps hours to meal categories", () => {

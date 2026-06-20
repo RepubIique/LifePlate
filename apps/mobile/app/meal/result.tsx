@@ -6,9 +6,7 @@ import { Button, Chip, Text, TextInput } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   buildMealPortionMeta,
-  clampMealPortions,
   inferMealType,
-  isLikelySharedMeal,
   loggedAtForDateKey,
   scaleMealForPortions,
   todayDateKey,
@@ -67,7 +65,6 @@ export default function MealResultScreen() {
     confidence: string;
     coachNudge: string;
     logDate?: string;
-    estimatedServings?: string;
     isTextLog?: string;
   }>();
 
@@ -101,7 +98,6 @@ export default function MealResultScreen() {
     }
   }, [params.foods]);
 
-  const initialEstimatedServings = toNumber(params.estimatedServings, 1);
   const initialBaseMacros: MealMacroTotals = {
     estimatedCalories: toNumber(params.estimatedCalories, 0),
     protein: toNumber(params.protein, 0),
@@ -111,51 +107,31 @@ export default function MealResultScreen() {
     sugar: toNumber(params.sugar, 0),
     sodium: toNumber(params.sodium, 0),
   };
-  const initialTotalPortions = clampMealPortions(
-    Math.max(2, Math.round(initialEstimatedServings)),
-  );
-  const initialLikelyShared = isLikelySharedMeal(
-    {
-      estimatedCalories: initialBaseMacros.estimatedCalories,
-      estimatedServings: initialEstimatedServings,
-    },
-    profile?.nutritionTargets?.dailyCalories,
-  );
-  const initialDisplayedMacros = initialLikelyShared
-    ? scaleMealForPortions(initialBaseMacros, initialTotalPortions, 1)
-    : initialBaseMacros;
 
   const [baseMacros, setBaseMacros] = useState<MealMacroTotals>(initialBaseMacros);
-  const [estimatedServings, setEstimatedServings] = useState(initialEstimatedServings);
   const [editing, setEditing] = useState(false);
   const [mealType, setMealType] = useState<MealType>(() => inferMealType());
   const [mealName, setMealName] = useState(params.mealName ?? "");
   const [foods, setFoods] = useState<string[]>(initialFoods);
   const [newFood, setNewFood] = useState("");
   const [calories, setCalories] = useState(
-    String(initialDisplayedMacros.estimatedCalories),
+    String(initialBaseMacros.estimatedCalories),
   );
-  const [protein, setProtein] = useState(String(initialDisplayedMacros.protein));
-  const [carbs, setCarbs] = useState(String(initialDisplayedMacros.carbs));
-  const [fat, setFat] = useState(String(initialDisplayedMacros.fat));
-  const [fibre, setFibre] = useState(String(initialDisplayedMacros.fibre));
-  const [sugar, setSugar] = useState(String(initialDisplayedMacros.sugar));
-  const [sodium, setSodium] = useState(String(initialDisplayedMacros.sodium));
+  const [protein, setProtein] = useState(String(initialBaseMacros.protein));
+  const [carbs, setCarbs] = useState(String(initialBaseMacros.carbs));
+  const [fat, setFat] = useState(String(initialBaseMacros.fat));
+  const [fibre, setFibre] = useState(String(initialBaseMacros.fibre));
+  const [sugar, setSugar] = useState(String(initialBaseMacros.sugar));
+  const [sodium, setSodium] = useState(String(initialBaseMacros.sodium));
   const [confidence, setConfidence] = useState(toNumber(params.confidence, 0));
   const [coachNudge, setCoachNudge] = useState(params.coachNudge ?? "");
-  const [totalPortions, setTotalPortions] = useState(initialTotalPortions);
+  const [totalPortions, setTotalPortions] = useState(1);
   const [portionsEaten, setPortionsEaten] = useState(1);
   const [clarification, setClarification] = useState("");
   const [refining, setRefining] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
-
-  const handleShareTotalPeopleChange = useCallback((count: number) => {
-    const nextTotal = clampMealPortions(Math.max(2, count));
-    setTotalPortions(nextTotal);
-    setPortionsEaten((prev) => Math.min(prev, nextTotal));
-  }, []);
 
   const attachPhoto = useCallback(
     async (prepared: { uri: string; mimeType: string; fileName: string }) => {
@@ -186,20 +162,6 @@ export default function MealResultScreen() {
     if (attachPhotoError) setSnackbar(attachPhotoError);
   }, [attachPhotoError]);
 
-  const likelySharedMeal = useMemo(
-    () =>
-      isLikelySharedMeal(
-        {
-          estimatedCalories: baseMacros.estimatedCalories,
-          estimatedServings,
-        },
-        profile?.nutritionTargets?.dailyCalories,
-      ),
-    [baseMacros.estimatedCalories, estimatedServings, profile?.nutritionTargets?.dailyCalories],
-  );
-
-  const showPortionControls = likelySharedMeal || selectedFriendIds.length > 0;
-
   function applyPortionScaling(
     macros: MealMacroTotals,
     total: number,
@@ -216,9 +178,8 @@ export default function MealResultScreen() {
   }
 
   useEffect(() => {
-    if (!showPortionControls) return;
     applyPortionScaling(baseMacros, totalPortions, portionsEaten);
-  }, [showPortionControls, totalPortions, portionsEaten, baseMacros]);
+  }, [totalPortions, portionsEaten, baseMacros]);
 
   const lowConfidence = confidence < 0.6;
   const macroCalories = toNumber(calories, 0);
@@ -256,15 +217,6 @@ export default function MealResultScreen() {
       const result = await refineMeal(draftId, note);
       setMealName(result.mealName);
       setFoods(result.foods);
-      const nextServings = result.estimatedServings ?? 1;
-      setEstimatedServings(nextServings);
-      const nextTotal =
-        nextServings >= 2
-          ? clampMealPortions(Math.max(2, Math.round(nextServings)))
-          : totalPortions;
-      if (nextServings >= 2) {
-        setTotalPortions(nextTotal);
-      }
       const nextBase: MealMacroTotals = {
         estimatedCalories: result.estimatedCalories,
         protein: result.protein,
@@ -275,31 +227,7 @@ export default function MealResultScreen() {
         sodium: result.sodium,
       };
       setBaseMacros(nextBase);
-      const shared = isLikelySharedMeal(
-        {
-          estimatedCalories: nextBase.estimatedCalories,
-          estimatedServings: nextServings,
-        },
-        profile?.nutritionTargets?.dailyCalories,
-      );
-      if (shared) {
-        const scaled = scaleMealForPortions(nextBase, nextTotal, portionsEaten);
-        setCalories(String(scaled.estimatedCalories));
-        setProtein(String(scaled.protein));
-        setCarbs(String(scaled.carbs));
-        setFat(String(scaled.fat));
-        setFibre(String(scaled.fibre));
-        setSugar(String(scaled.sugar));
-        setSodium(String(scaled.sodium));
-      } else {
-        setCalories(String(nextBase.estimatedCalories));
-        setProtein(String(nextBase.protein));
-        setCarbs(String(nextBase.carbs));
-        setFat(String(nextBase.fat));
-        setFibre(String(nextBase.fibre));
-        setSugar(String(nextBase.sugar));
-        setSodium(String(nextBase.sodium));
-      }
+      applyPortionScaling(nextBase, totalPortions, portionsEaten);
       setConfidence(result.confidence);
       setCoachNudge(result.coachNudge);
       setClarification("");
@@ -332,7 +260,6 @@ export default function MealResultScreen() {
           baseMacros,
           totalPortions,
           portionsEaten,
-          estimatedServings,
         ),
         loggedAt: loggedAtForDateKey(logDate, mealType),
         shareWithFriendIds:
@@ -397,20 +324,16 @@ export default function MealResultScreen() {
         </PremiumCard>
       ) : null}
 
-      {showPortionControls ? (
-        <SharedMealPortionsCard
-          totalPortions={totalPortions}
-          portionsEaten={portionsEaten}
-          estimatedServings={estimatedServings}
-          onTotalPortionsChange={setTotalPortions}
-          onPortionsEatenChange={setPortionsEaten}
-        />
-      ) : null}
+      <SharedMealPortionsCard
+        totalPortions={totalPortions}
+        portionsEaten={portionsEaten}
+        onTotalPortionsChange={setTotalPortions}
+        onPortionsEatenChange={setPortionsEaten}
+      />
 
       <ShareWithFriendsPicker
         selectedFriendIds={selectedFriendIds}
         onSelectionChange={setSelectedFriendIds}
-        onTotalPeopleChange={handleShareTotalPeopleChange}
       />
 
       <PremiumCard>

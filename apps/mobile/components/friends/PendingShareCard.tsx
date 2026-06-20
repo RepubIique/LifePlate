@@ -21,7 +21,7 @@ type PendingShareCardProps = {
 };
 
 export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingShareCardProps) {
-  const initialTotal = share.portionMeta?.totalPortions ?? 2;
+  const initialTotal = share.portionMeta?.totalPortions ?? 1;
   const initialEaten = share.portionMeta?.portionsEaten ?? 1;
   const baseMacros = share.portionMeta?.baseMacros ?? {
     estimatedCalories: share.calories ?? 0,
@@ -79,19 +79,16 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
         </View>
       </View>
 
-      {totalPortions > 1 ? (
-        <SharedMealPortionsCard
-          variant="edit"
-          totalPortions={totalPortions}
-          portionsEaten={portionsEaten}
-          estimatedServings={share.portionMeta?.estimatedServings}
-          onTotalPortionsChange={(value) => {
-            setTotalPortions(clampMealPortions(value));
-            setPortionsEaten((prev) => Math.min(prev, value));
-          }}
-          onPortionsEatenChange={setPortionsEaten}
-        />
-      ) : null}
+      <SharedMealPortionsCard
+        variant="edit"
+        totalPortions={totalPortions}
+        portionsEaten={portionsEaten}
+        onTotalPortionsChange={(value) => {
+          setTotalPortions(clampMealPortions(value));
+          setPortionsEaten((prev) => Math.min(prev, value));
+        }}
+        onPortionsEatenChange={setPortionsEaten}
+      />
 
       <View style={styles.actions}>
         <Button
@@ -103,7 +100,6 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
                 baseMacros,
                 totalPortions,
                 portionsEaten,
-                share.portionMeta?.estimatedServings,
               ),
             )
           }

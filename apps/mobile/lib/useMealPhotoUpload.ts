@@ -58,7 +58,6 @@ export function useMealPhotoUpload() {
           sodium: String(analysis.sodium),
           confidence: String(analysis.confidence),
           coachNudge: analysis.coachNudge,
-          estimatedServings: String(analysis.estimatedServings ?? 1),
           logDate: logDateRef.current ?? todayDateKey(),
           isTextLog: options?.isTextLog ? "true" : undefined,
         },

@@ -74,15 +74,13 @@ function confirmBodyToSnapshot(body: MealConfirmRequest): MealShareSnapshot {
 function friendSharePortionMeta(
   baseMacros: MealMacroTotals,
   totalPeople: number,
-  estimatedServings?: number,
 ): { portionMeta: MealPortionMeta; macros: MealMacroTotals } {
   const totalPortions = totalPeople;
   const portionMeta =
-    buildMealPortionMeta(baseMacros, totalPortions, 1, estimatedServings) ?? {
+    buildMealPortionMeta(baseMacros, totalPortions, 1) ?? {
       totalPortions,
       portionsEaten: 1,
       baseMacros,
-      estimatedServings,
     };
   const macros = scaleMealForPortions(baseMacros, totalPortions, 1);
   return { portionMeta, macros };
@@ -154,13 +152,11 @@ export async function createMealShareRequestsFromSnapshot(
 
   const baseMacros = resolveBaseMacrosFromSnapshot(snapshot);
   const totalPeople = 1 + friendIds.length;
-  const estimatedServings = snapshot.portionMeta?.estimatedServings;
 
   for (const friendId of friendIds) {
     const { portionMeta, macros } = friendSharePortionMeta(
       baseMacros,
       totalPeople,
-      estimatedServings,
     );
     const rawAiResponse = mergeRawAiPortionMeta(params.rawAiResponse, portionMeta);
 

@@ -11,13 +11,11 @@ import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealDetail, MealListItem, MealSource, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
-  clampMealPortions,
   isMealSource,
   isMealSourceOptional,
   isMealType,
   MAX_MEAL_REANALYZES,
   mealListItemToMacros,
-  resolveMealPortionState,
   scaleMealForPortions,
   type MealMacroTotals,
 } from "@lifeplate/shared";
@@ -148,15 +146,7 @@ export default function EditMealScreen() {
   });
   const [totalPortions, setTotalPortions] = useState(1);
   const [portionsEaten, setPortionsEaten] = useState(1);
-  const [estimatedServings, setEstimatedServings] = useState<number | undefined>();
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
-
-  const handleShareTotalPeopleChange = useCallback((count: number) => {
-    if (count < 2) return;
-    const nextTotal = clampMealPortions(count);
-    setTotalPortions(nextTotal);
-    setPortionsEaten((prev) => Math.min(prev, nextTotal));
-  }, []);
 
   const canShareMeal = !meal?.sharedByUserId;
 
@@ -237,11 +227,9 @@ export default function EditMealScreen() {
   const applyMealDetail = useCallback((m: MealDetail) => {
     setMeal(m);
     const stored = mealListItemToMacros(m);
-    const resolved = resolveMealPortionState(stored, m.portionMeta);
-    setBaseMacros(resolved.baseMacros);
-    setTotalPortions(resolved.totalPortions);
-    setPortionsEaten(resolved.portionsEaten);
-    setEstimatedServings(resolved.estimatedServings);
+    setBaseMacros(stored);
+    setTotalPortions(1);
+    setPortionsEaten(1);
     applyMealToForm(m, {
       setMealName,
       setMealType,
@@ -340,7 +328,6 @@ export default function EditMealScreen() {
       setMealName(result.mealName);
       setFoods(result.foods);
       setBaseMacros(nextMacros);
-      setEstimatedServings(result.estimatedServings);
       setReanalyzeRemaining(result.reanalyzeRemaining);
       if (meal) {
         setMeal({ ...meal, confidence: result.confidence });
@@ -362,7 +349,6 @@ export default function EditMealScreen() {
           baseMacros,
           totalPortions,
           portionsEaten,
-          estimatedServings,
         ) ?? null;
       const nextCalories = toNumber(calories, 0);
       const nextProtein = toNumber(protein, 0);
@@ -698,7 +684,6 @@ export default function EditMealScreen() {
             variant="edit"
             totalPortions={totalPortions}
             portionsEaten={portionsEaten}
-            estimatedServings={estimatedServings}
             onTotalPortionsChange={setTotalPortions}
             onPortionsEatenChange={setPortionsEaten}
           />
@@ -721,7 +706,6 @@ export default function EditMealScreen() {
               embedded
               selectedFriendIds={selectedFriendIds}
               onSelectionChange={setSelectedFriendIds}
-              onTotalPeopleChange={handleShareTotalPeopleChange}
             />
           </CollapsibleSection>
         </View>

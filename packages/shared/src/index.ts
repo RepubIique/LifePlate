@@ -215,21 +215,6 @@ export interface MealAnalysisResult extends MealMacroTotals {
   mealName: string;
   foods: string[];
   confidence: number;
-  /** AI estimate of how many portions are visible in the photo (≥ 1). */
-  estimatedServings?: number;
-}
-
-/** True when the photo likely shows more food than one person would eat. */
-export function isLikelySharedMeal(
-  analysis: Pick<MealAnalysisResult, "estimatedCalories" | "estimatedServings">,
-  dailyCalories?: number | null,
-): boolean {
-  const servings = analysis.estimatedServings;
-  if (servings != null && servings >= 2) return true;
-  const threshold = dailyCalories
-    ? Math.round(dailyCalories * 0.55)
-    : 900;
-  return analysis.estimatedCalories >= threshold;
 }
 
 export function clampMealPortions(value: number, min = 1, max = 12): number {
