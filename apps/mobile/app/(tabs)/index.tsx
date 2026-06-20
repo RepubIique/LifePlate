@@ -6,6 +6,7 @@ import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   dateKeyFromIso,
   formatLogDateLabel,
+  mealLogDateKey,
   todayDateKey,
 } from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
@@ -31,10 +32,6 @@ import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
-function mealsForDate(iso: string, dateKey: string) {
-  return dateKeyFromIso(iso) === dateKey;
-}
-
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { meals, loading: mealsLoading, refreshing: mealsRefreshing, refreshMeals } = useMeals();
@@ -59,7 +56,7 @@ export default function HomeScreen() {
   const hydrationTarget = profile?.nutritionTargets?.dailyHydrationGlasses ?? 8;
 
   const dayMeals = useMemo(
-    () => meals.filter((m) => mealsForDate(m.createdAt, logDateKey)),
+    () => meals.filter((m) => mealLogDateKey(m) === logDateKey),
     [meals, logDateKey],
   );
   const dayMealsRevision = useMemo(

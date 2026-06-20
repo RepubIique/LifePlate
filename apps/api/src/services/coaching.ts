@@ -2,13 +2,11 @@ import OpenAI from "openai";
 import type { MealAnalysisResult } from "@lifeplate/shared";
 import {
   buildLifeplateInsightTemplate,
+  offsetLogDateKey,
+  todayDateKey,
   type ExtendedNutritionTargets,
 } from "@lifeplate/shared";
 import { pool } from "../db.js";
-import {
-  MEAL_UTC_DAY_DATE_COLUMN_SQL,
-  UTC_TODAY_DATE_SQL,
-} from "./mealLogDate.js";
 import { config } from "../config.js";
 
 const VEG_KEYWORDS = [
@@ -41,6 +39,9 @@ export type CoachingContext = {
 };
 
 export async function buildCoachingContext(userId: string): Promise<CoachingContext> {
+  const today = todayDateKey();
+  const weekStart = offsetLogDateKey(today, -6);
+
   const { rows: userRows } = await pool.query<{ goal: string | null }>(
     `SELECT goal FROM users WHERE id = $1`,
     [userId],
@@ -48,57 +49,53 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
 
   const { rows: todayCountRows } = await pool.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM meals m
-     WHERE m.user_id = $1
-       AND ${MEAL_UTC_DAY_DATE_COLUMN_SQL} = ${UTC_TODAY_DATE_SQL}`,
-    [userId],
+     WHERE m.user_id = $1 AND m.log_date = $2::date`,
+    [userId, today],
   );
 
   const { rows: weekRows } = await pool.query<{
     protein: number | null;
-    food_name: string | null;
+    foods: string[];
     meal_id: string;
   }>(
-    `SELECT m.id AS meal_id, a.protein, f.food_name
+    `SELECT m.id AS meal_id, m.protein, m.foods
      FROM meals m
-     LEFT JOIN meal_analysis a ON a.meal_id = m.id
-     LEFT JOIN foods f ON f.meal_id = m.id
-     WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'`,
-    [userId],
+     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+    [userId, weekStart],
   );
 
   const { rows: todayProteinRows } = await pool.query<{ total: string }>(
-    `SELECT COALESCE(SUM(a.protein), 0)::text AS total
+    `SELECT COALESCE(SUM(m.protein), 0)::text AS total
      FROM meals m
-     JOIN meal_analysis a ON a.meal_id = m.id
-     WHERE m.user_id = $1
-       AND ${MEAL_UTC_DAY_DATE_COLUMN_SQL} = ${UTC_TODAY_DATE_SQL}`,
-    [userId],
+     WHERE m.user_id = $1 AND m.log_date = $2::date`,
+    [userId, today],
   );
   const todayProteinTotal = Number(todayProteinRows[0]?.total ?? 0);
 
   const { rows: weekCountRows } = await pool.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM meals m
-     WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'`,
-    [userId],
+     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+    [userId, weekStart],
   );
 
   const { rows: weekProteinRows } = await pool.query<{ avg: string }>(
-    `SELECT COALESCE(AVG(a.protein), 0)::text AS avg
+    `SELECT COALESCE(AVG(m.protein), 0)::text AS avg
      FROM meals m
-     JOIN meal_analysis a ON a.meal_id = m.id
-     WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'`,
-    [userId],
+     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+    [userId, weekStart],
   );
 
   const weekFoods = weekRows
-    .map((r) => r.food_name?.toLowerCase())
-    .filter((f): f is string => !!f);
+    .flatMap((r) => r.foods ?? [])
+    .map((f) => f.toLowerCase())
+    .filter(Boolean);
   const weekMealIdsWithVeg = new Set<string>();
   for (const row of weekRows) {
-    const food = row.food_name?.toLowerCase() ?? "";
-    if (VEG_KEYWORDS.some((k) => food.includes(k))) {
-      weekMealIdsWithVeg.add(row.meal_id);
-    }
+    const hasVeg = (row.foods ?? []).some((food) => {
+      const lower = food.toLowerCase();
+      return VEG_KEYWORDS.some((k) => lower.includes(k));
+    });
+    if (hasVeg) weekMealIdsWithVeg.add(row.meal_id);
   }
 
   const recentFoods = [...new Set(weekFoods)].slice(0, 12);

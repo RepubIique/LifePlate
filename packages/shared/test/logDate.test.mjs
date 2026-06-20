@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyMealOrderTimestamps,
+  compareMealsTimeline,
   dateKeyFromIso,
   formatLogDateLabel,
   isValidLogDateKey,
@@ -70,21 +71,51 @@ test("createdAtForDayPosition keeps top timeline slot latest within the day", ()
   assert.ok(new Date(first).getTime() > new Date(last).getTime());
 });
 
-test("applyMealOrderTimestamps only permutes existing timestamps", () => {
+test("applyMealOrderTimestamps assigns sortIndex without changing createdAt", () => {
   const dayMeals = [
-    { id: "a", createdAt: "2026-06-10T12:00:00.000Z" },
-    { id: "b", createdAt: "2026-06-10T11:00:00.000Z" },
-    { id: "c", createdAt: "2026-06-10T10:00:00.000Z" },
+    { id: "a", createdAt: "2026-06-10T12:00:00.000Z", sortIndex: 0 },
+    { id: "b", createdAt: "2026-06-10T11:00:00.000Z", sortIndex: 1 },
+    { id: "c", createdAt: "2026-06-10T10:00:00.000Z", sortIndex: 2 },
   ];
   const reordered = applyMealOrderTimestamps(
     [dayMeals[2], dayMeals[0], dayMeals[1]],
     dayMeals,
   );
   assert.deepEqual(
-    reordered.map((meal) => meal.createdAt).sort(),
-    dayMeals.map((meal) => meal.createdAt).sort(),
+    reordered.map((meal) => meal.createdAt),
+    [
+      "2026-06-10T10:00:00.000Z",
+      "2026-06-10T12:00:00.000Z",
+      "2026-06-10T11:00:00.000Z",
+    ],
   );
-  assert.equal(reordered[0].createdAt, "2026-06-10T12:00:00.000Z");
-  assert.equal(reordered[1].createdAt, "2026-06-10T11:00:00.000Z");
-  assert.equal(reordered[2].createdAt, "2026-06-10T10:00:00.000Z");
+  assert.deepEqual(
+    reordered.map((meal) => meal.sortIndex),
+    [0, 1, 2],
+  );
+});
+
+test("applyMealOrderTimestamps preserves meal fields besides sortIndex", () => {
+  const dayMeals = [
+    { id: "a", mealName: "Breakfast", createdAt: "2026-06-10T08:00:00.000Z", sortIndex: 1 },
+    { id: "b", mealName: "Dinner", createdAt: "2026-06-10T20:00:00.000Z", sortIndex: 0 },
+  ];
+  const reordered = applyMealOrderTimestamps([dayMeals[0], dayMeals[1]], dayMeals);
+  assert.equal(reordered[0].id, "a");
+  assert.equal(reordered[0].mealName, "Breakfast");
+  assert.equal(reordered[0].sortIndex, 0);
+  assert.equal(reordered[1].id, "b");
+  assert.equal(reordered[1].mealName, "Dinner");
+  assert.equal(reordered[1].sortIndex, 1);
+});
+
+test("compareMealsTimeline orders by logDate then sortIndex", () => {
+  const meals = [
+    { createdAt: "2026-06-09T12:00:00.000Z", logDate: "2026-06-09", sortIndex: 0 },
+    { createdAt: "2026-06-10T08:00:00.000Z", logDate: "2026-06-10", sortIndex: 1 },
+    { createdAt: "2026-06-10T20:00:00.000Z", logDate: "2026-06-10", sortIndex: 0 },
+  ];
+  const sorted = [...meals].sort(compareMealsTimeline);
+  assert.deepEqual(sorted.map((meal) => meal.sortIndex), [0, 1, 0]);
+  assert.equal(sorted[0].logDate, "2026-06-10");
 });

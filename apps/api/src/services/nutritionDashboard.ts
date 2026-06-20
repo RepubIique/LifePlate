@@ -18,7 +18,6 @@ import {
   type ExtendedNutritionTargets,
   type NutritionDashboardApiResponse,
   weeklyGutScore,
-  dateKeyFromIso,
   todayDateKey,
 } from "@lifeplate/shared";
 import type { Gender } from "@lifeplate/shared";
@@ -38,7 +37,8 @@ type MealRow = {
   carbs: number | null;
   fat: number | null;
   fibre: number | null;
-  food_name: string | null;
+  foods: string[];
+  log_date: string;
   created_at: Date;
 };
 
@@ -115,7 +115,8 @@ function collectFoods(rows: MealRow[]): string[] {
   return [
     ...new Set(
       rows
-        .map((row) => row.food_name?.trim())
+        .flatMap((row) => row.foods ?? [])
+        .map((food) => food.trim())
         .filter((food): food is string => !!food),
     ),
   ];
@@ -125,29 +126,16 @@ function collectMealNames(rows: MealRow[]): string[] {
   return [...new Set(rows.map((row) => row.meal_name))];
 }
 
-async function fetchMealRowsSince(userId: string, since: Date): Promise<MealRow[]> {
+async function fetchMealRowsSince(userId: string, sinceDateKey: string): Promise<MealRow[]> {
   const { rows } = await pool.query<MealRow>(
-    `SELECT m.id AS meal_id, m.meal_name, m.created_at,
-            a.calories, a.protein, a.carbs, a.fat, a.fibre,
-            f.food_name
+    `SELECT m.id AS meal_id, m.meal_name, m.created_at, m.log_date::text AS log_date,
+            m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
-     LEFT JOIN meal_analysis a ON a.meal_id = m.id
-     LEFT JOIN foods f ON f.meal_id = m.id
-     WHERE m.user_id = $1 AND m.created_at >= $2`,
-    [userId, since],
+     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+    [userId, sinceDateKey],
   );
 
   return rows;
-}
-
-function startOfDateKey(dateKey: string): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-}
-
-function endOfDateKey(dateKey: string): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
 }
 
 async function fetchMealRowsBetween(
@@ -156,14 +144,11 @@ async function fetchMealRowsBetween(
   endDateKey: string,
 ): Promise<MealRow[]> {
   const { rows } = await pool.query<MealRow>(
-    `SELECT m.id AS meal_id, m.meal_name, m.created_at,
-            a.calories, a.protein, a.carbs, a.fat, a.fibre,
-            f.food_name
+    `SELECT m.id AS meal_id, m.meal_name, m.created_at, m.log_date::text AS log_date,
+            m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
-     LEFT JOIN meal_analysis a ON a.meal_id = m.id
-     LEFT JOIN foods f ON f.meal_id = m.id
-     WHERE m.user_id = $1 AND m.created_at >= $2 AND m.created_at <= $3`,
-    [userId, startOfDateKey(startDateKey), endOfDateKey(endDateKey)],
+     WHERE m.user_id = $1 AND m.log_date >= $2::date AND m.log_date <= $3::date`,
+    [userId, startDateKey, endDateKey],
   );
 
   return rows;
@@ -184,13 +169,11 @@ function periodLabel(dateKey: string): string {
 }
 
 function filterRowsForDate(rows: MealRow[], dateKey: string): MealRow[] {
-  return rows.filter((row) => dateKeyFromIso(row.created_at.toISOString()) === dateKey);
+  return rows.filter((row) => row.log_date === dateKey);
 }
 
-function startOfWeek(): Date {
-  const now = new Date();
-  now.setDate(now.getDate() - 7);
-  return now;
+function weekStartDateKey(): string {
+  return offsetLogDateKey(todayDateKey(), -6);
 }
 
 function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
@@ -204,7 +187,7 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
   const dayMap = new Map<string, MealRow[]>();
 
   for (const row of weekRows) {
-    const key = dateKeyFromIso(row.created_at.toISOString());
+    const key = row.log_date;
     const list = dayMap.get(key) ?? [];
     list.push(row);
     dayMap.set(key, list);
@@ -229,9 +212,7 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
 
     const mealFoodMap = new Map<string, string[]>();
     for (const row of dayRows) {
-      const foodsForMeal = mealFoodMap.get(row.meal_name) ?? [];
-      if (row.food_name) foodsForMeal.push(row.food_name);
-      mealFoodMap.set(row.meal_name, foodsForMeal);
+      mealFoodMap.set(row.meal_name, [...(row.foods ?? [])]);
     }
     for (const [mealName, foods] of mealFoodMap) {
       processedMealRows.push({ mealName, foods });
@@ -270,7 +251,7 @@ export async function buildNutritionDashboard(
       `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
       [userId],
     ),
-    fetchMealRowsSince(userId, startOfWeek()),
+    fetchMealRowsSince(userId, weekStartDateKey()),
     fetchMealRowsBetween(userId, previousKey, dateKey),
     fetchHydrationGlasses(userId, dateKey),
     fetchHydrationGlasses(userId, previousKey),

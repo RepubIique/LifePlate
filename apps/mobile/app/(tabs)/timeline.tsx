@@ -1,10 +1,10 @@
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealListSummary } from "@lifeplate/shared";
-import { todayDateKey, dateKeyFromIso } from "@lifeplate/shared";
+import { todayDateKey, compareMealsTimeline, mealLogDateKey } from "@lifeplate/shared";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { TimelineDayMeals } from "@/components/timeline/TimelineDayMeals";
 import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
@@ -63,6 +63,22 @@ export default function TimelineScreen() {
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
 
+  function confirmDelete(meal: MealListSummary) {
+    const label = meal.mealName?.trim() || "this meal";
+    Alert.alert(
+      "Delete meal?",
+      `Are you sure you want to delete "${label}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => scheduleDelete(meal),
+        },
+      ],
+    );
+  }
+
   function scheduleDelete(meal: MealListSummary) {
     removeMealLocally(meal.id);
 
@@ -113,10 +129,8 @@ export default function TimelineScreen() {
   const handleDayMealsReorder = useCallback(
     (dateKey: string, orderedMeals: MealListSummary[]) => {
       const previous = meals
-        .filter((meal) => dateKeyFromIso(meal.createdAt) === dateKey)
-        .sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        .filter((meal) => mealLogDateKey(meal) === dateKey)
+        .sort(compareMealsTimeline);
       reorderDayMealsLocally(dateKey, orderedMeals);
       void reorderMeals({
         dateKey,
@@ -196,7 +210,7 @@ export default function TimelineScreen() {
               meals={group.meals}
               onReorder={handleDayMealsReorder}
               onPress={(mealId) => openMealEdit(mealId, "timeline")}
-              onDelete={scheduleDelete}
+              onDelete={confirmDelete}
             />
             <Button
               mode="text"

@@ -1,7 +1,7 @@
 import {
-  dateKeyFromIso,
   formatPlantAmount,
   formatPlantFoodText,
+  mealLogDateKey,
   parsePlantFoodText,
   plantLabelsForFood,
   PLANT_AMOUNT_PRESETS,
@@ -45,7 +45,7 @@ export function buildPlantSources(meals: MealListItem[]): PlantSourceEntry[] {
 }
 
 export function filterTodayMeals(meals: MealListItem[], dateKey = todayDateKey()): MealListItem[] {
-  return meals.filter((meal) => dateKeyFromIso(meal.createdAt) === dateKey);
+  return meals.filter((meal) => mealLogDateKey(meal) === dateKey);
 }
 
 export function normalizeFoodName(value: string): string {

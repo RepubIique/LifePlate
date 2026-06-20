@@ -59,18 +59,40 @@ export function createdAtForDayPosition(
   return new Date(year, month - 1, day, hours, mins, index, 0).toISOString();
 }
 
-/** Keep each meal on its calendar day — only permute existing timestamps for a new order. */
-export function applyMealOrderTimestamps<T extends { createdAt: string }>(
-  orderedMeals: T[],
-  dayMeals: T[],
-): T[] {
-  const sortedTimestamps = [...dayMeals]
-    .map((meal) => meal.createdAt)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+export type MealTimelineFields = {
+  createdAt: string;
+  logDate?: string;
+  sortIndex?: number;
+};
 
+export function mealLogDateKey(meal: MealTimelineFields): string {
+  return meal.logDate ?? dateKeyFromIso(meal.createdAt);
+}
+
+/** Newer calendar days first; within a day, lower sortIndex is higher on the timeline. */
+export function compareMealsTimeline(
+  a: MealTimelineFields,
+  b: MealTimelineFields,
+): number {
+  const dateA = mealLogDateKey(a);
+  const dateB = mealLogDateKey(b);
+  if (dateA !== dateB) return dateA < dateB ? 1 : -1;
+
+  const sortA = a.sortIndex ?? 0;
+  const sortB = b.sortIndex ?? 0;
+  if (sortA !== sortB) return sortA - sortB;
+
+  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+}
+
+/** Assign within-day timeline order without mutating logged timestamps. */
+export function applyMealOrderTimestamps<T extends MealTimelineFields>(
+  orderedMeals: T[],
+  _dayMeals: T[],
+): T[] {
   return orderedMeals.map((meal, index) => ({
     ...meal,
-    createdAt: sortedTimestamps[index] ?? meal.createdAt,
+    sortIndex: index,
   }));
 }
 

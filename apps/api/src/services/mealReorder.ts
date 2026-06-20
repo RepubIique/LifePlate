@@ -3,14 +3,14 @@ import type { PoolClient } from "pg";
 export async function reorderMealsForDay(
   client: PoolClient,
   userId: string,
-  _dateKey: string,
+  dateKey: string,
   mealIds: string[],
 ): Promise<void> {
   const { rows } = await client.query<{
     id: string;
-    created_at: Date;
+    log_date: string;
   }>(
-    `SELECT id, created_at
+    `SELECT id, log_date::text AS log_date
      FROM meals
      WHERE user_id = $1 AND id = ANY($2::uuid[])`,
     [userId, mealIds],
@@ -29,22 +29,22 @@ export async function reorderMealsForDay(
     );
   }
 
-  // Permute existing timestamps only — client groups by local calendar day, which
-  // may span two UTC dates; do not require a single UTC day here.
-  const sortedAts = rows
-    .map((row) => row.created_at)
-    .sort((a, b) => b.getTime() - a.getTime());
+  if (!rows.every((row) => row.log_date === dateKey)) {
+    throw new ReorderMealsValidationError(
+      "Meals must share the same log date",
+    );
+  }
 
-  const loggedAts = mealIds.map((_, index) => sortedAts[index]!);
+  const sortIndices = mealIds.map((_, index) => index);
 
   await client.query(
     `UPDATE meals AS m
-     SET created_at = v.logged_at
+     SET sort_index = v.sort_index
      FROM (
-       SELECT unnest($1::uuid[]) AS id, unnest($2::timestamptz[]) AS logged_at
+       SELECT unnest($1::uuid[]) AS id, unnest($2::smallint[]) AS sort_index
      ) AS v
      WHERE m.id = v.id AND m.user_id = $3`,
-    [mealIds, loggedAts, userId],
+    [mealIds, sortIndices, userId],
   );
 }
 

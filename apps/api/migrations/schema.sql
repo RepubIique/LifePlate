@@ -51,39 +51,31 @@ CREATE TABLE IF NOT EXISTS meals (
 );
 
 ALTER TABLE meals ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS log_date DATE;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS sort_index SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS calories INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS protein INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS carbs INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS fat INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS fibre INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS sugar INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS sodium INTEGER;
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS confidence DECIMAL(4, 3);
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS foods TEXT[] NOT NULL DEFAULT '{}';
 
 ALTER TABLE meals ALTER COLUMN image_url DROP NOT NULL;
 ALTER TABLE meals ALTER COLUMN image_url SET DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS meals_user_created_idx ON meals(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS meals_user_utc_day_idx
-  ON meals (user_id, ((created_at AT TIME ZONE 'UTC')::date));
+CREATE INDEX IF NOT EXISTS meals_user_log_date_sort_idx
+  ON meals (user_id, log_date DESC, sort_index ASC);
+CREATE INDEX IF NOT EXISTS meals_user_log_date_idx ON meals (user_id, log_date);
 
 CREATE TABLE IF NOT EXISTS meal_analysis (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   meal_id UUID NOT NULL UNIQUE REFERENCES meals(id) ON DELETE CASCADE,
-  calories INTEGER,
-  protein INTEGER,
-  carbs INTEGER,
-  fat INTEGER,
-  fibre INTEGER,
-  sugar INTEGER,
-  sodium INTEGER,
-  confidence DECIMAL(4, 3),
   raw_ai_response JSONB
 );
-
-ALTER TABLE meal_analysis ADD COLUMN IF NOT EXISTS fibre INTEGER;
-ALTER TABLE meal_analysis ADD COLUMN IF NOT EXISTS sugar INTEGER;
-ALTER TABLE meal_analysis ADD COLUMN IF NOT EXISTS sodium INTEGER;
-
-CREATE TABLE IF NOT EXISTS foods (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  meal_id UUID NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
-  food_name TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS foods_meal_idx ON foods(meal_id);
 
 -- ---------------------------------------------------------------------------
 -- Hydration & insights

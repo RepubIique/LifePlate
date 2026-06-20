@@ -1,7 +1,14 @@
-import { dateKeyFromIso, formatLogDateLabel, mealTypeLabel, todayDateKey, type MealListSummary } from "@lifeplate/shared";
+import {
+  compareMealsTimeline,
+  formatLogDateLabel,
+  mealLogDateKey,
+  mealTypeLabel,
+  todayDateKey,
+  type MealListSummary,
+} from "@lifeplate/shared";
 
-export function formatDayLabel(iso: string): string {
-  return formatLogDateLabel(dateKeyFromIso(iso));
+export function formatDayLabel(dateKey: string): string {
+  return formatLogDateLabel(dateKey);
 }
 
 export type TimelineDayGroup = {
@@ -20,7 +27,7 @@ export function buildTimelineDayGroups(
   const mealMap = new Map<string, MealListSummary[]>();
 
   for (const meal of meals) {
-    const key = dateKeyFromIso(meal.createdAt);
+    const key = mealLogDateKey(meal);
     const list = mealMap.get(key) ?? [];
     list.push(meal);
     mealMap.set(key, list);
@@ -33,20 +40,17 @@ export function buildTimelineDayGroups(
     .sort((a, b) => (a < b ? 1 : -1))
     .map((dateKey) => {
       const dayMeals = mealMap.get(dateKey) ?? [];
-      const anchorIso = dayMeals[0]?.createdAt ?? `${dateKey}T12:00:00.000Z`;
 
       return {
         dateKey,
-        day: formatDayLabel(anchorIso),
+        day: formatDayLabel(dateKey),
         subtitle: new Date(`${dateKey}T12:00:00.000Z`).toLocaleDateString(undefined, {
           weekday: "long",
           month: "long",
           day: "numeric",
         }),
         isToday: dateKey === todayKey,
-        meals: dayMeals.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        ),
+        meals: [...dayMeals].sort(compareMealsTimeline),
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });

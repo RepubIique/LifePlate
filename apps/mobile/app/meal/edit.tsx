@@ -296,8 +296,9 @@ export default function EditMealScreen() {
       const nextFibre = toNumber(fibre, 0);
       const nextSugar = toNumber(sugar, 0);
       const nextSodium = toNumber(sodium, 0);
-      const logDateChanged =
-        mealDateKeyFromIso(loggedAt) !== mealDateKeyFromIso(meal.createdAt);
+      const currentLogDate = meal.logDate ?? mealDateKeyFromIso(meal.createdAt);
+      const nextLogDate = mealDateKeyFromIso(loggedAt);
+      const logDateChanged = nextLogDate !== currentLogDate;
 
       await updateMeal(id, {
         mealName,
@@ -332,6 +333,7 @@ export default function EditMealScreen() {
           sugar: nextSugar,
           sodium: nextSodium,
           createdAt: loggedAt,
+          logDate: nextLogDate,
           notes: notes || null,
           portionMeta: portionMeta ?? undefined,
         });
@@ -342,6 +344,7 @@ export default function EditMealScreen() {
           protein: nextProtein,
           notes: notes || null,
           createdAt: loggedAt,
+          logDate: nextLogDate,
         });
         refreshMealsAndDashboard();
       }

@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { MealListSummary } from "@lifeplate/shared";
-import { applyMealOrderTimestamps, dateKeyFromIso } from "@lifeplate/shared";
+import { applyMealOrderTimestamps, compareMealsTimeline, mealLogDateKey } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
 import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
@@ -113,9 +113,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     (meal: MealListSummary) => {
       setMeals((prev) => {
         if (prev.some((m) => m.id === meal.id)) return prev;
-        const next = [meal, ...prev].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        const next = [meal, ...prev].sort(compareMealsTimeline);
         persistMeals(next, fetchedAtRef.current);
         return next;
       });
@@ -135,10 +133,8 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         if (index < 0) return prev;
         const next = [...prev];
         next[index] = { ...next[index], ...patch };
-        if (patch.createdAt) {
-          next.sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
+        if (patch.createdAt || patch.logDate !== undefined || patch.sortIndex !== undefined) {
+          next.sort(compareMealsTimeline);
         }
         persistMeals(next, fetchedAtRef.current);
         return next;
@@ -151,15 +147,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     (dateKey: string, orderedMeals: MealListSummary[]) => {
       setMeals((prev) => {
         const dayMeals = prev.filter(
-          (meal) => dateKeyFromIso(meal.createdAt) === dateKey,
+          (meal) => mealLogDateKey(meal) === dateKey,
         );
         const otherDays = prev.filter(
-          (meal) => dateKeyFromIso(meal.createdAt) !== dateKey,
+          (meal) => mealLogDateKey(meal) !== dateKey,
         );
         const reordered = applyMealOrderTimestamps(orderedMeals, dayMeals);
-        const next = [...otherDays, ...reordered].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        const next = [...otherDays, ...reordered].sort(compareMealsTimeline);
         persistMeals(next, fetchedAtRef.current);
         return next;
       });

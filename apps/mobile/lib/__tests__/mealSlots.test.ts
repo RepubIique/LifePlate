@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { MealListSummary } from "@lifeplate/shared";
+import { dateKeyFromIso } from "@lifeplate/shared";
 import {
   getFilledSlots,
   getSuggestedSlot,
@@ -13,7 +14,15 @@ function summary(
   mealType: string,
   createdAt: string,
 ): MealListSummary {
-  return { id, mealName, mealType, imageUrl: "", createdAt };
+  return {
+    id,
+    mealName,
+    mealType,
+    imageUrl: "",
+    createdAt,
+    logDate: dateKeyFromIso(createdAt),
+    sortIndex: 0,
+  };
 }
 
 test("mealMatchesSlot treats beverages and desserts as snack", () => {

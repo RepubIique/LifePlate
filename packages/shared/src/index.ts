@@ -421,6 +421,10 @@ export interface MealListSummary {
   mealName: string;
   imageUrl: string;
   createdAt: string;
+  /** Calendar day the meal was logged for (YYYY-MM-DD). */
+  logDate: string;
+  /** Within-day timeline order; 0 = top slot. */
+  sortIndex: number;
   calories?: number | null;
   protein?: number | null;
   notes?: string | null;
@@ -565,9 +569,12 @@ export {
   loggedAtForDateKey,
   createdAtForDayPosition,
   applyMealOrderTimestamps,
+  compareMealsTimeline,
+  mealLogDateKey,
   recentLogDateKeys,
   formatLogDateLabel,
   offsetLogDateKey,
+  type MealTimelineFields,
 } from "./logDate.js";
 
 /** Fields returned from PATCH /api/users/me — only what was edited. */

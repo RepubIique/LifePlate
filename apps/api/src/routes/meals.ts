@@ -282,13 +282,16 @@ export async function mealRoutes(app: FastifyInstance) {
       }
 
       const mealType = body.mealType ?? inferMealType();
-      let loggedAt: Date | null = null;
+      const loggedAtDate = body.loggedAt ? new Date(body.loggedAt) : new Date();
       if (body.loggedAt) {
-        loggedAt = new Date(body.loggedAt);
-        if (Number.isNaN(loggedAt.getTime()) || !isValidLogDateKey(dateKeyFromIso(loggedAt.toISOString()))) {
+        if (
+          Number.isNaN(loggedAtDate.getTime()) ||
+          !isValidLogDateKey(dateKeyFromIso(loggedAtDate.toISOString()))
+        ) {
           return reply.code(400).send({ error: "Invalid loggedAt" });
         }
       }
+      const logDate = dateKeyFromIso(loggedAtDate.toISOString());
 
       try {
         assertMealAnalysis({
@@ -318,19 +321,25 @@ export async function mealRoutes(app: FastifyInstance) {
 
       try {
         await client.query("BEGIN");
-        const mealResult = await client.query<{ id: string }>(
-          `INSERT INTO meals (user_id, meal_type, meal_name, image_url, created_at)
-           VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()))
-           RETURNING id`,
-          [userId, mealType, body.mealName, imageUrl, loggedAt],
-        );
-        const mealId = mealResult.rows[0].id;
-
         await client.query(
-          `INSERT INTO meal_analysis (meal_id, calories, protein, carbs, fat, fibre, sugar, sodium, confidence, raw_ai_response)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          `UPDATE meals SET sort_index = sort_index + 1
+           WHERE user_id = $1 AND log_date = $2::date`,
+          [userId, logDate],
+        );
+        const mealResult = await client.query<{ id: string }>(
+          `INSERT INTO meals (
+             user_id, meal_type, meal_name, image_url, created_at, log_date, sort_index,
+             calories, protein, carbs, fat, fibre, sugar, sodium, confidence, foods
+           )
+           VALUES ($1, $2, $3, $4, $5, $6::date, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+           RETURNING id`,
           [
-            mealId,
+            userId,
+            mealType,
+            body.mealName,
+            imageUrl,
+            loggedAtDate,
+            logDate,
             body.estimatedCalories,
             body.protein,
             body.carbs,
@@ -339,21 +348,24 @@ export async function mealRoutes(app: FastifyInstance) {
             body.sugar,
             body.sodium,
             body.confidence,
+            body.foods,
+          ],
+        );
+        const mealId = mealResult.rows[0].id;
+
+        await client.query(
+          `INSERT INTO meal_analysis (meal_id, raw_ai_response)
+           VALUES ($1, $2)`,
+          [
+            mealId,
             mergeRawAiPortionMeta(draft?.rawAiResponse, body.portionMeta),
           ],
         );
 
-        for (const food of body.foods) {
-          await client.query(
-            `INSERT INTO foods (meal_id, food_name) VALUES ($1, $2)`,
-            [mealId, food],
-          );
-        }
-
         await client.query("COMMIT");
         await deleteDraft(body.draftId);
 
-        await onMealDataChanged(userId, { mealCreatedAt: loggedAt ?? new Date() });
+        await onMealDataChanged(userId, { mealCreatedAt: loggedAtDate });
 
         return { id: mealId };
       } catch (err) {
@@ -380,6 +392,8 @@ export async function mealRoutes(app: FastifyInstance) {
           meal_name: string;
           image_url: string;
           created_at: Date;
+          log_date: string;
+          sort_index: number;
           notes: string | null;
           calories: number | null;
           protein: number | null;
@@ -389,17 +403,14 @@ export async function mealRoutes(app: FastifyInstance) {
           sugar: number | null;
           sodium: number | null;
           confidence: string | null;
-          foods: string[] | null;
+          foods: string[];
         }>(
-          `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
-                  a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
-                  COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
-           FROM meals m
-           LEFT JOIN meal_analysis a ON a.meal_id = m.id
-           LEFT JOIN foods f ON f.meal_id = m.id
-           WHERE m.user_id = $1
-           GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence
-           ORDER BY m.created_at DESC
+          `SELECT id, meal_type, meal_name, image_url, created_at, log_date::text AS log_date,
+                  sort_index, notes, calories, protein, carbs, fat, fibre, sugar, sodium,
+                  confidence, foods
+           FROM meals
+           WHERE user_id = $1
+           ORDER BY log_date DESC, sort_index ASC
            LIMIT 100`,
           [userId],
         );
@@ -411,6 +422,8 @@ export async function mealRoutes(app: FastifyInstance) {
             mealName: r.meal_name,
             imageUrl: await mealListImageUrl(r.image_url, isPaid),
             createdAt: r.created_at.toISOString(),
+            logDate: r.log_date,
+            sortIndex: r.sort_index,
             notes: r.notes,
             calories: r.calories,
             protein: r.protein,
@@ -433,16 +446,17 @@ export async function mealRoutes(app: FastifyInstance) {
         meal_name: string;
         image_url: string;
         created_at: Date;
+        log_date: string;
+        sort_index: number;
         notes: string | null;
         calories: number | null;
         protein: number | null;
       }>(
-        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
-                a.calories, a.protein
-         FROM meals m
-         LEFT JOIN meal_analysis a ON a.meal_id = m.id
-         WHERE m.user_id = $1
-         ORDER BY m.created_at DESC
+        `SELECT id, meal_type, meal_name, image_url, created_at, log_date::text AS log_date,
+                sort_index, notes, calories, protein
+         FROM meals
+         WHERE user_id = $1
+         ORDER BY log_date DESC, sort_index ASC
          LIMIT 100`,
         [userId],
       );
@@ -454,6 +468,8 @@ export async function mealRoutes(app: FastifyInstance) {
           mealName: r.meal_name,
           imageUrl: await mealListImageUrl(r.image_url, isPaid),
           createdAt: r.created_at.toISOString(),
+          logDate: r.log_date,
+          sortIndex: r.sort_index,
           notes: r.notes,
           calories: r.calories,
           protein: r.protein,
@@ -606,6 +622,8 @@ export async function mealRoutes(app: FastifyInstance) {
         meal_name: string;
         image_url: string;
         created_at: Date;
+        log_date: string;
+        sort_index: number;
         notes: string | null;
         calories: number | null;
         protein: number | null;
@@ -615,18 +633,16 @@ export async function mealRoutes(app: FastifyInstance) {
         sugar: number | null;
         sodium: number | null;
         confidence: string | null;
-        foods: string[] | null;
+        foods: string[];
         raw_ai_response: unknown;
       }>(
-        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at, m.notes,
-                a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence,
-                a.raw_ai_response,
-                COALESCE(array_agg(f.food_name) FILTER (WHERE f.food_name IS NOT NULL), '{}') AS foods
+        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+                m.log_date::text AS log_date, m.sort_index, m.notes,
+                m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
+                m.confidence, m.foods, a.raw_ai_response
          FROM meals m
          LEFT JOIN meal_analysis a ON a.meal_id = m.id
-         LEFT JOIN foods f ON f.meal_id = m.id
-         WHERE m.user_id = $1 AND m.id = $2
-         GROUP BY m.id, a.calories, a.protein, a.carbs, a.fat, a.fibre, a.sugar, a.sodium, a.confidence, a.raw_ai_response`,
+         WHERE m.user_id = $1 AND m.id = $2`,
         [userId, id],
       );
 
@@ -642,6 +658,8 @@ export async function mealRoutes(app: FastifyInstance) {
         mealName: r.meal_name,
         imageUrl,
         createdAt: r.created_at.toISOString(),
+        logDate: r.log_date,
+        sortIndex: r.sort_index,
         notes: r.notes,
         calories: r.calories,
         protein: r.protein,
@@ -672,9 +690,10 @@ export async function mealRoutes(app: FastifyInstance) {
         const owned = await client.query<{
           id: string;
           created_at: Date;
+          log_date: string;
           raw_ai_response: unknown;
         }>(
-          `SELECT m.id, m.created_at, a.raw_ai_response
+          `SELECT m.id, m.created_at, m.log_date::text AS log_date, a.raw_ai_response
            FROM meals m
            LEFT JOIN meal_analysis a ON a.meal_id = m.id
            WHERE m.id = $1 AND m.user_id = $2`,
@@ -693,9 +712,17 @@ export async function mealRoutes(app: FastifyInstance) {
             await client.query("ROLLBACK");
             return reply.code(400).send({ error: "Invalid loggedAt" });
           }
+          const logDate = dateKeyFromIso(parsed.toISOString());
           await client.query(
-            `UPDATE meals SET created_at = $1 WHERE id = $2 AND user_id = $3`,
-            [parsed, id, userId],
+            `UPDATE meals SET sort_index = sort_index + 1
+             WHERE user_id = $1 AND log_date = $2::date AND id != $3`,
+            [userId, logDate, id],
+          );
+          await client.query(
+            `UPDATE meals
+             SET created_at = $1, log_date = $2::date, sort_index = 0
+             WHERE id = $3 AND user_id = $4`,
+            [parsed, logDate, id, userId],
           );
           nextCreatedAt = parsed;
         }
@@ -731,8 +758,19 @@ export async function mealRoutes(app: FastifyInstance) {
           body.sugar !== undefined ||
           body.sodium !== undefined
         ) {
+          const macroParams = [
+            roundOptionalMealMacro(body.calories) ?? null,
+            roundOptionalMealMacro(body.protein) ?? null,
+            roundOptionalMealMacro(body.carbs) ?? null,
+            roundOptionalMealMacro(body.fat) ?? null,
+            roundOptionalMealMacro(body.fibre) ?? null,
+            roundOptionalMealMacro(body.sugar) ?? null,
+            roundOptionalMealMacro(body.sodium) ?? null,
+            id,
+            userId,
+          ];
           await client.query(
-            `UPDATE meal_analysis
+            `UPDATE meals
              SET calories = COALESCE($1, calories),
                  protein = COALESCE($2, protein),
                  carbs = COALESCE($3, carbs),
@@ -740,38 +778,27 @@ export async function mealRoutes(app: FastifyInstance) {
                  fibre = COALESCE($5, fibre),
                  sugar = COALESCE($6, sugar),
                  sodium = COALESCE($7, sodium)
-             WHERE meal_id = $8`,
-            [
-              roundOptionalMealMacro(body.calories) ?? null,
-              roundOptionalMealMacro(body.protein) ?? null,
-              roundOptionalMealMacro(body.carbs) ?? null,
-              roundOptionalMealMacro(body.fat) ?? null,
-              roundOptionalMealMacro(body.fibre) ?? null,
-              roundOptionalMealMacro(body.sugar) ?? null,
-              roundOptionalMealMacro(body.sodium) ?? null,
-              id,
-            ],
+             WHERE id = $8 AND user_id = $9`,
+            macroParams,
           );
         }
 
         if (body.foods) {
-          await client.query(`DELETE FROM foods WHERE meal_id = $1`, [id]);
-          for (const food of body.foods) {
-            await client.query(
-              `INSERT INTO foods (meal_id, food_name) VALUES ($1, $2)`,
-              [id, food],
-            );
-          }
+          await client.query(
+            `UPDATE meals SET foods = $1 WHERE id = $2 AND user_id = $3`,
+            [body.foods, id, userId],
+          );
         }
 
         if (body.portionMeta !== undefined) {
           await client.query(
-            `UPDATE meal_analysis
-             SET raw_ai_response = $1::jsonb
-             WHERE meal_id = $2`,
+            `INSERT INTO meal_analysis (meal_id, raw_ai_response)
+             VALUES ($1, $2::jsonb)
+             ON CONFLICT (meal_id) DO UPDATE
+             SET raw_ai_response = EXCLUDED.raw_ai_response`,
             [
-              mergeRawAiPortionMeta(owned.rows[0].raw_ai_response, body.portionMeta),
               id,
+              mergeRawAiPortionMeta(owned.rows[0].raw_ai_response, body.portionMeta),
             ],
           );
         }

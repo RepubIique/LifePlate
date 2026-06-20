@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { InsightsResponse } from "@lifeplate/shared";
+import { offsetLogDateKey, todayDateKey } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
@@ -7,7 +8,6 @@ import {
   computeTakeawayPercent,
   countTakeawayMeals,
 } from "../services/insightsMetrics.js";
-import { MEAL_UTC_DAY_COLUMN_SQL } from "../services/mealLogDate.js";
 import { pool } from "../db.js";
 
 const VEG_KEYWORDS = [
@@ -35,32 +35,34 @@ export async function insightRoutes(app: FastifyInstance) {
     async (request) => {
       const { userId } = request as AuthedRequest;
 
+      const today = todayDateKey();
+      const weekStart = offsetLogDateKey(today, -6);
+
       const { rows: mealRows } = await pool.query<{
         meal_id: string;
         protein: number | null;
-        food_name: string | null;
+        foods: string[];
         meal_name: string | null;
       }>(
-        `SELECT m.id AS meal_id, a.protein, f.food_name, m.meal_name
+        `SELECT m.id AS meal_id, m.protein, m.foods, m.meal_name
          FROM meals m
-         LEFT JOIN meal_analysis a ON a.meal_id = m.id
-         LEFT JOIN foods f ON f.meal_id = m.id
-         WHERE m.user_id = $1
-           AND m.created_at >= NOW() - INTERVAL '7 days'`,
-        [userId],
+         WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+        [userId, weekStart],
       );
 
       const foods: string[] = [];
 
       for (const row of mealRows) {
-        if (row.food_name) foods.push(row.food_name.toLowerCase());
+        for (const food of row.foods ?? []) {
+          foods.push(food.toLowerCase());
+        }
       }
 
       const { rows: countRows } = await pool.query<{ count: string }>(
         `SELECT COUNT(DISTINCT m.id)::text AS count
          FROM meals m
-         WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'`,
-        [userId],
+         WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+        [userId, weekStart],
       );
       const mealsLogged = Number(countRows[0]?.count ?? 0);
 
@@ -68,12 +70,11 @@ export async function insightRoutes(app: FastifyInstance) {
         day: string;
         avg_protein: string;
       }>(
-        `SELECT ${MEAL_UTC_DAY_COLUMN_SQL} AS day, AVG(a.protein)::text AS avg_protein
+        `SELECT m.log_date::text AS day, AVG(m.protein)::text AS avg_protein
          FROM meals m
-         JOIN meal_analysis a ON a.meal_id = m.id
-         WHERE m.user_id = $1 AND m.created_at >= NOW() - INTERVAL '7 days'
-         GROUP BY ${MEAL_UTC_DAY_COLUMN_SQL}`,
-        [userId],
+         WHERE m.user_id = $1 AND m.log_date >= $2::date
+         GROUP BY m.log_date`,
+        [userId, weekStart],
       );
 
       let proteinTotal = 0;
@@ -101,15 +102,16 @@ export async function insightRoutes(app: FastifyInstance) {
         }
       }
 
-      const takeawayHits = countTakeawayMeals(
-        mealRows.map((row) => ({
+      const takeawayHits = mealRows.flatMap((row) =>
+        (row.foods?.length ? row.foods : [""]).map((foodName) => ({
           mealId: row.meal_id,
           mealName: row.meal_name,
-          foodName: row.food_name,
+          foodName,
         })),
       );
+      const takeawayMeals = countTakeawayMeals(takeawayHits);
       const { takeawayPercent, homeCookedPercent } = computeTakeawayPercent(
-        takeawayHits,
+        takeawayMeals,
         mealsLogged,
       );
 

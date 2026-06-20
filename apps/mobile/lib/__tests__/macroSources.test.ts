@@ -3,13 +3,22 @@ import test from "node:test";
 import type { MealListItem } from "@lifeplate/shared";
 import { buildMacroSources } from "../macroSources";
 
+import { dateKeyFromIso } from "@lifeplate/shared";
+
+function defaultLogDate(createdAt: string): string {
+  return dateKeyFromIso(createdAt);
+}
+
 function meal(partial: Partial<MealListItem> & Pick<MealListItem, "id">): MealListItem {
+  const createdAt = partial.createdAt ?? new Date().toISOString();
   return {
     id: partial.id,
     mealType: partial.mealType ?? "lunch",
     mealName: partial.mealName ?? "Meal",
     imageUrl: partial.imageUrl ?? "",
-    createdAt: partial.createdAt ?? new Date().toISOString(),
+    createdAt,
+    logDate: partial.logDate ?? defaultLogDate(createdAt),
+    sortIndex: partial.sortIndex ?? 0,
     calories: partial.calories ?? 400,
     protein: partial.protein ?? 20,
     carbs: partial.carbs ?? 40,
