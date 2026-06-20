@@ -49,8 +49,10 @@ export function TimelineMealCard({ meal, isLast, onPress, onDelete }: Props) {
             <MealImage
               mealId={meal.id}
               cloudUrl={meal.imageUrl}
+              mealType={meal.mealType}
               style={styles.image}
               placeholderStyle={styles.imagePlaceholder}
+              placeholderIconSize={36}
             />
 
             <View style={styles.body}>

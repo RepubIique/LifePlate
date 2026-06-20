@@ -78,6 +78,7 @@ export function mealTypeIcon(
   | "white-balance-sunny"
   | "weather-night"
   | "cookie-outline"
+  | "cup-outline"
   | "silverware-fork-knife" {
   switch (mealType) {
     case "breakfast":
@@ -86,8 +87,9 @@ export function mealTypeIcon(
       return "white-balance-sunny";
     case "dinner":
       return "weather-night";
-    case "snack":
     case "beverage":
+      return "cup-outline";
+    case "snack":
     case "dessert":
       return "cookie-outline";
     default:

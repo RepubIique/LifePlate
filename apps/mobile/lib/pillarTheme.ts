@@ -1,7 +1,7 @@
 export type PillarKey = "protein" | "fibre" | "plants" | "carbs" | "hydration";
 
 export const PILLAR_COLORS: Record<PillarKey, string> = {
-  protein: "#1B4332",
+  protein: "#722F37",
   fibre: "#E9A319",
   plants: "#52B788",
   carbs: "#C46A2A",

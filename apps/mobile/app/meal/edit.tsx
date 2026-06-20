@@ -348,7 +348,10 @@ export default function EditMealScreen() {
         <MealImage
           mealId={meal.id}
           cloudUrl={meal.imageUrl}
+          mealType={mealType}
           style={styles.image}
+          placeholderStyle={styles.imagePlaceholder}
+          placeholderIconSize={56}
         />
       </View>
 
@@ -530,6 +533,7 @@ const styles = StyleSheet.create({
   container: { paddingBottom: spacing.xl, gap: spacing.md },
   imageWrap: { paddingHorizontal: spacing.lg },
   image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
+  imagePlaceholder: { width: "100%", height: 220, borderRadius: premium.imageRadius },
   cardWrap: { paddingHorizontal: spacing.lg },
   sectionTitle: { marginTop: spacing.md, marginBottom: spacing.xs },
   notesHint: { opacity: 0.65, marginBottom: spacing.sm, lineHeight: 18 },

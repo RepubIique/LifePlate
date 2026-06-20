@@ -97,6 +97,10 @@ export async function deleteDraft(draftId: string | undefined) {
   await pool.query(`DELETE FROM meal_drafts WHERE id = $1`, [draftId]);
 }
 
+export function draftHasImage(draft: Draft): boolean {
+  return Boolean(draft.imageBuffer || draft.imageUrl?.trim());
+}
+
 export async function updateDraftAnalysis(
   draftId: string,
   userId: string,
@@ -129,6 +133,9 @@ export async function getDraftImage(
       buffer: draft.imageBuffer,
       mimeType: draft.mimeType ?? "image/jpeg",
     };
+  }
+  if (!draft.imageUrl?.trim()) {
+    throw new Error("Draft has no image");
   }
   return imageUrlToBuffer(draft.imageUrl);
 }

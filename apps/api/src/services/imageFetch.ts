@@ -1,6 +1,10 @@
 export async function imageUrlToBuffer(
   imageUrl: string,
 ): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (!imageUrl?.trim()) {
+    throw new Error("Invalid image URL");
+  }
+
   if (imageUrl.startsWith("data:")) {
     const match = /^data:([^;]+);base64,(.+)$/.exec(imageUrl);
     if (!match) throw new Error("Invalid data URL");

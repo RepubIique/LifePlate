@@ -8,6 +8,7 @@ export function MealRowCard({
   mealId,
   mealName,
   subtitle,
+  mealType,
   imageUrl,
   onPress,
   onDelete,
@@ -15,6 +16,7 @@ export function MealRowCard({
   mealId?: string;
   mealName: string;
   subtitle: string;
+  mealType?: string | null;
   imageUrl?: string | null;
   onPress?: () => void;
   onDelete?: () => void;
@@ -25,6 +27,7 @@ export function MealRowCard({
         <MealImage
           mealId={mealId}
           cloudUrl={imageUrl}
+          mealType={mealType}
           style={premiumStyles.thumb}
           placeholderStyle={premiumStyles.thumbPlaceholder}
         />

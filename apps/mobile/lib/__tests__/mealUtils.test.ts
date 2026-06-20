@@ -64,6 +64,7 @@ test("mealTypeIcon maps known meal types", () => {
   assert.equal(mealTypeIcon("lunch"), "white-balance-sunny");
   assert.equal(mealTypeIcon("dinner"), "weather-night");
   assert.equal(mealTypeIcon("snack"), "cookie-outline");
+  assert.equal(mealTypeIcon("beverage"), "cup-outline");
   assert.equal(mealTypeIcon("unknown"), "silverware-fork-knife");
 });
 

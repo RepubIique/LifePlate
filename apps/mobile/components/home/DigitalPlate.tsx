@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Ellipse } from "react-native-svg";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
 import { fetchMealsFull } from "@/lib/api";
@@ -54,6 +54,52 @@ function plateMessage(completeness: number, hasMeals: boolean) {
   if (completeness >= 75) return "Nearly there — great progress";
   if (completeness >= 50) return "Your plate is halfway there";
   return "Room to grow — every meal counts";
+}
+
+function PlateCenterGraphic({ size }: { size: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const outerR = size / 2 - 1;
+  const rimR = outerR * 0.9;
+  const wellR = outerR * 0.74;
+
+  return (
+    <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+      <Circle cx={cx} cy={cy + 1.5} r={outerR} fill="rgba(0,0,0,0.04)" />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={outerR}
+        fill="#FFFFFF"
+        stroke="#C5D0D8"
+        strokeWidth={2.5}
+      />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={rimR}
+        fill="none"
+        stroke="#DDE5EA"
+        strokeWidth={1.5}
+      />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={wellR}
+        fill="#F3F7F5"
+        stroke="#E2E8E4"
+        strokeWidth={1}
+      />
+      <Ellipse
+        cx={cx}
+        cy={cy - wellR * 0.28}
+        rx={wellR * 0.42}
+        ry={wellR * 0.16}
+        fill="#FFFFFF"
+        opacity={0.5}
+      />
+    </Svg>
+  );
 }
 
 function PlateCenterLabels({
@@ -325,6 +371,7 @@ export function DigitalPlate({
             ]}
             pointerEvents="none"
           >
+            <PlateCenterGraphic size={innerDiameter} />
             <PlateCenterLabels
               completeness={completeness}
               hasMeals={hasMeals}
@@ -414,11 +461,9 @@ const styles = StyleSheet.create({
   },
   centerPlate: {
     position: "absolute",
-    backgroundColor: "#F8FBF9",
-    borderWidth: 1,
-    borderColor: "#E2E8E4",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   completeness: {
     fontWeight: "700",

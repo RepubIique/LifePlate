@@ -288,6 +288,7 @@ export default function HomeScreen() {
               mealId={meal.id}
               mealName={meal.mealName}
               subtitle={formatMealTypeLabel(meal.mealType)}
+              mealType={meal.mealType}
               imageUrl={meal.imageUrl}
               onPress={() => openMealEdit(meal.id, "home")}
             />

@@ -1,14 +1,42 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
-import { Image, type ImageStyle, StyleSheet, View, type StyleProp } from "react-native";
+import { Image, type ImageStyle, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { resolveMealImageUri } from "@/lib/mealImages";
+import { mealTypeIcon } from "@/lib/mealUtils";
 import { premiumStyles } from "@/src/theme/premium";
+
+type MealImagePlaceholderProps = {
+  mealType?: string | null;
+  style?: StyleProp<ViewStyle>;
+  placeholderStyle?: StyleProp<ViewStyle>;
+  iconSize?: number;
+};
+
+export function MealImagePlaceholder({
+  mealType,
+  style,
+  placeholderStyle,
+  iconSize = 28,
+}: MealImagePlaceholderProps) {
+  return (
+    <View style={[premiumStyles.thumbPlaceholder, mealImageStyles.placeholder, style, placeholderStyle]}>
+      <MaterialCommunityIcons
+        name={mealTypeIcon(mealType)}
+        size={iconSize}
+        color="#40916C"
+      />
+    </View>
+  );
+}
 
 type MealImageProps = {
   mealId?: string;
   cloudUrl?: string | null;
+  mealType?: string | null;
   style?: StyleProp<ImageStyle>;
-  placeholderStyle?: StyleProp<ImageStyle>;
+  placeholderStyle?: StyleProp<ViewStyle>;
+  placeholderIconSize?: number;
   /** Override Plus cloud fallback (defaults to profile.isPaid). */
   cloudFallback?: boolean;
 };
@@ -16,8 +44,10 @@ type MealImageProps = {
 export function MealImage({
   mealId,
   cloudUrl,
+  mealType,
   style,
   placeholderStyle,
+  placeholderIconSize,
   cloudFallback,
 }: MealImageProps) {
   const { profile } = useAuth();
@@ -38,7 +68,14 @@ export function MealImage({
   }, [mealId, cloudUrl, allowCloudFallback]);
 
   if (!uri) {
-    return <View style={[premiumStyles.thumbPlaceholder, style, placeholderStyle]} />;
+    return (
+      <MealImagePlaceholder
+        mealType={mealType}
+        style={style}
+        placeholderStyle={placeholderStyle}
+        iconSize={placeholderIconSize}
+      />
+    );
   }
 
   return <Image source={{ uri }} style={style} />;
@@ -46,4 +83,9 @@ export function MealImage({
 
 export const mealImageStyles = StyleSheet.create({
   hero: { width: "100%", height: 220 },
+  placeholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EEF2F0",
+  },
 });

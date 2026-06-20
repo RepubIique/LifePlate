@@ -16,6 +16,7 @@ import {
   type MealType,
 } from "@lifeplate/shared";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
+import { MealImagePlaceholder } from "@/components/MealImage";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { MealTypePicker } from "@/components/MealTypePicker";
@@ -311,7 +312,13 @@ export default function MealResultScreen() {
 
       {imageUrl ? (
         <Image source={{ uri: imageUrl }} style={styles.image} />
-      ) : null}
+      ) : (
+        <MealImagePlaceholder
+          mealType={mealType}
+          style={styles.image}
+          placeholderIconSize={56}
+        />
+      )}
 
       {coachNudge ? (
         <PremiumCard>

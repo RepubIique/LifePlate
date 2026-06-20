@@ -13,7 +13,14 @@ import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 import { buildCoachingContext, generateCoachNudge } from "../services/coaching.js";
-import { getDraft, deleteDraft, updateDraftAnalysis, getDraftImage, saveDraft } from "../services/drafts.js";
+import {
+  getDraft,
+  deleteDraft,
+  updateDraftAnalysis,
+  getDraftImage,
+  saveDraft,
+  draftHasImage,
+} from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
@@ -150,7 +157,7 @@ export async function mealRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
 
-      if (!draft.imageBuffer && !draft.imageUrl?.trim()) {
+      if (!draftHasImage(draft)) {
         return reply.code(400).send({
           error: "Text-only meals can't be refined. Edit the meal details instead.",
         });
@@ -196,7 +203,7 @@ export async function mealRoutes(app: FastifyInstance) {
         body.imageUrl?.trim() || draft?.imageUrl,
       );
 
-      if (!imageUrl && draft) {
+      if (!imageUrl && draft && draftHasImage(draft)) {
         const storageFlags = await loadUserImageStorageFlags(userId);
         if (shouldUploadMealToCloud(storageFlags)) {
           try {
