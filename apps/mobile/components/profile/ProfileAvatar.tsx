@@ -3,6 +3,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -62,58 +63,75 @@ export function ProfileAvatar({
       accessibilityLabel="Change profile photo"
       accessibilityRole="button"
     >
-      <View style={styles.wrap}>
-        {showImage ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.image}
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <View style={styles.placeholder}>
-            <Text variant="headlineLarge" style={styles.initials}>
-              {initials(name)}
-            </Text>
+      <View style={styles.ring}>
+        <View style={styles.wrap}>
+          {showImage ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <View style={styles.placeholder}>
+              <Text variant="headlineLarge" style={styles.initials}>
+                {initials(name)}
+              </Text>
+            </View>
+          )}
+          <View style={styles.badge}>
+            <MaterialCommunityIcons name="camera-outline" size={14} color="#FFFFFF" />
           </View>
-        )}
-        <View style={styles.badge}>
-          <MaterialCommunityIcons name="camera" size={15} color="#FFFFFF" />
+          {uploading ? (
+            <View style={styles.overlay}>
+              <ActivityIndicator color="#FFFFFF" />
+            </View>
+          ) : null}
         </View>
-        {uploading ? (
-          <View style={styles.overlay}>
-            <ActivityIndicator color="#FFFFFF" />
-          </View>
-        ) : null}
       </View>
     </Pressable>
   );
 }
 
-const AVATAR_SIZE = 108;
+const AVATAR_SIZE = 112;
 
 const styles = StyleSheet.create({
   pressable: { alignSelf: "center" },
-  pressed: { opacity: 0.9 },
+  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
+  ring: {
+    padding: 4,
+    borderRadius: (AVATAR_SIZE + 8) / 2,
+    backgroundColor: "#FFFFFF",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#1B4332",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+      },
+      android: { elevation: 4 },
+      default: {},
+    }),
+  },
   wrap: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
     position: "relative",
+    borderWidth: 2,
+    borderColor: "#D8F3DC",
   },
   image: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
+    width: AVATAR_SIZE - 4,
+    height: AVATAR_SIZE - 4,
+    borderRadius: (AVATAR_SIZE - 4) / 2,
+    margin: 1,
   },
   placeholder: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
+    flex: 1,
     borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: "#E8F5E9",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#40916C",
   },
   initials: {
     color: "#1B4332",
@@ -122,15 +140,15 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#1B4332",
+    right: -2,
+    bottom: -2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#40916C",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: "#FFFFFF",
   },
   overlay: {

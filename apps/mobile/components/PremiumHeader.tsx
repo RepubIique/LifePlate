@@ -6,15 +6,18 @@ import { spacing } from "@/src/theme/lifeplate";
 export function PremiumHeader({
   title,
   subtitle,
+  left,
   right,
 }: {
   title: string;
   subtitle?: string;
+  left?: ReactNode;
   right?: ReactNode;
 }) {
   return (
     <View style={styles.row}>
-      <View style={{ flex: 1 }}>
+      {left ? <View style={styles.side}>{left}</View> : null}
+      <View style={styles.copy}>
         <Text variant="headlineSmall" style={styles.title}>
           {title}
         </Text>
@@ -24,7 +27,7 @@ export function PremiumHeader({
           </Text>
         ) : null}
       </View>
-      {right ? <View style={styles.right}>{right}</View> : null}
+      {right ? <View style={styles.side}>{right}</View> : null}
     </View>
   );
 }
@@ -32,15 +35,15 @@ export function PremiumHeader({
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
+  copy: { flex: 1 },
+  side: { alignItems: "center", justifyContent: "center" },
   title: { letterSpacing: 0.2 },
   subtitle: { opacity: 0.7, marginTop: spacing.xs },
-  right: { alignItems: "flex-end", justifyContent: "center" },
 });
 

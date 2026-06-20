@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionSheetIOS, Alert, Platform, RefreshControl, Share, StyleSheet, View } from "react-native";
-import { Button, Switch, Text, TextInput } from "react-native-paper";
+import { Button, IconButton, Switch } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
@@ -11,12 +11,16 @@ import {
   toOptionalInt,
   toOptionalNumber,
 } from "@/components/BodyMetricsForm";
-import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { ProfileHeroCard } from "@/components/profile/ProfileHeroCard";
+import { ProfileSaveBar } from "@/components/profile/ProfileSaveBar";
+import { ProfileSettingRow } from "@/components/profile/ProfileSettingRow";
 import { ProfileStatsRow } from "@/components/profile/ProfileStatsRow";
 import { BadgeShelf } from "@/components/gamification/BadgeShelf";
 import { StreakFreezeCard } from "@/components/gamification/StreakFreezeCard";
 import { PremiumCard } from "@/components/PremiumCard";
+import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/context/AuthContext";
 import { useFriends } from "@/context/FriendsContext";
@@ -326,7 +330,20 @@ export default function ProfileScreen() {
     ]);
   }
 
-  const displayName = name.trim() || profile?.name?.trim() || "Your profile";
+  function handleShareFriendCode() {
+    if (!friendCode) return;
+    void Share.share({ message: friendCode }).then(() =>
+      setSnackbar("Friend code ready to share"),
+    );
+  }
+
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/(tabs)");
+  }
 
   async function handleStreakFreeze() {
     setFreezeLoading(true);
@@ -377,49 +394,48 @@ export default function ProfileScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
       }
     >
-      <View style={styles.body}>
-        <PremiumCard style={styles.hero}>
-          <ProfileAvatar
-            userId={profile?.id ?? null}
-            hasAvatar={profile?.hasAvatar ?? false}
-            remoteAvatarUrl={remoteAvatarUrl}
-            name={displayName}
-            uploading={avatarUploading}
-            cacheRevision={avatarCacheRevision}
-            onPress={showAvatarPicker}
+      <PremiumHeader
+        title="Profile"
+        subtitle="Your account and preferences"
+        left={
+          <IconButton
+            icon="arrow-left"
+            size={22}
+            onPress={handleBack}
+            accessibilityLabel="Go back"
           />
-          <Text variant="headlineSmall" style={styles.heroName}>
-            {displayName}
-          </Text>
-          <Text variant="bodyMedium" style={styles.heroEmail}>
-            {profile?.email ?? "Your account"}
-          </Text>
-          <View style={styles.friendCodeBlock}>
-            <Text variant="bodySmall" style={styles.friendCodeLabel}>
-              Friend code
-            </Text>
-            <View style={styles.friendCodeRow}>
-              <Text variant="titleMedium" style={styles.friendCode}>
-                {friendCode || "------"}
-              </Text>
-              <Button
-                mode="text"
-                compact
-                onPress={() =>
-                  void Share.share({ message: friendCode || "" }).then(() =>
-                    setSnackbar("Friend code ready to share"),
-                  )
-                }
-                disabled={!friendCode}
-              >
-                Share
-              </Button>
-            </View>
-          </View>
-          <Text variant="bodySmall" style={styles.avatarHint}>
-            Tap photo to update
-          </Text>
-        </PremiumCard>
+        }
+      />
+
+      <View style={styles.body}>
+        <ProfileHeroCard
+          userId={profile?.id ?? null}
+          hasAvatar={profile?.hasAvatar ?? false}
+          remoteAvatarUrl={remoteAvatarUrl}
+          name={name}
+          goal={goal}
+          email={profile?.email ?? null}
+          isPaid={profile?.isPaid ?? false}
+          friendCode={friendCode}
+          avatarUploading={avatarUploading}
+          avatarCacheRevision={avatarCacheRevision}
+          onNameChange={(value) => {
+            setIsDirty(true);
+            setName(value);
+          }}
+          onGoalChange={(value) => {
+            setIsDirty(true);
+            setGoal(value);
+          }}
+          onAvatarPress={showAvatarPicker}
+          onShareFriendCode={handleShareFriendCode}
+        />
+
+        <ProfileSaveBar
+          visible={canSave}
+          saving={saving}
+          onSave={() => void handleSave()}
+        />
 
         <ProfileStatsRow
           mealsLogged={profile?.mealsLogged ?? 0}
@@ -427,12 +443,7 @@ export default function ProfileScreen() {
           longestStreak={profile?.longestStreak ?? 0}
         />
 
-        {badgeStats ? (
-          <>
-            <SectionLabel title="Badges" subtitle="Quiet wins from showing up" />
-            <BadgeShelf stats={badgeStats} />
-          </>
-        ) : null}
+        {badgeStats ? <BadgeShelf stats={badgeStats} /> : null}
 
         <SectionLabel title="Streak" />
         <StreakFreezeCard
@@ -442,36 +453,12 @@ export default function ProfileScreen() {
           onUse={() => void handleStreakFreeze()}
         />
 
-        <SectionLabel title="About you" />
-        <PremiumCard style={styles.formCard}>
-          <TextInput
-            label="Name"
-            value={name}
-            onChangeText={(value) => {
-              setIsDirty(true);
-              setName(value);
-            }}
-            mode="outlined"
-            style={styles.input}
-          />
-          <TextInput
-            label="Goal"
-            value={goal}
-            onChangeText={(value) => {
-              setIsDirty(true);
-              setGoal(value);
-            }}
-            mode="outlined"
-            placeholder="e.g. Increase protein"
-            style={styles.input}
-          />
-        </PremiumCard>
-
-        <SectionLabel
+        <SectionLabel title="Body" />
+        <CollapsibleSection
           title="Body metrics"
-          subtitle="Used to estimate your daily fibre and calorie targets"
-        />
-        <PremiumCard style={styles.formCard}>
+          subtitle="Used for fibre and calorie targets"
+          defaultExpanded={false}
+        >
           <BodyMetricsForm
             weightKg={weightKg}
             heightCm={heightCm}
@@ -494,43 +481,33 @@ export default function ProfileScreen() {
               setGender(value);
             }}
           />
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            disabled={saving || !canSave}
-            loading={saving}
-            style={styles.saveButton}
-          >
-            Save changes
-          </Button>
-          {!canSave ? (
-            <Text variant="bodySmall" style={styles.saveHint}>
-              Change a field above to save.
-            </Text>
-          ) : null}
+        </CollapsibleSection>
+
+        <SectionLabel title="Preferences" />
+        <PremiumCard style={styles.settingsCard} noBlur>
+          <ProfileSettingRow
+            icon="cloud-upload-outline"
+            title="Cloud photo backup"
+            subtitle={
+              profile?.isPaid
+                ? "Store meal photos in the cloud for multi-device access."
+                : "Upgrade to Plus to back up meal photos across devices."
+            }
+            trailing={
+              <Switch
+                value={profile?.cloudImageBackup ?? false}
+                onValueChange={handleCloudBackupToggle}
+                disabled={!profile?.isPaid}
+              />
+            }
+          />
         </PremiumCard>
 
-        <SectionLabel title="LifePlate Plus" />
-        <PremiumCard style={styles.formCard} noBlur>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <Text variant="titleMedium">Cloud photo backup</Text>
-              <Text variant="bodySmall" style={styles.switchHint}>
-                {profile?.isPaid
-                  ? "Also store meal photos in the cloud for multi-device access."
-                  : "Upgrade to Plus to back up meal photos across devices."}
-              </Text>
-            </View>
-            <Switch
-              value={profile?.cloudImageBackup ?? false}
-              onValueChange={handleCloudBackupToggle}
-              disabled={!profile?.isPaid}
-            />
-          </View>
-        </PremiumCard>
-
-        <SectionLabel title="Account" />
-        <PremiumCard style={styles.formCard} noBlur>
+        <CollapsibleSection
+          title="Linked accounts"
+          subtitle="Connect Apple or Google sign-in"
+          defaultExpanded={false}
+        >
           <View style={styles.linkActions}>
             <Button
               mode="outlined"
@@ -551,27 +528,30 @@ export default function ProfileScreen() {
               Link Google
             </Button>
           </View>
-        </PremiumCard>
+        </CollapsibleSection>
 
-        <View style={styles.actions}>
+        <PremiumCard style={styles.footerCard} noBlur>
           <Button
             mode="text"
             icon="export-variant"
-            onPress={handleExport}
+            onPress={() => void handleExport()}
             loading={exporting}
             disabled={exporting}
+            contentStyle={styles.footerButtonContent}
           >
             Export data
           </Button>
+          <View style={styles.footerDivider} />
           <Button
-            mode="outlined"
+            mode="text"
             icon="logout"
             textColor="#c0392b"
             onPress={confirmSignOut}
+            contentStyle={styles.footerButtonContent}
           >
             Sign out
           </Button>
-        </View>
+        </PremiumCard>
       </View>
 
       <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
@@ -584,53 +564,24 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
     gap: spacing.md,
   },
-  hero: {
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: "#F8FBF9",
-    paddingVertical: spacing.xl,
+  settingsCard: {
+    gap: 0,
   },
-  heroName: {
-    marginTop: spacing.sm,
-    letterSpacing: 0.15,
-    color: "#1B4332",
-  },
-  heroEmail: { opacity: 0.6 },
-  friendCodeBlock: {
-    alignItems: "center",
-    marginTop: spacing.sm,
-    gap: 2,
-  },
-  friendCodeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  friendCodeLabel: { opacity: 0.5 },
-  friendCode: {
-    letterSpacing: 2,
-    color: "#1B4332",
-    fontWeight: "600",
-  },
-  avatarHint: { opacity: 0.45, marginTop: 2 },
-  formCard: { gap: spacing.sm },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  switchCopy: { flex: 1, gap: 4 },
-  switchHint: { opacity: 0.65 },
-  input: { backgroundColor: "#FFFFFF" },
-  saveButton: { marginTop: spacing.sm },
-  saveHint: { opacity: 0.5, textAlign: "center" },
   linkActions: { gap: spacing.sm },
-  actions: {
-    gap: spacing.xs,
+  footerCard: {
+    gap: 0,
+    paddingVertical: spacing.xs,
     marginTop: spacing.xs,
+  },
+  footerButtonContent: {
+    justifyContent: "flex-start",
+  },
+  footerDivider: {
+    height: 1,
+    backgroundColor: "#F1F3F5",
+    marginHorizontal: spacing.sm,
   },
 });
