@@ -1,43 +1,31 @@
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
-import { MEAL_TYPE_OPTIONS, type MealType } from "@lifeplate/shared";
+import { Pressable, StyleSheet, View } from "react-native";
+import { SegmentedButtons, Text } from "react-native-paper";
+import { MEAL_SOURCE_OPTIONS, type MealSource } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { spacing } from "@/src/theme/lifeplate";
 
-type MealTypePickerProps = {
-  value: MealType;
-  onChange: (value: MealType) => void;
+type MealSourcePickerProps = {
+  value: MealSource;
+  onChange: (value: MealSource) => void;
   compact?: boolean;
 };
 
-export function MealTypePicker({ value, onChange, compact = false }: MealTypePickerProps) {
+export function MealSourcePicker({ value, onChange, compact = false }: MealSourcePickerProps) {
   if (compact) {
     return (
       <View style={styles.compactRoot}>
         <Text variant="labelLarge" style={styles.compactLabel}>
-          Type
+          Source
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.compactScroll}
-        >
-          {MEAL_TYPE_OPTIONS.map((option) => {
-            const selected = value === option.value;
-            return (
-              <Pressable key={option.value} onPress={() => onChange(option.value)}>
-                <View style={[styles.compactChip, selected && styles.compactChipSelected]}>
-                  <Text
-                    variant="bodySmall"
-                    style={selected ? styles.compactChipTextSelected : styles.compactChipText}
-                  >
-                    {option.label}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <SegmentedButtons
+          value={value}
+          onValueChange={(next) => onChange(next as MealSource)}
+          buttons={MEAL_SOURCE_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+          style={styles.segmented}
+        />
       </View>
     );
   }
@@ -45,10 +33,10 @@ export function MealTypePicker({ value, onChange, compact = false }: MealTypePic
   return (
     <View style={styles.root}>
       <Text variant="titleMedium" style={styles.title}>
-        Meal type
+        Meal source
       </Text>
       <View style={styles.grid}>
-        {MEAL_TYPE_OPTIONS.map((option) => {
+        {MEAL_SOURCE_OPTIONS.map((option) => {
           const selected = value === option.value;
           return (
             <Pressable
@@ -96,19 +84,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  compactScroll: { gap: spacing.xs, paddingRight: spacing.sm },
-  compactChip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#E3E8E5",
-    backgroundColor: "#FAFBFA",
-  },
-  compactChipSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
-  },
-  compactChipText: { color: "#495057" },
-  compactChipTextSelected: { color: "#1B4332" },
+  segmented: { alignSelf: "stretch" },
 });

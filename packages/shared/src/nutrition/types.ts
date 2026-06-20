@@ -107,6 +107,7 @@ export interface MealPatchResponse {
   fibre?: number | null;
   sugar?: number | null;
   sodium?: number | null;
+  mealSource?: string | null;
 }
 
 export interface DashboardTodaySummary {

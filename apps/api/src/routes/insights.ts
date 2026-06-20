@@ -43,8 +43,9 @@ export async function insightRoutes(app: FastifyInstance) {
         protein: number | null;
         foods: string[];
         meal_name: string | null;
+        meal_source: string | null;
       }>(
-        `SELECT m.id AS meal_id, m.protein, m.foods, m.meal_name
+        `SELECT m.id AS meal_id, m.protein, m.foods, m.meal_name, m.meal_source
          FROM meals m
          WHERE m.user_id = $1 AND m.log_date >= $2::date`,
         [userId, weekStart],
@@ -107,6 +108,7 @@ export async function insightRoutes(app: FastifyInstance) {
           mealId: row.meal_id,
           mealName: row.meal_name,
           foodName,
+          mealSource: row.meal_source,
         })),
       );
       const takeawayMeals = countTakeawayMeals(takeawayHits);

@@ -116,6 +116,18 @@ async function removeLegacyAvatarObjects(userId: string, keepPath: string): Prom
   }
 }
 
+export async function deleteStoredMealImage(stored: string | null | undefined): Promise<void> {
+  const path = stored?.trim() ? normalizeStoragePath(stored) : "";
+  if (!path) return;
+
+  try {
+    await deleteStorageObjects([path]);
+    invalidateSignedUrlCache(path);
+  } catch {
+    // Best-effort cleanup when replacing meal photos.
+  }
+}
+
 export async function uploadMealImage(
   userId: string,
   buffer: Buffer,

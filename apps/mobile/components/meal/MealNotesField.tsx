@@ -24,9 +24,10 @@ import { premium } from "@/src/theme/premium";
 type Props = {
   value: string;
   onChange: (value: string) => void;
+  compact?: boolean;
 };
 
-export function MealNotesField({ value, onChange }: Props) {
+export function MealNotesField({ value, onChange, compact = false }: Props) {
   const { friends, hydrated, loadFriends } = useFriends();
   const selectionRef = useRef<NotesSelection>({ start: 0, end: 0 });
   const [selection, setSelection] = useState<NotesSelection>({ start: 0, end: 0 });
@@ -111,13 +112,17 @@ export function MealNotesField({ value, onChange }: Props) {
 
   return (
     <View>
-      <Text variant="titleMedium" style={styles.sectionTitle}>
-        Journal notes
-      </Text>
-      <Text variant="bodySmall" style={styles.hint}>
-        Who you ate with, where you went, or a quick recipe note. Use the toolbar for bold, italic,
-        bullet lists, and @ mentions.
-      </Text>
+      {!compact ? (
+        <>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Journal notes
+          </Text>
+          <Text variant="bodySmall" style={styles.hint}>
+            Who you ate with, where you went, or a quick recipe note. Use the toolbar for bold,
+            italic, bullet lists, and @ mentions.
+          </Text>
+        </>
+      ) : null}
 
       <View style={styles.toolbar}>
         <IconButton

@@ -10,12 +10,14 @@ type ShareWithFriendsPickerProps = {
   selectedFriendIds: string[];
   onSelectionChange: (ids: string[]) => void;
   onTotalPeopleChange?: (count: number) => void;
+  embedded?: boolean;
 };
 
 export function ShareWithFriendsPicker({
   selectedFriendIds,
   onSelectionChange,
   onTotalPeopleChange,
+  embedded = false,
 }: ShareWithFriendsPickerProps) {
   const { friends, hydrated, loadFriends } = useFriends();
 
@@ -37,14 +39,23 @@ export function ShareWithFriendsPicker({
 
   if (!hydrated) return null;
 
-  return (
-    <PremiumCard style={styles.card}>
-      <Text variant="titleMedium" style={styles.title}>
-        Who ate with you?
-      </Text>
-      <Text variant="bodySmall" style={styles.subtitle}>
-        Send the same meal log to friends — they&apos;ll review before it appears on their timeline.
-      </Text>
+  const content = (
+    <>
+      {!embedded ? (
+        <>
+          <Text variant="titleMedium" style={styles.title}>
+            Who ate with you?
+          </Text>
+          <Text variant="bodySmall" style={styles.subtitle}>
+            Send the same meal log to friends — they&apos;ll review before it appears on their
+            timeline.
+          </Text>
+        </>
+      ) : (
+        <Text variant="bodySmall" style={styles.subtitle}>
+          Friends review before it appears on their timeline.
+        </Text>
+      )}
 
       {friends.length === 0 ? (
         <Pressable onPress={() => router.push("/(tabs)/friends")}>
@@ -70,8 +81,14 @@ export function ShareWithFriendsPicker({
           })}
         </View>
       )}
-    </PremiumCard>
+    </>
   );
+
+  if (embedded) {
+    return <View style={styles.embedded}>{content}</View>;
+  }
+
+  return <PremiumCard style={styles.card}>{content}</PremiumCard>;
 }
 
 const styles = StyleSheet.create({
@@ -89,4 +106,5 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     opacity: 0.85,
   },
+  embedded: { gap: spacing.sm },
 });

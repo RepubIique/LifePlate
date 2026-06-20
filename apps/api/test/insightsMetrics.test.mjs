@@ -21,6 +21,24 @@ test("countTakeawayMeals dedupes takeaway hits per meal", () => {
   assert.equal(count, 1);
 });
 
+test("countTakeawayMeals respects explicit mealSource tags", () => {
+  const count = countTakeawayMeals([
+    {
+      mealId: "meal-1",
+      mealName: "Salad",
+      foodName: "lettuce",
+      mealSource: "takeaway",
+    },
+    {
+      mealId: "meal-2",
+      mealName: "KFC dinner",
+      foodName: "chicken",
+      mealSource: "home_cooked",
+    },
+  ]);
+  assert.equal(count, 1);
+});
+
 test("computeTakeawayPercent caps at 100 percent", () => {
   assert.deepEqual(computeTakeawayPercent(2, 1), {
     takeawayPercent: 100,

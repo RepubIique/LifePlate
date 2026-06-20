@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Image, Alert, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import {
   Button,
   Chip,
@@ -8,10 +8,11 @@ import {
   TextInput,
 } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
-import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
+import type { MealDetail, MealListItem, MealSource, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
   clampMealPortions,
+  isMealSource,
   isMealType,
   MAX_MEAL_REANALYZES,
   mealListItemToMacros,
@@ -27,9 +28,10 @@ import { EditMealSkeleton } from "@/components/skeletons/EditMealSkeleton";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
 import { MealTypePicker } from "@/components/MealTypePicker";
+import { MealSourcePicker } from "@/components/MealSourcePicker";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
-import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { ShareWithFriendsPicker } from "@/components/meal/ShareWithFriendsPicker";
 import { useAuth } from "@/context/AuthContext";
@@ -120,6 +122,7 @@ export default function EditMealScreen() {
 
   const [mealName, setMealName] = useState("");
   const [mealType, setMealType] = useState<MealType>("lunch");
+  const [mealSource, setMealSource] = useState<MealSource>("home_cooked");
   const [foods, setFoods] = useState<string[]>([]);
   const [newFood, setNewFood] = useState("");
   const [calories, setCalories] = useState("0");
@@ -198,7 +201,7 @@ export default function EditMealScreen() {
     };
   }, [meal?.id, meal?.imageUrl, attachedImageUri]);
 
-  const showPhotoAttach = Boolean(meal && !attachedImageUri && !resolvedImageUri);
+  const displayImageUri = attachedImageUri || resolvedImageUri || undefined;
 
   const macroSetters = {
     setCalories,
@@ -244,6 +247,8 @@ export default function EditMealScreen() {
     });
     setLoggedAt(m.createdAt);
     setNotes(m.notes ?? "");
+    const source = m.mealSource ?? "";
+    setMealSource(isMealSource(source) ? source : "home_cooked");
     setReanalyzeRemaining(
       m.reanalyzeRemaining ?? Math.max(0, MAX_MEAL_REANALYZES - (m.reanalyzeCount ?? 0)),
     );
@@ -366,6 +371,7 @@ export default function EditMealScreen() {
         loggedAt,
         notes,
         portionMeta,
+        mealSource,
       });
 
       let sharesSent = 0;
@@ -396,6 +402,7 @@ export default function EditMealScreen() {
           logDate: nextLogDate,
           notes: notes || null,
           portionMeta: portionMeta ?? undefined,
+          mealSource,
         });
         patchMealLocally(id, {
           mealName,
@@ -403,6 +410,7 @@ export default function EditMealScreen() {
           calories: nextCalories,
           protein: nextProtein,
           notes: notes || null,
+          mealSource,
           createdAt: loggedAt,
           logDate: nextLogDate,
         });
@@ -474,192 +482,217 @@ export default function EditMealScreen() {
       ) : meal ? (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
-      {showPhotoAttach ? (
-        <View style={styles.imageWrap}>
-          <MealPhotoAttachSection
-            mealType={mealType}
-            attaching={attachingPhoto}
-            onPickCamera={() => {
-              setAttachPhotoError(null);
-              void pickPhoto(true);
-            }}
-            onPickLibrary={() => {
-              setAttachPhotoError(null);
-              void pickPhoto(false);
-            }}
-          />
-        </View>
-      ) : (
-        <View style={styles.imageWrap}>
-          {attachedImageUri ? (
-            <Image source={{ uri: attachedImageUri }} style={styles.image} />
-          ) : (
-            <MealImage
-              mealId={meal.id}
-              cloudUrl={meal.imageUrl}
-              mealType={mealType}
-              style={styles.image}
-              placeholderStyle={styles.imagePlaceholder}
-              placeholderIconSize={56}
-            />
-          )}
-        </View>
-      )}
+
+      <MealPhotoAttachSection
+        mealType={mealType}
+        imageUri={displayImageUri}
+        attaching={attachingPhoto}
+        variant="compact"
+        onPickCamera={() => {
+          setAttachPhotoError(null);
+          void pickPhoto(true);
+        }}
+        onPickLibrary={() => {
+          setAttachPhotoError(null);
+          void pickPhoto(false);
+        }}
+      />
 
       <View style={styles.cardWrap}>
-      <PremiumCard>
-        <MealLogDateField
-          dateKey={dateKeyFromIso(loggedAt || meal.createdAt)}
-          mealType={mealType}
-          label="Logged on"
-          onChange={setLoggedAt}
-        />
-        <TextInput
-          label="Meal name"
-          value={mealName}
-          onChangeText={setMealName}
-          mode="outlined"
-        />
+        <PremiumCard style={styles.sectionCard}>
+          <MealLogDateField
+            dateKey={dateKeyFromIso(loggedAt || meal.createdAt)}
+            mealType={mealType}
+            label="Logged on"
+            onChange={setLoggedAt}
+          />
+          <TextInput
+            label="Meal name"
+            value={mealName}
+            onChangeText={setMealName}
+            mode="outlined"
+          />
+          <View style={styles.metaGroup}>
+            <MealTypePicker compact value={mealType} onChange={setMealType} />
+            <MealSourcePicker compact value={mealSource} onChange={setMealSource} />
+          </View>
+        </PremiumCard>
+      </View>
 
-        <MealTypePicker value={mealType} onChange={setMealType} />
-
-        <MealNotesField value={notes} onChange={setNotes} />
-
-        <SharedMealPortionsCard
-          variant="edit"
-          totalPortions={totalPortions}
-          portionsEaten={portionsEaten}
-          estimatedServings={estimatedServings}
-          onTotalPortionsChange={setTotalPortions}
-          onPortionsEatenChange={setPortionsEaten}
-        />
-
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Foods
-        </Text>
-        <View style={styles.chips}>
-          {foods.map((f) => (
-            <Chip key={f} onClose={() => removeFood(f)}>
-              {f}
-            </Chip>
-          ))}
-        </View>
-        <TextInput
-          label="Add food"
-          value={newFood}
-          onChangeText={setNewFood}
-          onSubmitEditing={addFood}
-          mode="outlined"
-          right={<TextInput.Icon icon="plus" onPress={addFood} />}
-        />
-
-        <View style={styles.reanalyzeBlock}>
-          <Text variant="bodySmall" style={styles.reanalyzeHint}>
-            {reanalyzeRemaining > 0
-              ? `Updated your food list? Re-estimate macros with AI. ${reanalyzeRemaining} of ${MAX_MEAL_REANALYZES} left for this meal.`
-              : `No AI re-analyses left for this meal (limit is ${MAX_MEAL_REANALYZES}). Adjust macros manually below.`}
+      <View style={styles.cardWrap}>
+        <PremiumCard style={styles.sectionCard}>
+          <Text variant="titleMedium" style={styles.blockTitle}>
+            What you ate
           </Text>
-          <Button
+          <View style={styles.chips}>
+            {foods.map((f) => (
+              <Chip key={f} onClose={() => removeFood(f)}>
+                {f}
+              </Chip>
+            ))}
+          </View>
+          <TextInput
+            label="Add food"
+            value={newFood}
+            onChangeText={setNewFood}
+            onSubmitEditing={addFood}
             mode="outlined"
-            icon="auto-fix"
-            onPress={handleReanalyze}
-            loading={reanalyzing}
-            disabled={
-              reanalyzing ||
-              saving ||
-              foods.length === 0 ||
-              reanalyzeRemaining <= 0
-            }
-          >
-            Re-analyse macros
-          </Button>
-        </View>
+            right={<TextInput.Icon icon="plus" onPress={addFood} />}
+          />
 
-        <MacroNutritionPanel
-          calories={toNumber(calories, 0)}
-          protein={toNumber(protein, 0)}
-          carbs={toNumber(carbs, 0)}
-          fat={toNumber(fat, 0)}
-          fibre={toNumber(fibre, 0)}
-          sugar={toNumber(sugar, 0)}
-          sodium={toNumber(sodium, 0)}
-          dailyFibreGoal={dailyFibreGoal}
-          personalisedGoal={personalisedFibreGoal}
-          confidence={meal.confidence ?? undefined}
-          showConfidence={meal.confidence != null}
-          energyUnitToggle
-        />
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Adjust macros
-        </Text>
-        <View style={styles.macroGrid}>
-          <TextInput
-            label="Calories"
-            value={calories}
-            onChangeText={setCalories}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
+          <View style={styles.reanalyzeRow}>
+            <Text variant="bodySmall" style={styles.reanalyzeHint}>
+              {reanalyzeRemaining > 0
+                ? `${reanalyzeRemaining} AI re-analyse${reanalyzeRemaining === 1 ? "" : "s"} left`
+                : "Manual macro edits only"}
+            </Text>
+            <Button
+              mode="outlined"
+              icon="auto-fix"
+              compact
+              onPress={handleReanalyze}
+              loading={reanalyzing}
+              disabled={
+                reanalyzing ||
+                saving ||
+                foods.length === 0 ||
+                reanalyzeRemaining <= 0
+              }
+            >
+              Re-analyse
+            </Button>
+          </View>
+
+          <MacroNutritionPanel
+            calories={toNumber(calories, 0)}
+            protein={toNumber(protein, 0)}
+            carbs={toNumber(carbs, 0)}
+            fat={toNumber(fat, 0)}
+            fibre={toNumber(fibre, 0)}
+            sugar={toNumber(sugar, 0)}
+            sodium={toNumber(sodium, 0)}
+            dailyFibreGoal={dailyFibreGoal}
+            personalisedGoal={personalisedFibreGoal}
+            confidence={meal.confidence ?? undefined}
+            showConfidence={meal.confidence != null}
+            energyUnitToggle
           />
-          <TextInput
-            label="Protein (g)"
-            value={protein}
-            onChangeText={setProtein}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
+        </PremiumCard>
+      </View>
+
+      <View style={styles.cardWrap}>
+        <CollapsibleSection title="Fine-tune macros" subtitle="Adjust individual numbers">
+          <View style={styles.macroGrid}>
+            <TextInput
+              label="Calories"
+              value={calories}
+              onChangeText={setCalories}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Protein (g)"
+              value={protein}
+              onChangeText={setProtein}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Carbs (g)"
+              value={carbs}
+              onChangeText={setCarbs}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Fat (g)"
+              value={fat}
+              onChangeText={setFat}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Fibre (g)"
+              value={fibre}
+              onChangeText={setFibre}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Sugar (g)"
+              value={sugar}
+              onChangeText={setSugar}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+            <TextInput
+              label="Sodium (mg)"
+              value={sodium}
+              onChangeText={setSodium}
+              keyboardType="numeric"
+              mode="outlined"
+              style={styles.macroInput}
+            />
+          </View>
+        </CollapsibleSection>
+      </View>
+
+      <View style={styles.cardWrap}>
+        <CollapsibleSection
+          title="Journal notes"
+          subtitle={notes.trim() ? notes.trim().slice(0, 48) : "Optional"}
+          defaultExpanded={Boolean(notes.trim())}
+        >
+          <MealNotesField compact value={notes} onChange={setNotes} />
+        </CollapsibleSection>
+      </View>
+
+      <View style={styles.cardWrap}>
+        <CollapsibleSection
+          title="Portions"
+          subtitle={
+            totalPortions > 1
+              ? `Logging ${portionsEaten} of ${totalPortions}`
+              : "Single portion"
+          }
+          defaultExpanded={totalPortions > 1}
+        >
+          <SharedMealPortionsCard
+            embedded
+            variant="edit"
+            totalPortions={totalPortions}
+            portionsEaten={portionsEaten}
+            estimatedServings={estimatedServings}
+            onTotalPortionsChange={setTotalPortions}
+            onPortionsEatenChange={setPortionsEaten}
           />
-          <TextInput
-            label="Carbs (g)"
-            value={carbs}
-            onChangeText={setCarbs}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
-          />
-          <TextInput
-            label="Fat (g)"
-            value={fat}
-            onChangeText={setFat}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
-          />
-          <TextInput
-            label="Fibre (g)"
-            value={fibre}
-            onChangeText={setFibre}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
-          />
-          <TextInput
-            label="Sugar (g)"
-            value={sugar}
-            onChangeText={setSugar}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
-          />
-          <TextInput
-            label="Sodium (mg)"
-            value={sodium}
-            onChangeText={setSodium}
-            keyboardType="numeric"
-            mode="outlined"
-            style={styles.macroInput}
-          />
-        </View>
-      </PremiumCard>
+        </CollapsibleSection>
       </View>
 
       {canShareMeal ? (
         <View style={styles.cardWrap}>
-          <ShareWithFriendsPicker
-            selectedFriendIds={selectedFriendIds}
-            onSelectionChange={setSelectedFriendIds}
-            onTotalPeopleChange={handleShareTotalPeopleChange}
-          />
+          <CollapsibleSection
+            title="Share with friends"
+            subtitle={
+              selectedFriendIds.length > 0
+                ? `${selectedFriendIds.length} selected`
+                : "Optional"
+            }
+            defaultExpanded={selectedFriendIds.length > 0}
+          >
+            <ShareWithFriendsPicker
+              embedded
+              selectedFriendIds={selectedFriendIds}
+              onSelectionChange={setSelectedFriendIds}
+              onTotalPeopleChange={handleShareTotalPeopleChange}
+            />
+          </CollapsibleSection>
         </View>
       ) : null}
 
@@ -693,17 +726,22 @@ export default function EditMealScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#FFFFFF" },
   scroll: { flex: 1, backgroundColor: "#FFFFFF" },
-  container: { paddingBottom: spacing.xl, gap: spacing.md },
-  imageWrap: { paddingHorizontal: spacing.lg },
-  image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
-  imagePlaceholder: { width: "100%", height: 220, borderRadius: premium.imageRadius },
+  container: { paddingBottom: spacing.xl, gap: spacing.sm },
   cardWrap: { paddingHorizontal: spacing.lg },
-  sectionTitle: { marginTop: spacing.md, marginBottom: spacing.xs },
+  sectionCard: { gap: spacing.sm },
+  metaGroup: { gap: spacing.md, marginTop: spacing.xs },
+  blockTitle: { letterSpacing: 0.15 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  reanalyzeBlock: { gap: spacing.sm, marginTop: spacing.sm },
-  reanalyzeHint: { opacity: 0.7, lineHeight: 18 },
+  reanalyzeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  reanalyzeHint: { opacity: 0.7, flex: 1, lineHeight: 18 },
   macroGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   macroInput: { flexBasis: "48%" },
-  actions: { gap: spacing.sm, paddingHorizontal: spacing.lg },
+  actions: { gap: spacing.sm, paddingHorizontal: spacing.lg, marginTop: spacing.xs },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
 });

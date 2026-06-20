@@ -163,6 +163,22 @@ export function mealTypeLabel(mealType: MealType | string | null | undefined): s
   return MEAL_TYPE_OPTIONS.find((o) => o.value === mealType)?.label ?? mealType;
 }
 
+export const MEAL_SOURCE_OPTIONS = [
+  { value: "home_cooked", label: "Home cooked" },
+  { value: "takeaway", label: "Takeaway" },
+] as const;
+
+export type MealSource = (typeof MEAL_SOURCE_OPTIONS)[number]["value"];
+
+export function isMealSource(value: string): value is MealSource {
+  return MEAL_SOURCE_OPTIONS.some((o) => o.value === value);
+}
+
+export function mealSourceLabel(mealSource: MealSource | string | null | undefined): string {
+  if (!mealSource) return "";
+  return MEAL_SOURCE_OPTIONS.find((o) => o.value === mealSource)?.label ?? mealSource;
+}
+
 export const MEAL_GUARDRAIL_CODES = [
   "INVALID_IMAGE",
   "NOT_FOOD",
@@ -418,6 +434,7 @@ export interface MealConfirmRequest {
   /** ISO timestamp — log the meal on a prior day. */
   loggedAt?: string;
   portionMeta?: MealPortionMeta;
+  mealSource?: MealSource;
   /** Friend user IDs to send a pending meal share to (must be mutual friends). */
   shareWithFriendIds?: string[];
 }
@@ -508,6 +525,8 @@ export interface MealListSummary {
   calories?: number | null;
   protein?: number | null;
   notes?: string | null;
+  /** Home cooked vs takeaway — used for weekly insights. */
+  mealSource?: MealSource | null;
   /** Present when this meal was shared by another user. */
   sharedByUserId?: string | null;
   sharedByName?: string | null;
@@ -548,6 +567,7 @@ export interface MealUpdateRequest {
   /** Free-form journal note (who you ate with, recipe, etc.). */
   notes?: string | null;
   portionMeta?: MealPortionMeta | null;
+  mealSource?: MealSource | null;
 }
 
 export interface MealReorderRequest {

@@ -11,6 +11,7 @@ type SharedMealPortionsCardProps = {
   portionsEaten: number;
   estimatedServings?: number;
   variant?: "confirm" | "edit";
+  embedded?: boolean;
   onTotalPortionsChange: (value: number) => void;
   onPortionsEatenChange: (value: number) => void;
 };
@@ -40,6 +41,7 @@ export function SharedMealPortionsCard({
   portionsEaten,
   estimatedServings,
   variant = "confirm",
+  embedded = false,
   onTotalPortionsChange,
   onPortionsEatenChange,
 }: SharedMealPortionsCardProps) {
@@ -51,21 +53,27 @@ export function SharedMealPortionsCard({
   const title = variant === "edit" ? "Portions" : "Shared meal?";
   const subtitle =
     variant === "edit"
-      ? "Update how this meal was split if you shared it or only ate part of it."
+      ? embedded
+        ? "Split this meal if you shared it or only ate part of it."
+        : "Update how this meal was split if you shared it or only ate part of it."
       : estimatedServings != null && estimatedServings >= 2
         ? `This looks like food for about ${Math.round(estimatedServings)} people. Tell us how many servings are in the photo so we log your share correctly.`
         : "This looks like more than one portion. Tell us how many servings are in the photo so we log your share correctly.";
 
-  return (
-    <PremiumCard>
-      <Text variant="titleMedium" style={styles.title}>
-        {title}
-      </Text>
-      <Text variant="bodySmall" style={styles.subtitle}>
-        {subtitle}
-      </Text>
+  const content = (
+    <>
+      {!embedded ? (
+        <>
+          <Text variant="titleMedium" style={styles.title}>
+            {title}
+          </Text>
+          <Text variant="bodySmall" style={styles.subtitle}>
+            {subtitle}
+          </Text>
+        </>
+      ) : null}
 
-      <Text variant="labelLarge" style={styles.sectionLabel}>
+      <Text variant="labelLarge" style={[styles.sectionLabel, embedded && styles.sectionLabelFirst]}>
         How many portions is this for?
       </Text>
       <View style={styles.chipRow}>
@@ -111,8 +119,14 @@ export function SharedMealPortionsCard({
         Logging {clampMealPortions(portionsEaten)} of {clampMealPortions(totalPortions)}{" "}
         {totalPortions === 1 ? "portion" : "portions"}.
       </Text>
-    </PremiumCard>
+    </>
   );
+
+  if (embedded) {
+    return <View style={styles.embedded}>{content}</View>;
+  }
+
+  return <PremiumCard>{content}</PremiumCard>;
 }
 
 const styles = StyleSheet.create({
@@ -138,4 +152,6 @@ const styles = StyleSheet.create({
   },
   chipTextSelected: { color: "#1B4332" },
   hint: { opacity: 0.65, marginTop: spacing.sm, lineHeight: 18 },
+  embedded: { gap: spacing.xs },
+  sectionLabelFirst: { marginTop: 0 },
 });

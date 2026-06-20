@@ -11,7 +11,7 @@ import type {
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey, isMealSource, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -43,7 +43,7 @@ import {
   shareExistingMealWithFriends,
   validateShareFriendIds,
 } from "../services/mealShare.js";
-import { uploadMealImage } from "../services/storage.js";
+import { deleteStoredMealImage, uploadMealImage } from "../services/storage.js";
 import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
 import {
   loadUserImageStorageFlags,
@@ -344,9 +344,9 @@ export async function mealRoutes(app: FastifyInstance) {
           `INSERT INTO meals (
              user_id, meal_type, meal_name, image_url, created_at, log_date, sort_index,
              calories, protein, carbs, fat, fibre, sugar, sodium, confidence, foods,
-             raw_ai_response
+             raw_ai_response, meal_source
            )
-           VALUES ($1, $2, $3, $4, $5, $6::date, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+           VALUES ($1, $2, $3, $4, $5, $6::date, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
            RETURNING id`,
           [
             userId,
@@ -365,6 +365,7 @@ export async function mealRoutes(app: FastifyInstance) {
             body.confidence,
             body.foods,
             mergeRawAiPortionMeta(draft?.rawAiResponse, body.portionMeta),
+            body.mealSource ?? null,
           ],
         );
         const mealId = mealResult.rows[0].id;
@@ -573,9 +574,8 @@ export async function mealRoutes(app: FastifyInstance) {
       if (!rows[0]) {
         return reply.code(404).send({ error: "Not found" });
       }
-      if (rows[0].image_url?.trim()) {
-        return reply.code(400).send({ error: "Meal already has a photo" });
-      }
+
+      const previousImageUrl = rows[0].image_url?.trim() ?? "";
 
       const file = await request.file();
       if (!file) {
@@ -613,6 +613,10 @@ export async function mealRoutes(app: FastifyInstance) {
         `UPDATE meals SET image_url = $1 WHERE id = $2 AND user_id = $3`,
         [imageUrl, id, userId],
       );
+
+      if (previousImageUrl) {
+        await deleteStoredMealImage(previousImageUrl);
+      }
 
       return { imageUrl };
     },
@@ -675,12 +679,13 @@ export async function mealRoutes(app: FastifyInstance) {
         raw_ai_response: unknown;
         reanalyze_count: number;
         shared_by_user_id: string | null;
+        meal_source: string | null;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 m.log_date::text AS log_date, m.sort_index, m.notes,
                 m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
                 m.confidence, m.foods, m.raw_ai_response, m.reanalyze_count,
-                m.shared_by_user_id
+                m.shared_by_user_id, m.meal_source
          FROM meals m
          WHERE m.user_id = $1 AND m.id = $2`,
         [userId, id],
@@ -714,6 +719,7 @@ export async function mealRoutes(app: FastifyInstance) {
         reanalyzeCount: r.reanalyze_count,
         reanalyzeRemaining: mealReanalyzeRemaining(r.reanalyze_count),
         sharedByUserId: r.shared_by_user_id,
+        mealSource: r.meal_source,
       };
     },
   );
@@ -822,6 +828,14 @@ export async function mealRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const body = request.body ?? {};
 
+      if (
+        body.mealSource !== undefined &&
+        body.mealSource !== null &&
+        !isMealSource(body.mealSource)
+      ) {
+        return reply.code(400).send({ error: "Invalid mealSource" });
+      }
+
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -867,20 +881,24 @@ export async function mealRoutes(app: FastifyInstance) {
         if (
           body.mealName !== undefined ||
           body.mealType !== undefined ||
-          body.notes !== undefined
+          body.notes !== undefined ||
+          body.mealSource !== undefined
         ) {
           await client.query(
             `UPDATE meals
              SET meal_name = COALESCE($1, meal_name),
                  meal_type = COALESCE($2, meal_type),
-                 notes = CASE WHEN $5 THEN $3 ELSE notes END
-             WHERE id = $4 AND user_id = $6`,
+                 notes = CASE WHEN $5 THEN $3 ELSE notes END,
+                 meal_source = CASE WHEN $7 THEN $6 ELSE meal_source END
+             WHERE id = $4 AND user_id = $8`,
             [
               body.mealName ?? null,
               body.mealType ?? null,
               normalizeMealNotes(body.notes),
               id,
               body.notes !== undefined,
+              body.mealSource ?? null,
+              body.mealSource !== undefined,
               userId,
             ],
           );
@@ -960,6 +978,7 @@ export async function mealRoutes(app: FastifyInstance) {
         if (body.fibre !== undefined) patch.fibre = body.fibre;
         if (body.sugar !== undefined) patch.sugar = body.sugar;
         if (body.sodium !== undefined) patch.sodium = body.sodium;
+        if (body.mealSource !== undefined) patch.mealSource = body.mealSource;
         return patch;
       } catch (err) {
         await client.query("ROLLBACK");

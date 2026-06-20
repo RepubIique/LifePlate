@@ -14,9 +14,13 @@ export type MealTakeawayRow = {
   mealId: string;
   mealName: string | null;
   foodName: string | null;
+  mealSource?: string | null;
 };
 
 export function isTakeawayMealRow(row: MealTakeawayRow): boolean {
+  if (row.mealSource === "takeaway") return true;
+  if (row.mealSource === "home_cooked") return false;
+
   const text = `${row.mealName ?? ""} ${row.foodName ?? ""}`.toLowerCase();
   return TAKEAWAY_KEYWORDS.some((keyword) => text.includes(keyword));
 }
