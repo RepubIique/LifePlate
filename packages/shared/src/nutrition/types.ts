@@ -4,6 +4,8 @@ export interface ComparisonPillarMetrics {
   protein: number;
   fibre: number;
   plants: number;
+  carbs: number;
+  fat: number;
   hydration: number;
 }
 

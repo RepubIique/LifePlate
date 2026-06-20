@@ -658,6 +658,7 @@ export {
   buildHydrationPillar,
   buildHydrationPillarFromGlasses,
   buildCarbsPillar,
+  buildFatPillar,
   buildEnergyMetrics,
   buildGutHealthSummary,
   buildFoodRecommendations,

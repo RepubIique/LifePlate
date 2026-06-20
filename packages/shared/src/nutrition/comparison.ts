@@ -25,10 +25,15 @@ export function buildComparisonPillars(
   hydrationGlasses: number,
   targets: ExtendedNutritionTargets,
 ): ComparisonPillarMetrics {
+  const carbsTarget = Math.max(80, Math.round(targets.dailyCalories / 8));
+  const fatTarget = Math.max(35, Math.round(targets.dailyCalories / 30));
+
   return {
     protein: progressPercent(totals.protein, targets.dailyProteinG),
     fibre: progressPercent(totals.fibre, targets.dailyFibreG),
     plants: progressPercent(resolvedPlantServes(classification), targets.dailyPlantServes),
+    carbs: progressPercent(totals.carbs, carbsTarget),
+    fat: progressPercent(totals.fat, fatTarget),
     hydration: progressPercent(hydrationGlasses, targets.dailyHydrationGlasses),
   };
 }

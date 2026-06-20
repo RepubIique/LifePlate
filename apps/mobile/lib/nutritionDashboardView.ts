@@ -56,7 +56,7 @@ function emptySnapshot(label: string, date: string): PeriodSnapshot {
     date,
     score: 0,
     mealsCount: 0,
-    pillars: { protein: 0, fibre: 0, plants: 0, hydration: 0 },
+    pillars: { protein: 0, fibre: 0, plants: 0, carbs: 0, fat: 0, hydration: 0 },
     hasData: false,
   };
 }

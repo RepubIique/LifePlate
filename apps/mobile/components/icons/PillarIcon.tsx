@@ -27,6 +27,7 @@ function resolveKey(pillar: PillarKey | string): PillarKey {
     pillar === "fibre" ||
     pillar === "plants" ||
     pillar === "carbs" ||
+    pillar === "fat" ||
     pillar === "hydration"
   ) {
     return pillar;
@@ -135,29 +136,40 @@ function CarbsIcon({ size = 20, color = PILLAR_COLORS.carbs }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M6 18.5c0-4.4 2.6-8.2 6-9.8 3.4 1.6 6 5.4 6 9.8"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
+        d="M4.5 19.5V9C4.5 5.6 7.8 3.5 11 3.5C13.8 3.5 16 4.8 17.4 7L19.8 11.2V19.5H4.5Z"
+        fill={color}
       />
       <Path
-        d="M8.5 14.5h7"
-        stroke={color}
-        strokeWidth={2}
+        d="M7 9.5C7 7.2 8.6 5.6 10.8 5.3"
+        stroke="#FFFFFF"
+        strokeWidth={1.4}
         strokeLinecap="round"
+        opacity={0.55}
       />
       <Path
-        d="M12 4.5V8"
-        stroke={color}
-        strokeWidth={2}
+        d="M10.5 13.8C11.5 13.3 12.5 13.3 13.5 13.8"
+        stroke="#FFFFFF"
+        strokeWidth={1.2}
         strokeLinecap="round"
+        opacity={0.4}
+      />
+    </Svg>
+  );
+}
+
+function FatIcon({ size = 20, color = PILLAR_COLORS.fat }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 4.5c-3.2 4.8-5 8.4-5 11.2a5 5 0 1010 0c0-2.8-1.8-6.4-5-11.2z"
+        fill={color}
       />
       <Path
-        d="M9.5 6.8 12 4.5l2.5 2.3"
-        stroke={color}
-        strokeWidth={2}
+        d="M10.5 14.2c.7.9 1.6 1.4 2.7 1.4"
+        stroke="#FFFFFF"
+        strokeWidth={1.4}
         strokeLinecap="round"
-        strokeLinejoin="round"
+        opacity={0.85}
       />
     </Svg>
   );
@@ -168,6 +180,7 @@ const ICONS: Record<PillarKey, (props: IconProps) => ReactElement> = {
   fibre: FibreIcon,
   plants: PlantsIcon,
   carbs: CarbsIcon,
+  fat: FatIcon,
   hydration: HydrationIcon,
 };
 

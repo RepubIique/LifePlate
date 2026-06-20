@@ -10,7 +10,7 @@ import {
 import { PremiumCard } from "@/components/PremiumCard";
 import { PillarIcon } from "@/components/icons/PillarIcon";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   comparison: PeriodComparison;
@@ -22,13 +22,15 @@ const PILLAR_ROWS: Array<{ key: ComparisonPillarKey; label: string }> = [
   { key: "protein", label: "Protein" },
   { key: "fibre", label: "Fibre" },
   { key: "plants", label: "Plants" },
+  { key: "carbs", label: "Carbs" },
+  { key: "fat", label: "Fats" },
   { key: "hydration", label: "Hydration" },
 ];
 
 function deltaColor(delta: number): string {
-  if (delta > 0) return "#40916C";
-  if (delta < 0) return "#E07A5F";
-  return "#636E72";
+  if (delta > 0) return semantic.primary;
+  if (delta < 0) return palette.coral;
+  return semantic.textMuted;
 }
 
 function ScoreColumn({
@@ -191,7 +193,7 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontWeight: "700",
     letterSpacing: -0.5,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   scoreCaption: {
     opacity: 0.4,
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     overflow: "hidden",
     position: "relative",
   },
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E2E8E4",
+    borderTopColor: ui.borderSubtle,
   },
   mealsText: {
     opacity: 0.5,

@@ -227,6 +227,28 @@ export function buildCarbsPillar(
   };
 }
 
+export function buildFatPillar(
+  totals: DailyTotals,
+  targets: ExtendedNutritionTargets,
+): PillarProgress {
+  const target = Math.max(35, Math.round(targets.dailyCalories / 30));
+  const progress = safeRatio(totals.fat, target);
+
+  return {
+    label: "Fats",
+    consumed: Math.round(totals.fat),
+    target,
+    unit: "g",
+    progress,
+    status: pillarStatus(progress),
+    equivalents: formatMacroEquivalents(totals.fat, "fat"),
+    tip:
+      progress >= 0.85
+        ? "Healthy fats are supporting your day"
+        : "Nuts, avocado and olive oil help fullness",
+  };
+}
+
 export function buildEnergyMetrics(totals: DailyTotals): {
   carbs: EnergyMetric;
   fats: EnergyMetric;
