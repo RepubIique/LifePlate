@@ -4,7 +4,6 @@ import { RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
-  buildHydrationPillarFromGlasses,
   dateKeyFromIso,
   formatLogDateLabel,
   todayDateKey,
@@ -24,13 +23,12 @@ import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
-import { fetchNutritionDashboard } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
+import { useDayDashboard } from "@/lib/useDayDashboard";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
-import { expandDashboard, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
 import { spacing } from "@/src/theme/lifeplate";
 
 function mealsForDate(iso: string, dateKey: string) {
@@ -50,17 +48,39 @@ export default function HomeScreen() {
   const { adjustHydration, syncDate } = useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
-  const dayDashboardCacheRef = useRef<Map<string, NutritionDashboardView>>(new Map());
 
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [logDateKey, setLogDateKey] = useState(() => todayDateKey());
   const [textLogOpen, setTextLogOpen] = useState(false);
   const [textDescription, setTextDescription] = useState("");
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
-  const [dayDashboard, setDayDashboard] = useState<NutritionDashboardView | null>(null);
-  const [dayDashboardLoading, setDayDashboardLoading] = useState(false);
 
   const isViewingToday = logDateKey === todayDateKey();
+  const hydrationTarget = profile?.nutritionTargets?.dailyHydrationGlasses ?? 8;
+
+  const dayMeals = useMemo(
+    () => meals.filter((m) => mealsForDate(m.createdAt, logDateKey)),
+    [meals, logDateKey],
+  );
+  const dayMealsRevision = useMemo(
+    () => dayMeals.map((m) => `${m.id}:${m.calories ?? 0}:${m.protein ?? 0}`).join("|"),
+    [dayMeals],
+  );
+
+  const {
+    dashboard: dayDashboard,
+    loading: dayDashboardLoading,
+    refresh: refreshDayDashboard,
+    patchHydration: patchDayHydration,
+  } = useDayDashboard({
+    dateKey: logDateKey,
+    mealsRevision: dayMealsRevision,
+    enabled: !isViewingToday,
+    nutritionTargets: profile?.nutritionTargets,
+    hydrationTarget,
+    onError: (e) => setSnackbar(friendlyErrorMessage(e)),
+  });
+
   const activeDashboard = isViewingToday ? dashboard : dayDashboard;
   const glanceTitle = isViewingToday
     ? "Today at a glance"
@@ -74,29 +94,19 @@ export default function HomeScreen() {
       adjustHydration(logDateKey, delta);
       if (!activeDashboard) return;
 
-      const target = profile?.nutritionTargets?.dailyHydrationGlasses ?? 8;
       const next = Math.max(
         0,
         Math.min(24, activeDashboard.essentials.hydration.consumed + delta),
       );
-      const hydration = buildHydrationPillarFromGlasses(next, target);
 
       if (isViewingToday) {
         patchHydrationRef.current(next);
         return;
       }
 
-      setDayDashboard((prev) => {
-        if (!prev) return prev;
-        const updated = {
-          ...prev,
-          essentials: { ...prev.essentials, hydration },
-        };
-        dayDashboardCacheRef.current.set(logDateKey, updated);
-        return updated;
-      });
+      patchDayHydration(next);
     },
-    [adjustHydration, activeDashboard, isViewingToday, logDateKey, profile?.nutritionTargets?.dailyHydrationGlasses],
+    [adjustHydration, activeDashboard, isViewingToday, logDateKey, patchDayHydration],
   );
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const {
@@ -111,46 +121,9 @@ export default function HomeScreen() {
     lastAssetRef,
   } = useMealPhotoUpload();
 
-  const dayMeals = useMemo(
-    () => meals.filter((m) => mealsForDate(m.createdAt, logDateKey)),
-    [meals, logDateKey],
-  );
-  const dayMealsRevision = useMemo(
-    () => dayMeals.map((m) => `${m.id}:${m.calories ?? 0}:${m.protein ?? 0}`).join("|"),
-    [dayMeals],
-  );
-
   useEffect(() => {
     getLastPhotoSource().then(setPreferredSource);
   }, []);
-
-  useEffect(() => {
-    if (isViewingToday) {
-      setDayDashboard(null);
-      setDayDashboardLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setDayDashboardLoading(true);
-    void fetchNutritionDashboard(logDateKey)
-      .then((raw) => {
-        if (cancelled) return;
-        const next = expandDashboard(raw, profile?.nutritionTargets ?? null);
-        dayDashboardCacheRef.current.set(logDateKey, next);
-        setDayDashboard(next);
-      })
-      .catch((e) => {
-        if (!cancelled) setSnackbar(friendlyErrorMessage(e));
-      })
-      .finally(() => {
-        if (!cancelled) setDayDashboardLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isViewingToday, logDateKey, dayMealsRevision, profile?.nutritionTargets]);
 
   useFocusEffect(
     useCallback(() => {
@@ -167,20 +140,10 @@ export default function HomeScreen() {
     if (isViewingToday) {
       tasks.push(refreshDashboard());
     } else {
-      dayDashboardCacheRef.current.delete(logDateKey);
-      setDayDashboardLoading(true);
-      tasks.push(
-        fetchNutritionDashboard(logDateKey)
-          .then((raw) => {
-            const next = expandDashboard(raw, profile?.nutritionTargets ?? null);
-            dayDashboardCacheRef.current.set(logDateKey, next);
-            setDayDashboard(next);
-          })
-          .finally(() => setDayDashboardLoading(false)),
-      );
+      tasks.push(refreshDayDashboard());
     }
     void Promise.all(tasks).catch((e) => setSnackbar(friendlyErrorMessage(e)));
-  }, [isViewingToday, logDateKey, profile?.nutritionTargets, refreshDashboard, refreshMeals]);
+  }, [isViewingToday, refreshDashboard, refreshDayDashboard, refreshMeals]);
 
   useEffect(() => {
     if (!dashboard || !isViewingToday) return;

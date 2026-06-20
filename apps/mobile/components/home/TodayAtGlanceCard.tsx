@@ -42,7 +42,6 @@ export function TodayAtGlanceCard({ dashboard, title = "Today at a glance", onPr
           fibre={essentials.fibre}
           plants={essentials.plants}
           carbs={essentials.carbs}
-          hydration={essentials.hydration}
           nutritionScore={score}
           hasMeals={hasActivity}
         />

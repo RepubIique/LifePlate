@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
@@ -31,11 +31,7 @@ export function MealSlotsTracker({ meals, onLogSuggested }: Props) {
         </Text>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.slots}
-      >
+      <View style={styles.slots}>
         {MEAL_SLOTS.map((slot) => {
           const isFilled = filled.has(slot.key);
           const isSuggested = !isFilled && slot.key === suggested;
@@ -51,7 +47,7 @@ export function MealSlotsTracker({ meals, onLogSuggested }: Props) {
             />
           );
         })}
-      </ScrollView>
+      </View>
     </PremiumCard>
   );
 }
@@ -100,13 +96,16 @@ function SlotChip({
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.slot, pressed && styles.pressed]}
+      >
         {content}
       </Pressable>
     );
   }
 
-  return content;
+  return <View style={styles.slot}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -123,10 +122,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: 2,
   },
+  slot: {
+    flex: 1,
+  },
   chip: {
     alignItems: "center",
     gap: 6,
-    minWidth: 72,
+    width: "100%",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     borderRadius: 14,

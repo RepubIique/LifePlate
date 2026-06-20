@@ -2,9 +2,9 @@ import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import type { PillarProgress } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { HydrationLevelFill } from "@/components/home/HydrationLevelFill";
 import { PillarIcon } from "@/components/icons/PillarIcon";
-import { PILLAR_COLORS, pillarColorForLabel } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { pillarColorForLabel } from "@/lib/pillarTheme";
 
 type Props = {
   pillar: PillarProgress;
@@ -17,67 +17,60 @@ export function HydrationQuickAdd({
   onIncrement,
   onDecrement,
 }: Props) {
-  const fillColor = PILLAR_COLORS.hydration;
   const total = Math.max(pillar.target, 1);
   const filled = Math.min(pillar.consumed, total);
+  const progress = filled / total;
 
   return (
     <PremiumCard style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <PillarIcon
-            pillar="hydration"
-            color={pillarColorForLabel("Hydration")}
-            size={32}
-            variant="badge"
-          />
-          <View>
-            <Text variant="titleMedium" style={styles.title}>
-              Hydration
-            </Text>
-            <Text variant="bodySmall" style={styles.subtitle}>
-              {filled} of {total} glasses
-            </Text>
+      <HydrationLevelFill progress={progress} total={total} filled={filled}>
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <PillarIcon
+              pillar="hydration"
+              color={pillarColorForLabel("Hydration")}
+              size={32}
+              variant="badge"
+            />
+            <View>
+              <Text variant="titleMedium" style={styles.title}>
+                Hydration
+              </Text>
+              <Text variant="bodySmall" style={styles.subtitle}>
+                {filled} of {total} glasses
+              </Text>
+            </View>
+          </View>
+          <View style={styles.controls}>
+            <IconButton
+              icon="minus"
+              size={18}
+              mode="contained-tonal"
+              containerColor="rgba(255, 255, 255, 0.9)"
+              onPress={onDecrement}
+              disabled={pillar.consumed <= 0}
+            />
+            <IconButton
+              icon="plus"
+              size={18}
+              mode="contained"
+              containerColor="#1B4332"
+              iconColor="#FFFFFF"
+              onPress={onIncrement}
+              disabled={pillar.consumed >= pillar.target}
+            />
           </View>
         </View>
-        <View style={styles.controls}>
-          <IconButton
-            icon="minus"
-            size={18}
-            mode="contained-tonal"
-            containerColor="#F1F3F5"
-            onPress={onDecrement}
-            disabled={pillar.consumed <= 0}
-          />
-          <IconButton
-            icon="plus"
-            size={18}
-            mode="contained"
-            containerColor="#1B4332"
-            iconColor="#FFFFFF"
-            onPress={onIncrement}
-            disabled={pillar.consumed >= pillar.target}
-          />
-        </View>
-      </View>
-
-      <View style={styles.dots}>
-        {Array.from({ length: total }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              i < filled ? { backgroundColor: fillColor } : styles.dotEmpty,
-            ]}
-          />
-        ))}
-      </View>
+      </HydrationLevelFill>
     </PremiumCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
+  card: {
+    padding: 0,
+    backgroundColor: "#F8FBFF",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -86,7 +79,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 12,
     flex: 1,
   },
   title: { letterSpacing: 0.15 },
@@ -94,21 +87,6 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: -spacing.sm,
-  },
-  dots: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  dot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  dotEmpty: {
-    backgroundColor: "#EEF2F0",
-    borderWidth: 1,
-    borderColor: "#E2E8E4",
+    marginRight: -8,
   },
 });

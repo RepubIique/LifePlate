@@ -5,7 +5,6 @@ import { Text } from "react-native-paper";
 import Svg, { Circle } from "react-native-svg";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
-import { PlateCenterWater } from "@/components/home/PlateCenterWater";
 import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
 import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
@@ -33,7 +32,6 @@ type Props = {
   fibre: PillarProgress;
   plants: PillarProgress;
   carbs: PillarProgress;
-  hydration: PillarProgress;
   nutritionScore?: number;
   hasMeals?: boolean;
 };
@@ -58,71 +56,28 @@ function plateMessage(completeness: number, hasMeals: boolean) {
   return "Room to grow — every meal counts";
 }
 
-function waterSurfaceY(plateSize: number, innerDiameter: number, innerRadius: number, progress: number) {
-  const cy = plateSize / 2;
-  return cy - innerRadius + innerDiameter * (1 - clampProgress(progress));
-}
-
 function PlateCenterLabels({
-  plateSize,
-  waterY,
   completeness,
   hasMeals,
-  hydration,
   nutritionScore,
 }: {
-  plateSize: number;
-  waterY: number;
   completeness: number;
   hasMeals: boolean;
-  hydration: PillarProgress;
   nutritionScore?: number;
 }) {
-  const content = (variant: "above" | "below") => (
-    <>
-      <Text
-        variant="headlineMedium"
-        style={variant === "below" ? styles.completenessUnderwater : styles.completeness}
-      >
+  return (
+    <View style={styles.center} pointerEvents="none">
+      <Text variant="headlineMedium" style={styles.completeness}>
         {hasMeals ? `${completeness}%` : "—"}
       </Text>
-      <Text
-        variant="labelMedium"
-        style={variant === "below" ? styles.centerLabelUnderwater : styles.centerLabel}
-      >
+      <Text variant="labelMedium" style={styles.centerLabel}>
         Today&apos;s plate
       </Text>
-      <Text
-        variant="labelSmall"
-        style={variant === "below" ? styles.hydrationHintUnderwater : styles.hydrationHint}
-      >
-        {hydration.consumed}/{hydration.target} glasses
-      </Text>
       {nutritionScore != null && hasMeals ? (
-        <Text
-          variant="labelSmall"
-          style={variant === "below" ? styles.scoreHintUnderwater : styles.scoreHint}
-        >
+        <Text variant="labelSmall" style={styles.scoreHint}>
           Score {nutritionScore}
         </Text>
       ) : null}
-    </>
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View
-        style={[styles.centerClip, { top: waterY }]}
-      >
-        <View style={[styles.center, { top: -waterY, height: plateSize }]}>
-          {content("below")}
-        </View>
-      </View>
-      <View style={[styles.centerClip, { height: waterY }]}>
-        <View style={[styles.center, { height: plateSize }]}>
-          {content("above")}
-        </View>
-      </View>
     </View>
   );
 }
@@ -244,7 +199,6 @@ export function DigitalPlate({
   fibre,
   plants,
   carbs,
-  hydration,
   nutritionScore,
   hasMeals = true,
 }: Props) {
@@ -318,8 +272,6 @@ export function DigitalPlate({
   const cy = PLATE_SIZE / 2;
   const innerRadius = radius - strokeWidth / 2 - 6;
   const innerDiameter = innerRadius * 2;
-  const hydrationProgress = clampProgress(hydration.progress);
-  const waterY = waterSurfaceY(PLATE_SIZE, innerDiameter, innerRadius, hydrationProgress);
 
   function openPillar(key: PlatePillarKey) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -362,27 +314,23 @@ export function DigitalPlate({
 
           <View
             style={[
-              styles.centerWater,
+              styles.centerPlate,
               {
                 width: innerDiameter,
                 height: innerDiameter,
                 left: cx - innerRadius,
                 top: cy - innerRadius,
+                borderRadius: innerRadius,
               },
             ]}
             pointerEvents="none"
           >
-            <PlateCenterWater size={innerDiameter} progress={hydrationProgress} />
+            <PlateCenterLabels
+              completeness={completeness}
+              hasMeals={hasMeals}
+              nutritionScore={nutritionScore}
+            />
           </View>
-
-          <PlateCenterLabels
-            plateSize={PLATE_SIZE}
-            waterY={waterY}
-            completeness={completeness}
-            hasMeals={hasMeals}
-            hydration={hydration}
-            nutritionScore={nutritionScore}
-          />
         </View>
 
         <Text variant="bodyMedium" style={styles.message}>
@@ -459,73 +407,30 @@ const styles = StyleSheet.create({
     height: QUARTER,
   },
   center: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.md,
-    width: "100%",
   },
-  centerClip: {
+  centerPlate: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    overflow: "hidden",
-  },
-  centerWater: {
-    position: "absolute",
+    backgroundColor: "#F8FBF9",
+    borderWidth: 1,
+    borderColor: "#E2E8E4",
+    alignItems: "center",
+    justifyContent: "center",
   },
   completeness: {
     fontWeight: "700",
     letterSpacing: -0.5,
     color: "#1B4332",
-    textShadowColor: "rgba(255, 255, 255, 0.9)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
-  },
-  completenessUnderwater: {
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    color: "#1B4332",
-    textShadowColor: "rgba(255, 255, 255, 0.9)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
   },
   centerLabel: {
     opacity: 0.65,
     letterSpacing: 0.4,
     marginTop: 2,
-    textShadowColor: "rgba(255, 255, 255, 0.85)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  centerLabelUnderwater: {
-    opacity: 0.65,
-    letterSpacing: 0.4,
-    marginTop: 2,
-    textShadowColor: "rgba(255, 255, 255, 0.85)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  hydrationHint: {
-    opacity: 0.65,
-    marginTop: 4,
-    letterSpacing: 0.2,
-    textShadowColor: "rgba(255, 255, 255, 0.85)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  hydrationHintUnderwater: {
-    opacity: 0.65,
-    marginTop: 4,
-    letterSpacing: 0.2,
-    textShadowColor: "rgba(255, 255, 255, 0.85)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
   },
   scoreHint: {
-    opacity: 0.45,
-    marginTop: 4,
-  },
-  scoreHintUnderwater: {
     opacity: 0.45,
     marginTop: 4,
   },

@@ -24,6 +24,7 @@ import {
 import { clearCachedAvatar } from "@/lib/avatarCache";
 import { clearCachedMeals } from "@/lib/mealsCache";
 import { clearCachedDashboard } from "@/lib/dashboardCache";
+import { clearCachedDayDashboards } from "@/lib/dayDashboardCache";
 import { clearCachedHydration } from "@/lib/hydrationCache";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
@@ -304,6 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void clearCachedAvatar(userId);
       void clearCachedMeals(userId);
       void clearCachedDashboard(userId);
+      void clearCachedDayDashboards(userId);
       void clearCachedHydration(userId);
     }
   }, [session]);
