@@ -16,7 +16,8 @@ type Props = {
   isLast: boolean;
   dragging?: boolean;
   onPress: () => void;
-  onLongPress?: () => void;
+  /** Long-press on the side drag handle only — starts timeline reorder. */
+  onDragHandleLongPress?: () => void;
   onDelete?: () => void;
 };
 
@@ -35,7 +36,7 @@ export function TimelineMealCard({
   isLast,
   dragging = false,
   onPress,
-  onLongPress,
+  onDragHandleLongPress,
   onDelete,
 }: Props) {
   const icon = mealTypeIcon(meal.mealType);
@@ -50,10 +51,29 @@ export function TimelineMealCard({
       </View>
 
       <View style={styles.cardWrap}>
+        {onDragHandleLongPress ? (
+          <Pressable
+            onLongPress={onDragHandleLongPress}
+            delayLongPress={220}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Reorder meal"
+            accessibilityHint="Long press and drag to change order within this day"
+            style={({ pressed }) => [
+              styles.dragHandle,
+              pressed && styles.dragHandlePressed,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="menu"
+              size={20}
+              color="#95A5A6"
+            />
+          </Pressable>
+        ) : null}
+
         <Pressable
           onPress={onPress}
-          onLongPress={onLongPress}
-          delayLongPress={180}
           style={({ pressed }) => [
             styles.pressable,
             pressed && !dragging && styles.pressed,
@@ -154,6 +174,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 0,
+  },
+  dragHandle: {
+    width: 28,
+    minHeight: THUMB + spacing.sm * 2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 2,
+    borderRadius: 8,
+  },
+  dragHandlePressed: {
+    backgroundColor: "#EEF2F0",
   },
   pressable: { flex: 1 },
   pressed: { opacity: 0.92 },

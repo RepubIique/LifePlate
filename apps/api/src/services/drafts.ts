@@ -3,32 +3,45 @@ import { pool } from "../db.js";
 import { imageUrlToBuffer } from "./imageFetch.js";
 
 const TTL_MS = 30 * 60 * 1000;
+const DRAFT_PRUNE_INTERVAL_MS = 5 * 60 * 1000;
+
+let lastDraftPruneAt = 0;
 
 export interface Draft {
+  id: string;
   userId: string;
   imageUrl: string;
   imageBuffer?: Buffer;
+  hasImageData?: boolean;
   mimeType?: string;
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
   expiresAt: number;
 }
 
+export type GetDraftOptions = {
+  /** When false, skips loading BYTEA image_data (lazy-loaded by getDraftImage). Default true. */
+  includeImageData?: boolean;
+};
+
 type DraftRow = {
   user_id: string;
   image_url: string;
   image_data: Buffer | null;
+  has_image_data: boolean;
   mime_type: string;
   analysis: MealAnalysisResult;
   raw_ai_response: unknown;
   expires_at: Date;
 };
 
-function rowToDraft(row: DraftRow): Draft {
+function rowToDraft(draftId: string, row: DraftRow): Draft {
   return {
+    id: draftId,
     userId: row.user_id,
     imageUrl: row.image_url,
     imageBuffer: row.image_data ?? undefined,
+    hasImageData: row.has_image_data,
     mimeType: row.mime_type,
     analysis: row.analysis,
     rawAiResponse: row.raw_ai_response,
@@ -36,7 +49,10 @@ function rowToDraft(row: DraftRow): Draft {
   };
 }
 
-async function pruneExpiredDrafts() {
+async function pruneExpiredDraftsIfDue() {
+  const now = Date.now();
+  if (now - lastDraftPruneAt < DRAFT_PRUNE_INTERVAL_MS) return;
+  lastDraftPruneAt = now;
   await pool.query(`DELETE FROM meal_drafts WHERE expires_at <= NOW()`);
 }
 
@@ -48,7 +64,7 @@ export async function saveDraft(input: {
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
 }): Promise<string> {
-  await pruneExpiredDrafts();
+  await pruneExpiredDraftsIfDue();
 
   const expiresAt = new Date(Date.now() + TTL_MS);
   const { rows } = await pool.query<{ id: string }>(
@@ -75,21 +91,58 @@ export async function saveDraft(input: {
   return draftId;
 }
 
+export async function draftBelongsToUser(
+  draftId: string,
+  userId: string,
+): Promise<boolean> {
+  const { rows } = await pool.query<{ ok: number }>(
+    `SELECT 1 AS ok FROM meal_drafts
+     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
+    [draftId, userId],
+  );
+  return rows.length > 0;
+}
+
 export async function getDraft(
   draftId: string,
   userId: string,
+  options?: GetDraftOptions,
 ): Promise<Draft | null> {
-  await pruneExpiredDrafts();
+  await pruneExpiredDraftsIfDue();
+
+  const includeImageData = options?.includeImageData !== false;
+  const imageDataColumn = includeImageData
+    ? "image_data"
+    : "NULL::bytea AS image_data";
 
   const { rows } = await pool.query<DraftRow>(
-    `SELECT user_id, image_url, image_data, mime_type, analysis, raw_ai_response, expires_at
+    `SELECT user_id, image_url, ${imageDataColumn},
+            (image_data IS NOT NULL) AS has_image_data,
+            mime_type, analysis, raw_ai_response, expires_at
      FROM meal_drafts
      WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
     [draftId, userId],
   );
 
   const row = rows[0];
-  return row ? rowToDraft(row) : null;
+  return row ? rowToDraft(draftId, row) : null;
+}
+
+async function loadDraftImageData(
+  draftId: string,
+  userId: string,
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  const { rows } = await pool.query<{ image_data: Buffer | null; mime_type: string }>(
+    `SELECT image_data, mime_type FROM meal_drafts
+     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
+    [draftId, userId],
+  );
+  const row = rows[0];
+  if (!row?.image_data) return null;
+  return {
+    buffer: row.image_data,
+    mimeType: row.mime_type ?? "image/jpeg",
+  };
 }
 
 export async function deleteDraft(draftId: string | undefined) {
@@ -98,7 +151,9 @@ export async function deleteDraft(draftId: string | undefined) {
 }
 
 export function draftHasImage(draft: Draft): boolean {
-  return Boolean(draft.imageBuffer || draft.imageUrl?.trim());
+  return Boolean(
+    draft.imageBuffer || draft.hasImageData || draft.imageUrl?.trim(),
+  );
 }
 
 export async function updateDraftAnalysis(
@@ -158,6 +213,10 @@ export async function getDraftImage(
       buffer: draft.imageBuffer,
       mimeType: draft.mimeType ?? "image/jpeg",
     };
+  }
+  if (draft.hasImageData) {
+    const loaded = await loadDraftImageData(draft.id, draft.userId);
+    if (loaded) return loaded;
   }
   if (!draft.imageUrl?.trim()) {
     throw new Error("Draft has no image");

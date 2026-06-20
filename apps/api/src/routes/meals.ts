@@ -9,7 +9,7 @@ import type {
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { createdAtForDayPosition, dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -22,14 +22,18 @@ import {
   saveDraft,
   draftHasImage,
   updateDraftImage,
+  draftBelongsToUser,
 } from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, analyzeMealText, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
+import {
+  reorderMealsForDay,
+  ReorderMealsValidationError,
+} from "../services/mealReorder.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
-import { MEAL_UTC_DAY_SQL } from "../services/mealLogDate.js";
 import { uploadMealImage } from "../services/storage.js";
 import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
 import {
@@ -155,7 +159,7 @@ export async function mealRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "draftId and clarification are required" });
       }
 
-      const draft = await getDraft(draftId, userId);
+      const draft = await getDraft(draftId, userId, { includeImageData: false });
       if (!draft) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
@@ -201,8 +205,8 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const { draftId } = request.params;
 
-      const draft = await getDraft(draftId, userId);
-      if (!draft) {
+      const owned = await draftBelongsToUser(draftId, userId);
+      if (!owned) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
 
@@ -258,7 +262,9 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const body = request.body;
 
-      const draft = body.draftId ? await getDraft(body.draftId, userId) : null;
+      const draft = body.draftId
+        ? await getDraft(body.draftId, userId, { includeImageData: false })
+        : null;
       let imageUrl = normalizeMealCloudImageUrl(
         body.imageUrl?.trim() || draft?.imageUrl,
       );
@@ -479,38 +485,16 @@ export async function mealRoutes(app: FastifyInstance) {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
-
-        const { rows: dayRows } = await client.query<{ id: string }>(
-          `SELECT id FROM meals WHERE user_id = $1 AND ${MEAL_UTC_DAY_SQL} = $2`,
-          [userId, dateKey],
-        );
-        const dayIds = dayRows.map((row) => row.id).sort();
-        const requestedIds = [...mealIds].sort();
-
-        if (
-          dayIds.length !== requestedIds.length ||
-          !dayIds.every((id, index) => id === requestedIds[index])
-        ) {
+        try {
+          await reorderMealsForDay(client, userId, dateKey, mealIds);
+        } catch (err) {
           await client.query("ROLLBACK");
-          return reply.code(400).send({
-            error: "mealIds must include every meal for this day exactly once",
-          });
+          if (err instanceof ReorderMealsValidationError) {
+            return reply.code(400).send({ error: err.message });
+          }
+          throw err;
         }
-
-        for (let index = 0; index < mealIds.length; index++) {
-          const mealId = mealIds[index];
-          const loggedAt = new Date(createdAtForDayPosition(dateKey, index, mealIds.length));
-          await client.query(
-            `UPDATE meals SET created_at = $1 WHERE id = $2 AND user_id = $3`,
-            [loggedAt, mealId, userId],
-          );
-        }
-
         await client.query("COMMIT");
-        await onMealDataChanged(userId, {
-          mealCreatedAt: new Date(createdAtForDayPosition(dateKey, 0, mealIds.length)),
-        });
-
         return { ok: true };
       } catch (err) {
         await client.query("ROLLBACK");

@@ -31,6 +31,8 @@ export function TimelineDayMeals({
 
   if (meals.length === 0) return null;
 
+  const canReorder = meals.length > 1;
+
   return (
     <DraggableFlatList
       data={meals}
@@ -40,7 +42,7 @@ export function TimelineDayMeals({
       }}
       onDragEnd={handleDragEnd}
       scrollEnabled={false}
-      activationDistance={10}
+      activationDistance={12}
       renderItem={({
         item,
         drag,
@@ -55,7 +57,7 @@ export function TimelineDayMeals({
               isLast={index === meals.length - 1}
               dragging={isActive}
               onPress={() => onPress(item.id)}
-              onLongPress={drag}
+              onDragHandleLongPress={canReorder ? drag : undefined}
               onDelete={() => onDelete(item)}
             />
           </ScaleDecorator>

@@ -11,6 +11,7 @@ import { pool } from "../db.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { resolveStorageObjectUrl, uploadProfileAvatar } from "../services/storage.js";
+import { invalidateUserImageStorageFlags } from "../services/userFeatures.js";
 
 type UserRow = {
   email: string;
@@ -325,6 +326,9 @@ export async function userRoutes(app: FastifyInstance) {
         if (!rowCount) {
           request.log.error({ userId }, "Profile update matched no rows");
           return reply.code(500).send({ error: "Failed to save profile" });
+        }
+        if (cloudImageBackup !== undefined) {
+          invalidateUserImageStorageFlags(userId);
         }
       }
 

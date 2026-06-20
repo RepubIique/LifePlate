@@ -151,9 +151,8 @@ export default function EditMealScreen() {
         setMeal({ ...meal, imageUrl: result.imageUrl || "" });
         setCachedMealDetail({ ...meal, imageUrl: result.imageUrl || "" });
       }
-      refreshMealsAndDashboard();
     },
-    [id, meal, patchMealLocally, refreshMealsAndDashboard],
+    [id, meal, patchMealLocally],
   );
 
   const {

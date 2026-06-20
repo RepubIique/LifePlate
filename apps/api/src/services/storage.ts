@@ -3,6 +3,36 @@ import { getSupabaseAdmin } from "../supabase.js";
 
 /** Signed URLs for private buckets; refreshed on each profile fetch. */
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+/** In-memory cache TTL — shorter than Supabase signed URL lifetime. */
+const SIGNED_URL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const SIGNED_URL_CACHE_MAX = 2000;
+
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+export function invalidateSignedUrlCache(storedPath?: string): void {
+  if (!storedPath?.trim()) {
+    signedUrlCache.clear();
+    return;
+  }
+  const path = normalizeStoragePath(storedPath);
+  if (path) signedUrlCache.delete(path);
+}
+
+function pruneSignedUrlCacheIfNeeded() {
+  if (signedUrlCache.size <= SIGNED_URL_CACHE_MAX) return;
+  const cutoff = Date.now();
+  for (const [key, entry] of signedUrlCache) {
+    if (entry.expiresAt <= cutoff) signedUrlCache.delete(key);
+  }
+  if (signedUrlCache.size <= SIGNED_URL_CACHE_MAX) return;
+  const overflow = signedUrlCache.size - SIGNED_URL_CACHE_MAX;
+  const keys = signedUrlCache.keys();
+  for (let i = 0; i < overflow; i++) {
+    const next = keys.next();
+    if (next.done) break;
+    signedUrlCache.delete(next.value);
+  }
+}
 
 /** One avatar per user — uploads overwrite this object. */
 export function profileAvatarPath(userId: string): string {
@@ -28,18 +58,37 @@ export async function resolveStorageObjectUrl(
 
   const path = normalizeStoragePath(stored);
   if (!path) return null;
+
+  const cached = signedUrlCache.get(path);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url;
+  }
+
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase.storage
     .from(config.storageBucket)
     .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
 
+  let url: string | null = null;
   if (!error && data.signedUrl) {
-    return data.signedUrl;
+    url = data.signedUrl;
+  } else {
+    const { data: publicData } = supabase.storage
+      .from(config.storageBucket)
+      .getPublicUrl(path);
+    url = publicData.publicUrl;
   }
 
-  const { data: publicData } = supabase.storage.from(config.storageBucket).getPublicUrl(path);
-  return publicData.publicUrl;
+  if (url) {
+    signedUrlCache.set(path, {
+      url,
+      expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
+    });
+    pruneSignedUrlCacheIfNeeded();
+  }
+
+  return url;
 }
 
 async function deleteStorageObjects(paths: string[]): Promise<void> {
@@ -121,5 +170,6 @@ export async function uploadProfileAvatar(
     throw new Error(`Storage upload failed: ${error.message}`);
   }
 
+  invalidateSignedUrlCache(path);
   return path;
 }

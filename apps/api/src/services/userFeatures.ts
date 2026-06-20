@@ -5,9 +5,24 @@ export type UserImageStorageFlags = {
   cloudImageBackup: boolean;
 };
 
+const FLAGS_CACHE_TTL_MS = 60_000;
+const flagsCache = new Map<
+  string,
+  { flags: UserImageStorageFlags; expiresAt: number }
+>();
+
+export function invalidateUserImageStorageFlags(userId: string): void {
+  flagsCache.delete(userId);
+}
+
 export async function loadUserImageStorageFlags(
   userId: string,
 ): Promise<UserImageStorageFlags> {
+  const cached = flagsCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.flags;
+  }
+
   const { rows } = await pool.query<{
     is_paid: boolean;
     cloud_image_backup: boolean;
@@ -16,10 +31,15 @@ export async function loadUserImageStorageFlags(
     [userId],
   );
   const row = rows[0];
-  return {
+  const flags: UserImageStorageFlags = {
     isPaid: row?.is_paid ?? false,
     cloudImageBackup: row?.cloud_image_backup ?? false,
   };
+  flagsCache.set(userId, {
+    flags,
+    expiresAt: Date.now() + FLAGS_CACHE_TTL_MS,
+  });
+  return flags;
 }
 
 export function shouldUploadMealToCloud(flags: UserImageStorageFlags): boolean {

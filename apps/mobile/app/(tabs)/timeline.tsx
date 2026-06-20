@@ -121,15 +121,13 @@ export default function TimelineScreen() {
       void reorderMeals({
         dateKey,
         mealIds: orderedMeals.map((meal) => meal.id),
-      })
-        .then(() => refreshAfterMealChange())
-        .catch(async (e) => {
-          reorderDayMealsLocally(dateKey, previous);
-          await refreshMeals();
-          setSnackbar(friendlyErrorMessage(e));
-        });
+      }).catch(async (e) => {
+        reorderDayMealsLocally(dateKey, previous);
+        await refreshMeals();
+        setSnackbar(friendlyErrorMessage(e));
+      });
     },
-    [meals, reorderDayMealsLocally, refreshAfterMealChange, refreshMeals],
+    [meals, reorderDayMealsLocally, refreshMeals],
   );
 
   const groups = useMemo(

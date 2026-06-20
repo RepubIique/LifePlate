@@ -56,6 +56,8 @@ ALTER TABLE meals ALTER COLUMN image_url DROP NOT NULL;
 ALTER TABLE meals ALTER COLUMN image_url SET DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS meals_user_created_idx ON meals(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS meals_user_utc_day_idx
+  ON meals (user_id, (to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')));
 
 CREATE TABLE IF NOT EXISTS meal_analysis (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
