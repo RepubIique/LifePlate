@@ -8,7 +8,7 @@ import type {
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -569,13 +569,13 @@ export async function mealRoutes(app: FastifyInstance) {
                  sodium = COALESCE($7, sodium)
              WHERE meal_id = $8`,
             [
-              body.calories ?? null,
-              body.protein ?? null,
-              body.carbs ?? null,
-              body.fat ?? null,
-              body.fibre ?? null,
-              body.sugar ?? null,
-              body.sodium ?? null,
+              roundOptionalMealMacro(body.calories) ?? null,
+              roundOptionalMealMacro(body.protein) ?? null,
+              roundOptionalMealMacro(body.carbs) ?? null,
+              roundOptionalMealMacro(body.fat) ?? null,
+              roundOptionalMealMacro(body.fibre) ?? null,
+              roundOptionalMealMacro(body.sugar) ?? null,
+              roundOptionalMealMacro(body.sodium) ?? null,
               id,
             ],
           );

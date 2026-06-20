@@ -207,6 +207,25 @@ export function clampMealPortions(value: number, min = 1, max = 12): number {
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
+/** Round macro totals to whole numbers for integer DB columns. */
+export function roundMealMacroTotals<T extends MealMacroTotals>(macros: T): T {
+  return {
+    ...macros,
+    estimatedCalories: Math.round(macros.estimatedCalories),
+    protein: Math.round(macros.protein),
+    carbs: Math.round(macros.carbs),
+    fat: Math.round(macros.fat),
+    fibre: Math.round(macros.fibre),
+    sugar: Math.round(macros.sugar),
+    sodium: Math.round(macros.sodium),
+  };
+}
+
+export function roundOptionalMealMacro(value: number | null | undefined): number | null | undefined {
+  if (value == null) return value;
+  return Math.round(value);
+}
+
 /** Scale total photo macros to what the user actually ate. */
 export function scaleMealForPortions(
   macros: MealMacroTotals,

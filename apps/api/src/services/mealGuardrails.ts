@@ -1,4 +1,5 @@
 import type { MealGuardrailCode, MealAnalysisResult } from "@lifeplate/shared";
+import { roundMealMacroTotals } from "@lifeplate/shared";
 
 export const MIN_MEAL_CONFIDENCE = 0.35;
 export const MAX_REASONABLE_CALORIES = 5000;
@@ -19,6 +20,8 @@ export function assertMealAnalysis(
   analysis: MealAnalysisResult,
   source: "photo" | "text" = "photo",
 ): void {
+  Object.assign(analysis, roundMealMacroTotals(analysis));
+
   const foods = analysis.foods.map((f) => f.trim()).filter(Boolean);
   if (foods.length === 0) {
     throw new MealGuardrailError(

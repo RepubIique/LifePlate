@@ -28,6 +28,13 @@ test("assertMealAnalysis accepts valid confirm payloads", () => {
   assert.doesNotThrow(() => assertMealAnalysis(confirmAnalysis()));
 });
 
+test("assertMealAnalysis rounds decimal macros before validation", () => {
+  const analysis = confirmAnalysis({ protein: 1.3, fibre: 2.6 });
+  assertMealAnalysis(analysis);
+  assert.equal(analysis.protein, 1);
+  assert.equal(analysis.fibre, 3);
+});
+
 test("assertMealAnalysis rejects confirm payloads with extreme calories", () => {
   assert.throws(
     () =>
