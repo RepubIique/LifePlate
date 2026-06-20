@@ -9,6 +9,12 @@ export function shouldLogRequest(url: string, method: string): boolean {
   return true;
 }
 
+export function requestLogLevel(statusCode: number): "error" | "warn" | null {
+  if (statusCode >= 500) return "error";
+  if (statusCode >= 400) return "warn";
+  return null;
+}
+
 export function fastifyServerOptions(): FastifyServerOptions {
   return {
     logger: {
@@ -30,12 +36,13 @@ export function registerRequestLogging(app: FastifyInstance) {
       responseTimeMs: Math.round(reply.elapsedTime),
     };
 
-    if (reply.statusCode >= 500) {
+    const level = requestLogLevel(reply.statusCode);
+    if (!level) return;
+
+    if (level === "error") {
       request.log.error(payload, "request failed");
       return;
     }
-    if (reply.statusCode >= 400) {
-      request.log.warn(payload, "request");
-    }
+    request.log.warn(payload, "request");
   });
 }
