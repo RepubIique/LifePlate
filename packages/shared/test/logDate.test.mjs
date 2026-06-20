@@ -10,6 +10,12 @@ import {
   offsetLogDateKey,
   recentLogDateKeys,
   todayDateKey,
+  monthStartKey,
+  monthEndKey,
+  previousMonthStartKey,
+  previousMonthEndKey,
+  enumerateLogDateKeys,
+  formatMonthLabel,
 } from "../dist/logDate.js";
 
 const NOW = new Date("2026-06-14T12:00:00.000Z");
@@ -110,4 +116,19 @@ test("compareMealsTimeline orders by logDate then sortIndex", () => {
   const sorted = [...meals].sort(compareMealsTimeline);
   assert.deepEqual(sorted.map((meal) => meal.sortIndex), [0, 1, 0]);
   assert.equal(sorted[0].logDate, "2026-06-10");
+});
+
+test("month helpers derive calendar month boundaries", () => {
+  assert.equal(monthStartKey("2026-06-14"), "2026-06-01");
+  assert.equal(monthEndKey("2026-06-14", NOW), "2026-06-14");
+  assert.equal(monthEndKey("2026-05-10", NOW), "2026-05-31");
+  assert.equal(previousMonthStartKey("2026-06-14"), "2026-05-01");
+  assert.equal(previousMonthEndKey("2026-06-14"), "2026-05-31");
+  assert.deepEqual(enumerateLogDateKeys("2026-06-12", "2026-06-14"), [
+    "2026-06-12",
+    "2026-06-13",
+    "2026-06-14",
+  ]);
+  assert.equal(formatMonthLabel("2026-06-14", NOW), "This month");
+  assert.equal(formatMonthLabel("2026-05-01", NOW), "Last month");
 });

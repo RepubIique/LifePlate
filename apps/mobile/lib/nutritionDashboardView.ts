@@ -23,6 +23,7 @@ import {
   type PeriodComparison,
   type PeriodSnapshot,
   type PillarProgress,
+  type WeeklyTrendItem,
 } from "@lifeplate/shared";
 
 export type NutritionDashboardView = Omit<NutritionDashboardResponse, "essentials"> & {
@@ -88,38 +89,85 @@ function resolveComparison(
   );
 }
 
+function emptyComparison(period: PeriodComparison["period"]): PeriodComparison {
+  const empty = emptySnapshot("—", "");
+  if (period === "week") {
+    return {
+      period,
+      currentLabel: "This week",
+      previousLabel: "Last week",
+      current: empty,
+      previous: empty,
+    };
+  }
+  if (period === "month") {
+    return {
+      period,
+      currentLabel: "This month",
+      previousLabel: "Last month",
+      current: empty,
+      previous: empty,
+    };
+  }
+  return buildDayComparison(
+    emptySnapshot("Today", ""),
+    emptySnapshot("Yesterday", ""),
+  );
+}
+
+/** Backfill fields missing from older cached dashboard payloads. */
+export function normalizeDashboardApi(
+  api: NutritionDashboardApiResponse,
+): NutritionDashboardApiResponse {
+  const weeklyTrends: WeeklyTrendItem[] = api.weeklyTrends ?? [];
+  const comparison =
+    api.comparison ??
+    buildDayComparison(emptySnapshot("Today", api.date), emptySnapshot("Yesterday", api.date));
+
+  return {
+    ...api,
+    dayTrends: api.dayTrends ?? weeklyTrends,
+    weeklyTrends,
+    monthTrends: api.monthTrends ?? weeklyTrends,
+    comparison,
+    weekComparison: api.weekComparison ?? emptyComparison("week"),
+    monthComparison: api.monthComparison ?? emptyComparison("month"),
+  };
+}
+
 export function expandDashboard(
   api: NutritionDashboardApiResponse,
   nutritionTargets: NutritionTargets | null,
   options?: ExpandDashboardOptions,
 ): NutritionDashboardView {
+  const normalized = normalizeDashboardApi(api);
   const targets = toExtendedTargets(nutritionTargets);
   const classification: FoodClassification = {
-    plants: api.today.plants,
-    plantServes: api.today.plantServes ?? api.today.plants.length,
-    protein: api.today.protein ?? [],
-    fibre: api.today.fibre ?? [],
-    carbs: api.today.carbs ?? [],
-    fermented: api.today.fermented,
-    prebiotic: api.today.prebiotic,
+    plants: normalized.today.plants,
+    plantServes: normalized.today.plantServes ?? normalized.today.plants.length,
+    protein: normalized.today.protein ?? [],
+    fibre: normalized.today.fibre ?? [],
+    carbs: normalized.today.carbs ?? [],
+    fermented: normalized.today.fermented,
+    prebiotic: normalized.today.prebiotic,
     omega3: [],
     processedMealCount: 0,
   };
-  const totals = api.today.totals;
+  const totals = normalized.today.totals;
   const protein = buildProteinPillar(totals, targets, classification);
   const fibre = buildFibrePillar(totals, targets, classification);
   const plants = buildPlantsPillar(classification, targets);
   const carbs = buildCarbsPillar(totals, targets, classification);
   const hydration = buildHydrationPillarFromGlasses(
-    api.hydration.glasses,
+    normalized.hydration.glasses,
     targets.dailyHydrationGlasses,
   );
-  const gaps = computeNutritionGaps(totals, targets, classification, api.hydration.glasses);
+  const gaps = computeNutritionGaps(totals, targets, classification, normalized.hydration.glasses);
   const score = computeNutritionScore(
     totals,
     targets,
     classification,
-    api.hydration.glasses,
+    normalized.hydration.glasses,
   );
   const pillarProgress = {
     protein: protein.progress,
@@ -129,14 +177,14 @@ export function expandDashboard(
   };
   const mergedMealTypes = [
     ...new Set(
-      [...(api.today.mealTypes ?? []), ...(options?.mealTypes ?? [])].map((type) =>
+      [...(normalized.today.mealTypes ?? []), ...(options?.mealTypes ?? [])].map((type) =>
         type.trim().toLowerCase(),
       ),
     ),
   ].filter(Boolean);
   const coachContext = {
     hour: options?.hour ?? new Date().getHours(),
-    logDate: api.date,
+    logDate: normalized.date,
     mealTypes: mergedMealTypes,
     mealsCount: totals.mealsCount,
   };
@@ -144,7 +192,7 @@ export function expandDashboard(
     totals.mealsCount > 0 ||
     totals.protein > 0 ||
     totals.fibre > 0 ||
-    api.hydration.glasses > 0;
+    normalized.hydration.glasses > 0;
   const coachSummary = buildCoachSummary(gaps, score, pillarProgress, coachContext);
   const plateMessage = buildPlateMessage(
     [protein, fibre, plants, carbs],
@@ -152,15 +200,15 @@ export function expandDashboard(
     coachContext,
   );
   const comparison = resolveComparison(
-    api,
+    normalized,
     score,
     totals.mealsCount,
     hasActivity,
-    buildComparisonPillars(totals, classification, api.hydration.glasses, targets),
+    buildComparisonPillars(totals, classification, normalized.hydration.glasses, targets),
   );
 
   return {
-    date: api.date,
+    date: normalized.date,
     score,
     scoreStatus: scoreStatus(score),
     coachSummary,
@@ -175,9 +223,13 @@ export function expandDashboard(
     energyBalance: buildEnergyMetrics(totals),
     gutHealth: buildGutHealthSummary(classification),
     recommendations: buildFoodRecommendations(gaps, coachContext),
-    weeklyTrends: api.weeklyTrends,
-    lifeplateInsight: api.lifeplateInsight,
+    dayTrends: normalized.dayTrends,
+    weeklyTrends: normalized.weeklyTrends,
+    monthTrends: normalized.monthTrends,
+    lifeplateInsight: normalized.lifeplateInsight,
     comparison,
+    weekComparison: normalized.weekComparison,
+    monthComparison: normalized.monthComparison,
   };
 }
 

@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
-import type { ComparisonPeriod } from "@lifeplate/shared";
+import type { ComparisonPeriod, PeriodComparison, WeeklyTrendItem } from "@lifeplate/shared";
 import { mealLogDateKey, offsetLogDateKey } from "@lifeplate/shared";
 import { GutHealthInsightCard } from "@/components/insights/GutHealthInsightCard";
 import { InsightsStreakCard } from "@/components/insights/InsightsStreakCard";
@@ -27,6 +27,36 @@ import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { currentWeekStartKey } from "@/lib/weekInsightsWindow";
 import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+
+const PERIOD_SECTION: Record<ComparisonPeriod, { title: string; subtitle: string }> = {
+  day: { title: "Today", subtitle: "Compared with yesterday" },
+  week: { title: "This week", subtitle: "Compared with last week" },
+  month: { title: "This month", subtitle: "Compared with last month" },
+};
+
+function trendsForPeriod(
+  dashboard: NonNullable<ReturnType<typeof useNutritionDashboard>["dashboard"]>,
+  period: ComparisonPeriod,
+): WeeklyTrendItem[] {
+  if (period === "day") return dashboard.dayTrends ?? [];
+  if (period === "month") return dashboard.monthTrends ?? [];
+  return dashboard.weeklyTrends ?? [];
+}
+
+function comparisonForPeriod(
+  dashboard: NonNullable<ReturnType<typeof useNutritionDashboard>["dashboard"]>,
+  period: ComparisonPeriod,
+): PeriodComparison {
+  if (period === "week") return dashboard.weekComparison ?? dashboard.comparison;
+  if (period === "month") return dashboard.monthComparison ?? dashboard.comparison;
+  return dashboard.comparison;
+}
+
+const PERIOD_GUT_LABEL: Record<ComparisonPeriod, string | null> = {
+  day: null,
+  week: "This week",
+  month: "This month",
+};
 
 export default function InsightsScreen() {
   const { profile } = useAuth();
@@ -64,7 +94,9 @@ export default function InsightsScreen() {
     );
   }, [refreshDashboard, refreshWeekInsights]);
 
-  const weeklyGutStatus = dashboard?.weeklyTrends.find((t) => t.label === "Gut Health")?.status;
+  const activeTrends = dashboard ? trendsForPeriod(dashboard, period) : [];
+  const periodGutStatus = activeTrends.find((t) => t.label === "Gut Health")?.status;
+  const periodGutLabel = PERIOD_GUT_LABEL[period];
 
   const mealsLastWeek = useMemo(() => {
     const thisWeekStart = currentWeekStartKey();
@@ -75,6 +107,9 @@ export default function InsightsScreen() {
       return key >= lastWeekStart && key <= lastWeekEnd;
     }).length;
   }, [meals]);
+
+  const periodSection = PERIOD_SECTION[period];
+  const activeComparison = dashboard ? comparisonForPeriod(dashboard, period) : null;
 
   return (
     <Screen
@@ -96,16 +131,12 @@ export default function InsightsScreen() {
           <InsightsSkeleton />
         ) : dashboard ? (
           <>
-            <SectionLabel title="Today" subtitle="Compared with yesterday" />
+            <SectionLabel title={periodSection.title} subtitle={periodSection.subtitle} />
             <PeriodSelector value={period} onChange={setPeriod} />
 
-            {period === "day" ? (
-              <PeriodComparisonCard comparison={dashboard.comparison} />
-            ) : (
-              <Text variant="bodyMedium" style={styles.comingSoon}>
-                {period === "week" ? "Weekly" : "Monthly"} comparisons are coming soon.
-              </Text>
-            )}
+            {activeComparison ? (
+              <PeriodComparisonCard comparison={activeComparison} />
+            ) : null}
 
             <SectionLabel title="This week" subtitle="Your last 7 days" />
 
@@ -123,11 +154,12 @@ export default function InsightsScreen() {
               <WeekSummaryCard insights={weekInsights} />
             ) : null}
 
-            <WeeklyTrendsCard trends={dashboard.weeklyTrends} />
+            <WeeklyTrendsCard trends={activeTrends} period={period} />
 
             <GutHealthInsightCard
               gutHealth={dashboard.gutHealth}
-              weeklyGutStatus={weeklyGutStatus}
+              periodGutStatus={periodGutStatus}
+              periodGutLabel={periodGutLabel ?? undefined}
             />
 
             <RecommendationsCard recommendations={dashboard.recommendations} />
@@ -171,12 +203,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.md,
-  },
-  comingSoon: {
-    opacity: 0.6,
-    lineHeight: 22,
-    textAlign: "center",
-    paddingVertical: spacing.lg,
   },
   weekSkeleton: {
     gap: spacing.md,

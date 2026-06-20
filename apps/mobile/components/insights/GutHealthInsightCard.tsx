@@ -8,10 +8,11 @@ import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   gutHealth: GutHealthSummary;
-  weeklyGutStatus?: TrendStatus;
+  periodGutStatus?: TrendStatus;
+  periodGutLabel?: string;
 };
 
-export function GutHealthInsightCard({ gutHealth, weeklyGutStatus }: Props) {
+export function GutHealthInsightCard({ gutHealth, periodGutStatus, periodGutLabel }: Props) {
   const hasFoods =
     gutHealth.fermentedFoods.length > 0 || gutHealth.prebioticFoods.length > 0;
 
@@ -43,12 +44,12 @@ export function GutHealthInsightCard({ gutHealth, weeklyGutStatus }: Props) {
           </Text>
           <StatusBadge status={gutHealth.status} />
         </View>
-        {weeklyGutStatus ? (
+        {periodGutStatus && periodGutLabel ? (
           <View style={styles.badgeRow}>
             <Text variant="labelSmall" style={styles.badgeHint}>
-              This week
+              {periodGutLabel}
             </Text>
-            <StatusBadge status={weeklyGutStatus} />
+            <StatusBadge status={periodGutStatus} />
           </View>
         ) : null}
       </View>

@@ -670,6 +670,9 @@ export {
   buildComparisonPillars,
   buildPeriodSnapshot,
   buildDayComparison,
+  buildWeekComparison,
+  buildMonthComparison,
+  aggregateDailySnapshots,
   scoreDelta,
   buildComparisonSummary,
   formatScoreDelta,
@@ -690,6 +693,12 @@ export {
   formatLogDateLabel,
   offsetLogDateKey,
   currentWeekStartKey,
+  monthStartKey,
+  monthEndKey,
+  previousMonthStartKey,
+  previousMonthEndKey,
+  enumerateLogDateKeys,
+  formatMonthLabel,
   type MealTimelineFields,
 } from "./logDate.js";
 

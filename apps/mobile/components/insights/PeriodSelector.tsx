@@ -8,10 +8,10 @@ type Props = {
   onChange: (period: ComparisonPeriod) => void;
 };
 
-const OPTIONS: Array<{ key: ComparisonPeriod; label: string; enabled: boolean; soon?: boolean }> = [
+const OPTIONS: Array<{ key: ComparisonPeriod; label: string; enabled: boolean }> = [
   { key: "day", label: "Day", enabled: true },
-  { key: "week", label: "Week", enabled: false, soon: true },
-  { key: "month", label: "Month", enabled: false, soon: true },
+  { key: "week", label: "Week", enabled: true },
+  { key: "month", label: "Month", enabled: true },
 ];
 
 export function PeriodSelector({ value, onChange }: Props) {
@@ -42,13 +42,6 @@ export function PeriodSelector({ value, onChange }: Props) {
             >
               {option.label}
             </Text>
-            {option.soon ? (
-              <Text variant="labelSmall" style={styles.soon}>
-                Soon
-              </Text>
-            ) : (
-              <View style={styles.soonSpacer} />
-            )}
           </Pressable>
         );
       })}
@@ -88,15 +81,5 @@ const styles = StyleSheet.create({
   },
   optionTextDisabled: {
     opacity: 0.35,
-  },
-  soon: {
-    opacity: 0.45,
-    fontSize: 10,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-    lineHeight: 14,
-  },
-  soonSpacer: {
-    height: 14,
   },
 });

@@ -134,9 +134,13 @@ export interface NutritionDashboardApiResponse {
   today: DashboardTodaySummary;
   hydration: HydrationSummary;
   recommendations: NutritionDashboardResponse["recommendations"];
+  dayTrends: WeeklyTrendItem[];
   weeklyTrends: WeeklyTrendItem[];
+  monthTrends: WeeklyTrendItem[];
   lifeplateInsight: string;
   comparison: PeriodComparison;
+  weekComparison: PeriodComparison;
+  monthComparison: PeriodComparison;
 }
 
 export interface NutritionDashboardResponse {
@@ -159,9 +163,13 @@ export interface NutritionDashboardResponse {
     items: FoodRecommendation[];
     impact: RecommendationImpact[];
   };
+  dayTrends: WeeklyTrendItem[];
   weeklyTrends: WeeklyTrendItem[];
+  monthTrends: WeeklyTrendItem[];
   lifeplateInsight: string;
   comparison: PeriodComparison;
+  weekComparison: PeriodComparison;
+  monthComparison: PeriodComparison;
 }
 
 export interface DailyTotals {

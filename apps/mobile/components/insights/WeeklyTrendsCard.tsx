@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
+import type { ComparisonPeriod } from "@lifeplate/shared";
 import type { WeeklyTrendItem } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -7,18 +8,36 @@ import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   trends: WeeklyTrendItem[];
+  period: ComparisonPeriod;
 };
 
-export function WeeklyTrendsCard({ trends }: Props) {
+const PERIOD_COPY: Record<ComparisonPeriod, { title: string; subtitle: string }> = {
+  day: {
+    title: "Today's trends",
+    subtitle: "How today is tracking against your targets.",
+  },
+  week: {
+    title: "Weekly trends",
+    subtitle: "How your last 7 days are tracking against your targets.",
+  },
+  month: {
+    title: "Monthly trends",
+    subtitle: "How this month is tracking against your targets.",
+  },
+};
+
+export function WeeklyTrendsCard({ trends, period }: Props) {
   if (trends.length === 0) return null;
+
+  const copy = PERIOD_COPY[period];
 
   return (
     <PremiumCard style={styles.card}>
       <Text variant="titleMedium" style={styles.title}>
-        Weekly trends
+        {copy.title}
       </Text>
       <Text variant="bodySmall" style={styles.subtitle}>
-        How your last 7 days are tracking against your targets.
+        {copy.subtitle}
       </Text>
       <View style={styles.list}>
         {trends.map((trend) => (

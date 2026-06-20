@@ -63,12 +63,16 @@ function PillarComparisonRow({
   current,
   previous,
   showDelta,
+  currentLabel,
+  previousLabel,
 }: {
   pillarKey: ComparisonPillarKey;
   label: string;
   current: number;
   previous: number;
   showDelta: boolean;
+  currentLabel: string;
+  previousLabel: string;
 }) {
   const color = PILLAR_COLORS[pillarKey];
   const delta = current - previous;
@@ -102,10 +106,10 @@ function PillarComparisonRow({
       </View>
       <View style={styles.barLegend}>
         <Text variant="bodySmall" style={styles.barLegendText}>
-          Today {current}%
+          {currentLabel} {current}%
         </Text>
         <Text variant="bodySmall" style={styles.barLegendText}>
-          Yesterday {previous}%
+          {previousLabel} {previous}%
         </Text>
       </View>
     </View>
@@ -117,6 +121,12 @@ export function PeriodComparisonCard({ comparison }: Props) {
   const delta = scoreDelta(comparison);
   const summary = buildComparisonSummary(comparison);
   const showDelta = previous.hasData;
+  const mealsCaption =
+    comparison.period === "day"
+      ? "logged today"
+      : comparison.period === "week"
+        ? "logged this week"
+        : "logged this month";
 
   return (
     <PremiumCard style={styles.card}>
@@ -154,17 +164,19 @@ export function PeriodComparisonCard({ comparison }: Props) {
             current={current.pillars[key]}
             previous={previous.pillars[key]}
             showDelta={showDelta}
+            currentLabel={comparison.currentLabel}
+            previousLabel={comparison.previousLabel}
           />
         ))}
       </View>
 
       <View style={styles.mealsRow}>
         <Text variant="bodySmall" style={styles.mealsText}>
-          {current.mealsCount} meal{current.mealsCount === 1 ? "" : "s"} logged today
+          {current.mealsCount} meal{current.mealsCount === 1 ? "" : "s"} {mealsCaption}
         </Text>
         {previous.hasData ? (
           <Text variant="bodySmall" style={styles.mealsText}>
-            {previous.mealsCount} yesterday
+            {previous.mealsCount} {comparison.previousLabel.toLowerCase()}
           </Text>
         ) : null}
       </View>

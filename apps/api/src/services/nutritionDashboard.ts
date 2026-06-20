@@ -1,9 +1,12 @@
 import {
+  aggregateDailySnapshots,
   buildCoachSummary,
   buildDayComparison,
+  buildMonthComparison,
   buildExtendedNutritionTargets,
   buildFoodRecommendations,
   buildPeriodSnapshot,
+  buildWeekComparison,
   buildWeeklyTrends,
   buildCarbsPillar,
   buildFibrePillar,
@@ -15,9 +18,15 @@ import {
   computeNutritionScore,
   countProcessedMeals,
   defaultExtendedNutritionTargets,
+  enumerateLogDateKeys,
   formatLogDateLabel,
+  formatMonthLabel,
   isValidLogDateKey,
+  monthEndKey,
+  monthStartKey,
   offsetLogDateKey,
+  previousMonthEndKey,
+  previousMonthStartKey,
   scoreStatus,
   type DailyTotals,
   type ExtendedNutritionTargets,
@@ -179,6 +188,75 @@ async function fetchHydrationGlasses(userId: string, dateKey?: string): Promise<
   return rows[0]?.glasses ?? 0;
 }
 
+async function fetchHydrationByDates(
+  userId: string,
+  dateKeys: string[],
+): Promise<Map<string, number>> {
+  const hydrationByDate = new Map<string, number>();
+  if (dateKeys.length === 0) return hydrationByDate;
+
+  const { rows } = await pool.query<{ date: string; glasses: number }>(
+    `SELECT log_date::text AS date, glasses
+     FROM daily_hydration
+     WHERE user_id = $1 AND log_date = ANY($2::date[])`,
+    [userId, dateKeys],
+  );
+
+  for (const row of rows) {
+    hydrationByDate.set(row.date, row.glasses);
+  }
+  return hydrationByDate;
+}
+
+
+function groupRowsByDate(rows: MealRow[]): Map<string, MealRow[]> {
+  const dayMap = new Map<string, MealRow[]>();
+  for (const row of rows) {
+    const list = dayMap.get(row.log_date) ?? [];
+    list.push(row);
+    dayMap.set(row.log_date, list);
+  }
+  return dayMap;
+}
+
+function buildDailySnapshot(
+  dateKey: string,
+  dayRows: MealRow[],
+  hydrationGlasses: number,
+  targets: ExtendedNutritionTargets,
+) {
+  const totals = aggregateTotals(dayRows);
+  const foods = collectFoods(dayRows);
+  const mealNames = collectMealNames(dayRows);
+  const classification = classifyFoods(foods, mealNames);
+  return buildPeriodSnapshot(
+    periodLabel(dateKey),
+    dateKey,
+    totals,
+    classification,
+    hydrationGlasses,
+    targets,
+  );
+}
+
+function buildRangeSnapshot(
+  label: string,
+  endDateKey: string,
+  startDateKey: string,
+  rowsByDate: Map<string, MealRow[]>,
+  hydrationByDate: Map<string, number>,
+  targets: ExtendedNutritionTargets,
+) {
+  const dailySnapshots = enumerateLogDateKeys(startDateKey, endDateKey).map((dateKey) =>
+    buildDailySnapshot(
+      dateKey,
+      rowsByDate.get(dateKey) ?? [],
+      hydrationByDate.get(dateKey) ?? 0,
+      targets,
+    ),
+  );
+  return aggregateDailySnapshots(label, endDateKey, dailySnapshots);
+}
 
 function periodLabel(dateKey: string): string {
   return formatLogDateLabel(dateKey);
@@ -190,6 +268,27 @@ function filterRowsForDate(rows: MealRow[], dateKey: string): MealRow[] {
 
 function weekStartDateKey(): string {
   return offsetLogDateKey(todayDateKey(), -6);
+}
+
+function buildTrendsFromRows(
+  rows: MealRow[],
+  targets: ExtendedNutritionTargets,
+) {
+  const metrics = computeWeeklyMetricsFromRows(rows);
+  return buildWeeklyTrends({
+    avgDailyProtein: metrics.avgDailyProtein,
+    proteinTarget: targets.dailyProteinG,
+    avgPlantFoods: metrics.avgPlantFoods,
+    plantTarget: targets.dailyPlantServes,
+    gutScore: metrics.gutScore,
+    processedPercent: metrics.processedPercent,
+    omega3Days: metrics.omega3Days,
+    daysWithMeals: metrics.daysWithMeals,
+  });
+}
+
+function filterRowsForRange(rows: MealRow[], startDateKey: string, endDateKey: string): MealRow[] {
+  return rows.filter((row) => row.log_date >= startDateKey && row.log_date <= endDateKey);
 }
 
 function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
@@ -260,17 +359,42 @@ export async function buildNutritionDashboard(
   const dateKey =
     targetDateKey && isValidLogDateKey(targetDateKey) ? targetDateKey : todayDateKey();
   const previousKey = offsetLogDateKey(dateKey, -1);
+  const thisWeekStart = offsetLogDateKey(dateKey, -6);
+  const lastWeekStart = offsetLogDateKey(dateKey, -13);
+  const lastWeekEnd = offsetLogDateKey(dateKey, -7);
+  const thisMonthStart = monthStartKey(dateKey);
+  const lastMonthStart = previousMonthStartKey(dateKey);
+  const lastMonthEnd = previousMonthEndKey(dateKey);
+  const comparisonFetchStart = lastMonthStart;
 
-  const [{ rows: userRows }, weekRows, dayRows, hydrationGlasses, previousHydrationGlasses, cachedInsight] =
-    await Promise.all([
+  const comparisonDateKeys = [
+    ...enumerateLogDateKeys(thisWeekStart, dateKey),
+    ...enumerateLogDateKeys(lastWeekStart, lastWeekEnd),
+    ...enumerateLogDateKeys(thisMonthStart, dateKey),
+    ...enumerateLogDateKeys(lastMonthStart, lastMonthEnd),
+  ];
+  const uniqueComparisonDateKeys = [...new Set(comparisonDateKeys)];
+
+  const [
+    { rows: userRows },
+    weekRows,
+    dayRows,
+    comparisonRows,
+    hydrationGlasses,
+    previousHydrationGlasses,
+    hydrationByDate,
+    cachedInsight,
+  ] = await Promise.all([
     pool.query<UserRow>(
       `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
       [userId],
     ),
     fetchMealRowsSince(userId, weekStartDateKey()),
     fetchMealRowsBetween(userId, previousKey, dateKey),
+    fetchMealRowsSince(userId, comparisonFetchStart),
     fetchHydrationGlasses(userId, dateKey),
     fetchHydrationGlasses(userId, previousKey),
+    fetchHydrationByDates(userId, uniqueComparisonDateKeys),
     dateKey === todayDateKey() ? getCachedDailyInsight(userId, dateKey) : Promise.resolve(null),
   ]);
 
@@ -324,7 +448,7 @@ export async function buildNutritionDashboard(
     hydration: hydrationPillar.progress,
   }, coachContext);
   const recommendations = buildFoodRecommendations(gaps, coachContext);
-  const weeklyMetrics = computeWeeklyMetricsFromRows(weekRows);
+  const monthRows = filterRowsForRange(comparisonRows, thisMonthStart, dateKey);
 
   const currentSnapshot = buildPeriodSnapshot(
     periodLabel(dateKey),
@@ -343,6 +467,42 @@ export async function buildNutritionDashboard(
     targets,
   );
   const comparison = buildDayComparison(currentSnapshot, previousSnapshot);
+
+  const comparisonRowsByDate = groupRowsByDate(comparisonRows);
+  const thisWeekSnapshot = buildRangeSnapshot(
+    "This week",
+    dateKey,
+    thisWeekStart,
+    comparisonRowsByDate,
+    hydrationByDate,
+    targets,
+  );
+  const lastWeekSnapshot = buildRangeSnapshot(
+    "Last week",
+    lastWeekEnd,
+    lastWeekStart,
+    comparisonRowsByDate,
+    hydrationByDate,
+    targets,
+  );
+  const thisMonthSnapshot = buildRangeSnapshot(
+    formatMonthLabel(dateKey),
+    dateKey,
+    thisMonthStart,
+    comparisonRowsByDate,
+    hydrationByDate,
+    targets,
+  );
+  const lastMonthSnapshot = buildRangeSnapshot(
+    formatMonthLabel(lastMonthStart),
+    lastMonthEnd,
+    lastMonthStart,
+    comparisonRowsByDate,
+    hydrationByDate,
+    targets,
+  );
+  const weekComparison = buildWeekComparison(thisWeekSnapshot, lastWeekSnapshot);
+  const monthComparison = buildMonthComparison(thisMonthSnapshot, lastMonthSnapshot);
 
   let lifeplateInsight = cachedInsight;
   if (!lifeplateInsight && dateKey === todayDateKey()) {
@@ -375,18 +535,13 @@ export async function buildNutritionDashboard(
     },
     hydration: { glasses: hydrationGlasses },
     recommendations,
-    weeklyTrends: buildWeeklyTrends({
-      avgDailyProtein: weeklyMetrics.avgDailyProtein,
-      proteinTarget: targets.dailyProteinG,
-      avgPlantFoods: weeklyMetrics.avgPlantFoods,
-      plantTarget: targets.dailyPlantServes,
-      gutScore: weeklyMetrics.gutScore,
-      processedPercent: weeklyMetrics.processedPercent,
-      omega3Days: weeklyMetrics.omega3Days,
-      daysWithMeals: weeklyMetrics.daysWithMeals,
-    }),
+    dayTrends: buildTrendsFromRows(todayRows, targets),
+    weeklyTrends: buildTrendsFromRows(weekRows, targets),
+    monthTrends: buildTrendsFromRows(monthRows, targets),
     lifeplateInsight: normalizeLifeplateInsight(lifeplateInsight ?? coachSummary),
     comparison,
+    weekComparison,
+    monthComparison,
   };
 }
 

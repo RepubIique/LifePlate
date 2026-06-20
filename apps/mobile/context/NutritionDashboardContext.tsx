@@ -18,7 +18,7 @@ import {
   saveCachedDashboard,
   todayDateKey,
 } from "@/lib/dashboardCache";
-import { expandDashboard, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
+import { expandDashboard, normalizeDashboardApi, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
 
 const STALE_MS = TAB_FOCUS_STALE_MS;
 
@@ -57,7 +57,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
 
   const expand = useCallback(
     (raw: NutritionDashboardApiResponse): NutritionDashboardView =>
-      expandDashboard(raw, profile?.nutritionTargets ?? null),
+      expandDashboard(normalizeDashboardApi(raw), profile?.nutritionTargets ?? null),
     [profile?.nutritionTargets],
   );
 
@@ -84,8 +84,9 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
       const cached = await loadCachedDashboard(userId);
       if (cancelled) return;
       if (cached?.dashboard && cached.dashboard.date === todayDateKey()) {
-        rawDashboardRef.current = cached.dashboard;
-        setDashboard(expandDashboard(cached.dashboard, profile?.nutritionTargets ?? null));
+        const normalized = normalizeDashboardApi(cached.dashboard);
+        rawDashboardRef.current = normalized;
+        setDashboard(expandDashboard(normalized, profile?.nutritionTargets ?? null));
         fetchedAtRef.current = cached.fetchedAt;
       }
       setHydrated(true);
@@ -157,7 +158,7 @@ export function NutritionDashboardProvider({ children }: { children: ReactNode }
         }
 
         try {
-          const data = await fetchNutritionDashboard();
+          const data = normalizeDashboardApi(await fetchNutritionDashboard());
           const fetchedAt = Date.now();
           rawDashboardRef.current = data;
           setDashboard(expand(data));

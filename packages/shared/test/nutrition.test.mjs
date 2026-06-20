@@ -4,6 +4,9 @@ import {
   buildCoachSummary,
   buildComparisonSummary,
   buildDayComparison,
+  buildMonthComparison,
+  buildWeekComparison,
+  aggregateDailySnapshots,
   buildFoodRecommendations,
   buildLifeplateInsightTemplate,
   buildPlateMessage,
@@ -299,6 +302,54 @@ test("buildComparisonSummary reports momentum when score jumps", () => {
   );
   const comparison = buildDayComparison(current, previous);
   assert.match(buildComparisonSummary(comparison), /ahead of yesterday/i);
+});
+
+test("buildWeekComparison summary references last week", () => {
+  const totals = {
+    calories: 1800,
+    protein: 70,
+    carbs: 180,
+    fat: 60,
+    fibre: 28,
+    mealsCount: 3,
+  };
+  const classification = classifyFoods(["broccoli", "berries", "oats"], ["Lunch"]);
+  const current = buildPeriodSnapshot("This week", "2026-06-14", totals, classification, 8, targets);
+  const previous = buildPeriodSnapshot(
+    "Last week",
+    "2026-06-07",
+    { calories: 900, protein: 20, carbs: 90, fat: 20, fibre: 8, mealsCount: 1 },
+    classifyFoods(["toast"], ["Breakfast"]),
+    2,
+    targets,
+  );
+  const comparison = buildWeekComparison(current, previous);
+  assert.equal(comparison.period, "week");
+  assert.match(buildComparisonSummary(comparison), /ahead of last week/i);
+});
+
+test("aggregateDailySnapshots averages scores across days with data", () => {
+  const classification = classifyFoods(["broccoli"], ["Lunch"]);
+  const dayOne = buildPeriodSnapshot(
+    "Mon",
+    "2026-06-09",
+    { calories: 800, protein: 40, carbs: 80, fat: 20, fibre: 12, mealsCount: 2 },
+    classification,
+    6,
+    targets,
+  );
+  const dayTwo = buildPeriodSnapshot(
+    "Tue",
+    "2026-06-10",
+    { calories: 1200, protein: 60, carbs: 120, fat: 30, fibre: 18, mealsCount: 3 },
+    classification,
+    8,
+    targets,
+  );
+  const aggregated = aggregateDailySnapshots("This week", "2026-06-10", [dayOne, dayTwo]);
+  assert.equal(aggregated.hasData, true);
+  assert.equal(aggregated.mealsCount, 5);
+  assert.equal(aggregated.score, Math.round((dayOne.score + dayTwo.score) / 2));
 });
 
 test("computeNutritionScore handles zero targets without NaN", () => {

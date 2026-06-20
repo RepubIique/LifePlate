@@ -115,3 +115,53 @@ export function offsetLogDateKey(dateKey: string, days: number): string {
 export function currentWeekStartKey(now = new Date()): string {
   return offsetLogDateKey(todayDateKey(now), -6);
 }
+
+/** First calendar day of the month containing `dateKey`. */
+export function monthStartKey(dateKey: string): string {
+  const [year, month] = dateKey.split("-");
+  return `${year}-${month}-01`;
+}
+
+/** Last calendar day of the month containing `dateKey`, capped at today. */
+export function monthEndKey(dateKey: string, now = new Date()): string {
+  const today = todayDateKey(now);
+  const [year, month] = dateKey.split("-").map(Number);
+  const lastDay = new Date(year, month, 0);
+  const end = dateKeyFromDate(lastDay);
+  return end > today ? today : end;
+}
+
+/** First day of the calendar month before the one containing `dateKey`. */
+export function previousMonthStartKey(dateKey: string): string {
+  const [year, month] = dateKey.split("-").map(Number);
+  const d = new Date(year, month - 2, 1);
+  return dateKeyFromDate(d);
+}
+
+/** Last day of the calendar month before the one containing `dateKey`. */
+export function previousMonthEndKey(dateKey: string): string {
+  return offsetLogDateKey(monthStartKey(dateKey), -1);
+}
+
+export function enumerateLogDateKeys(startDateKey: string, endDateKey: string): string[] {
+  const keys: string[] = [];
+  let cursor = startDateKey;
+  while (cursor <= endDateKey) {
+    keys.push(cursor);
+    cursor = offsetLogDateKey(cursor, 1);
+  }
+  return keys;
+}
+
+export function formatMonthLabel(dateKey: string, now = new Date()): string {
+  const today = todayDateKey(now);
+  const thisMonthStart = monthStartKey(today);
+  const keyMonthStart = monthStartKey(dateKey);
+  if (keyMonthStart === thisMonthStart) return "This month";
+  if (keyMonthStart === previousMonthStartKey(today)) return "Last month";
+  const [year, month] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
