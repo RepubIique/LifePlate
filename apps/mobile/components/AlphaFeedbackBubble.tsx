@@ -14,11 +14,11 @@ import {
 import {
   ActivityIndicator,
   IconButton,
-  Snackbar,
   Text,
   TextInput,
   useTheme,
 } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { fetchAlphaFeedbackMessages, sendAlphaFeedbackMessage } from "@/lib/api";
@@ -264,9 +264,9 @@ export function AlphaFeedbackBubble() {
         </View>
       </Modal>
 
-      <Snackbar visible={!!error} onDismiss={() => setError(null)} duration={4000}>
+      <BottomSnackbar visible={!!error} onDismiss={() => setError(null)} duration={4000}>
         {error}
-      </Snackbar>
+      </BottomSnackbar>
     </>
   );
 }

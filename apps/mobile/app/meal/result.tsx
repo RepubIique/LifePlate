@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import { Button, Chip, Snackbar, Text, TextInput } from "react-native-paper";
+import { Button, Chip, Text, TextInput } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   buildMealPortionMeta,
   clampMealPortions,
@@ -299,6 +300,15 @@ export default function MealResultScreen() {
 
   return (
     <KeyboardAvoidingScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      <PremiumCard>
+        <MealLogDateField
+          dateKey={logDate}
+          mealType={mealType}
+          onChange={(loggedAt) => setLogDate(dateKeyFromIso(loggedAt))}
+        />
+        <MealTypePicker value={mealType} onChange={setMealType} />
+      </PremiumCard>
+
       {imageUrl ? (
         <Image source={{ uri: imageUrl }} style={styles.image} />
       ) : null}
@@ -323,15 +333,6 @@ export default function MealResultScreen() {
           onPortionsEatenChange={setPortionsEaten}
         />
       ) : null}
-
-      <PremiumCard>
-        <MealLogDateField
-          dateKey={logDate}
-          mealType={mealType}
-          onChange={(loggedAt) => setLogDate(dateKeyFromIso(loggedAt))}
-        />
-        <MealTypePicker value={mealType} onChange={setMealType} />
-      </PremiumCard>
 
       <PremiumCard>
         {editing ? (
@@ -508,9 +509,9 @@ export default function MealResultScreen() {
         </Button>
       </View>
 
-      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
+      <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </KeyboardAvoidingScrollView>
   );
 }

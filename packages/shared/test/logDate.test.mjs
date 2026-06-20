@@ -5,6 +5,7 @@ import {
   formatLogDateLabel,
   isValidLogDateKey,
   loggedAtForDateKey,
+  offsetLogDateKey,
   recentLogDateKeys,
   todayDateKey,
 } from "../dist/logDate.js";
@@ -45,6 +46,11 @@ test("formatLogDateLabel returns Today, Yesterday, or formatted date", () => {
   const label = formatLogDateLabel("2026-06-10", NOW);
   assert.match(label, /Jun/);
   assert.match(label, /10/);
+});
+
+test("offsetLogDateKey shifts calendar dates", () => {
+  assert.equal(offsetLogDateKey("2026-06-14", -1), "2026-06-13");
+  assert.equal(offsetLogDateKey("2026-06-01", -1), "2026-05-31");
 });
 
 test("loggedAtForDateKey preserves local calendar date for early-morning meals", () => {

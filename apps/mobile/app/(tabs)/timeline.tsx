@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, Snackbar, Text } from "react-native-paper";
+import { ActivityIndicator, Button, Text } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealListSummary } from "@lifeplate/shared";
 import { todayDateKey } from "@lifeplate/shared";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
@@ -225,7 +226,7 @@ export default function TimelineScreen() {
         onClose={() => setHydrationPickerOpen(false)}
       />
 
-      <Snackbar
+      <BottomSnackbar
         visible={!!error || !!snackbar}
         onDismiss={() => {
           setError(null);
@@ -241,7 +242,7 @@ export default function TimelineScreen() {
         }
       >
         {error ?? snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }

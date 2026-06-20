@@ -1,7 +1,8 @@
 import { router, Redirect, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Button, Snackbar, Text } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GOALS, isOnboardingComplete, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
@@ -94,9 +95,9 @@ export default function GoalScreen() {
           Sign out
         </Button>
       </View>
-      <Snackbar visible={!!error} onDismiss={() => setError(null)} duration={6000}>
+      <BottomSnackbar visible={!!error} onDismiss={() => setError(null)} duration={6000}>
         {error}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }

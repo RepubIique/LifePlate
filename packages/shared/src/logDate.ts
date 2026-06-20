@@ -67,3 +67,10 @@ export function formatLogDateLabel(dateKey: string, now = new Date()): string {
     day: "numeric",
   });
 }
+
+export function offsetLogDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
+  d.setDate(d.getDate() + days);
+  return dateKeyFromDate(d);
+}

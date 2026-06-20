@@ -10,13 +10,16 @@ import {
   computeNutritionScore,
   countProcessedMeals,
   defaultExtendedNutritionTargets,
+  formatLogDateLabel,
   isValidLogDateKey,
+  offsetLogDateKey,
   scoreStatus,
   type DailyTotals,
   type ExtendedNutritionTargets,
   type NutritionDashboardApiResponse,
   weeklyGutScore,
   dateKeyFromIso,
+  todayDateKey,
 } from "@lifeplate/shared";
 import type { Gender } from "@lifeplate/shared";
 import { computeNutritionTargets } from "@lifeplate/shared";
@@ -25,7 +28,6 @@ import {
   getCachedDailyInsight,
   saveDailyInsight,
 } from "./dailyInsightCache.js";
-import { todayDateKey } from "./streaks.js";
 import { pool } from "../db.js";
 
 type MealRow = {
@@ -138,6 +140,35 @@ async function fetchMealRowsSince(userId: string, since: Date): Promise<MealRow[
   return rows;
 }
 
+function startOfDateKey(dateKey: string): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function endOfDateKey(dateKey: string): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
+async function fetchMealRowsBetween(
+  userId: string,
+  startDateKey: string,
+  endDateKey: string,
+): Promise<MealRow[]> {
+  const { rows } = await pool.query<MealRow>(
+    `SELECT m.id AS meal_id, m.meal_name, m.created_at,
+            a.calories, a.protein, a.carbs, a.fat, a.fibre,
+            f.food_name
+     FROM meals m
+     LEFT JOIN meal_analysis a ON a.meal_id = m.id
+     LEFT JOIN foods f ON f.meal_id = m.id
+     WHERE m.user_id = $1 AND m.created_at >= $2 AND m.created_at <= $3`,
+    [userId, startOfDateKey(startDateKey), endOfDateKey(endDateKey)],
+  );
+
+  return rows;
+}
+
 async function fetchHydrationGlasses(userId: string, dateKey?: string): Promise<number> {
   const { rows } = await pool.query<{ glasses: number }>(
     `SELECT glasses FROM daily_hydration
@@ -147,10 +178,9 @@ async function fetchHydrationGlasses(userId: string, dateKey?: string): Promise<
   return rows[0]?.glasses ?? 0;
 }
 
-function yesterdayDateKey(): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
+
+function periodLabel(dateKey: string): string {
+  return formatLogDateLabel(dateKey);
 }
 
 function filterRowsForDate(rows: MealRow[], dateKey: string): MealRow[] {
@@ -228,18 +258,23 @@ function computeWeeklyMetricsFromRows(weekRows: MealRow[]): {
 
 export async function buildNutritionDashboard(
   userId: string,
+  targetDateKey?: string,
 ): Promise<NutritionDashboardApiResponse> {
-  const dateKey = todayDateKey();
+  const dateKey =
+    targetDateKey && isValidLogDateKey(targetDateKey) ? targetDateKey : todayDateKey();
+  const previousKey = offsetLogDateKey(dateKey, -1);
 
-  const [{ rows: userRows }, weekRows, hydrationGlasses, yesterdayHydrationGlasses, cachedInsight] = await Promise.all([
+  const [{ rows: userRows }, weekRows, dayRows, hydrationGlasses, previousHydrationGlasses, cachedInsight] =
+    await Promise.all([
     pool.query<UserRow>(
       `SELECT goal, weight_kg, height_cm, age, gender FROM users WHERE id = $1`,
       [userId],
     ),
     fetchMealRowsSince(userId, startOfWeek()),
-    fetchHydrationGlasses(userId),
-    fetchHydrationGlasses(userId, yesterdayDateKey()),
-    getCachedDailyInsight(userId, dateKey),
+    fetchMealRowsBetween(userId, previousKey, dateKey),
+    fetchHydrationGlasses(userId, dateKey),
+    fetchHydrationGlasses(userId, previousKey),
+    dateKey === todayDateKey() ? getCachedDailyInsight(userId, dateKey) : Promise.resolve(null),
   ]);
 
   const user = userRows[0];
@@ -253,16 +288,16 @@ export async function buildNutritionDashboard(
     },
   );
 
-  const todayRows = filterRowsForDate(weekRows, dateKey);
-  const yesterdayRows = filterRowsForDate(weekRows, yesterdayDateKey());
+  const todayRows = filterRowsForDate(dayRows, dateKey);
+  const previousRows = filterRowsForDate(dayRows, previousKey);
   const totals = aggregateTotals(todayRows);
-  const yesterdayTotals = aggregateTotals(yesterdayRows);
+  const previousTotals = aggregateTotals(previousRows);
   const foods = collectFoods(todayRows);
-  const yesterdayFoods = collectFoods(yesterdayRows);
+  const previousFoods = collectFoods(previousRows);
   const mealNames = collectMealNames(todayRows);
-  const yesterdayMealNames = collectMealNames(yesterdayRows);
+  const previousMealNames = collectMealNames(previousRows);
   const classification = classifyFoods(foods, mealNames);
-  const yesterdayClassification = classifyFoods(yesterdayFoods, yesterdayMealNames);
+  const previousClassification = classifyFoods(previousFoods, previousMealNames);
 
   const gaps = computeNutritionGaps(totals, targets, classification, hydrationGlasses);
   const score = computeNutritionScore(
@@ -277,7 +312,7 @@ export async function buildNutritionDashboard(
   const weeklyMetrics = computeWeeklyMetricsFromRows(weekRows);
 
   const currentSnapshot = buildPeriodSnapshot(
-    "Today",
+    periodLabel(dateKey),
     dateKey,
     totals,
     classification,
@@ -285,17 +320,17 @@ export async function buildNutritionDashboard(
     targets,
   );
   const previousSnapshot = buildPeriodSnapshot(
-    "Yesterday",
-    yesterdayDateKey(),
-    yesterdayTotals,
-    yesterdayClassification,
-    yesterdayHydrationGlasses,
+    periodLabel(previousKey),
+    previousKey,
+    previousTotals,
+    previousClassification,
+    previousHydrationGlasses,
     targets,
   );
   const comparison = buildDayComparison(currentSnapshot, previousSnapshot);
 
   let lifeplateInsight = cachedInsight;
-  if (!lifeplateInsight) {
+  if (!lifeplateInsight && dateKey === todayDateKey()) {
     lifeplateInsight = await generateLifeplateInsight({
       goal: user?.goal ?? null,
       totals,
@@ -334,7 +369,7 @@ export async function buildNutritionDashboard(
       omega3Days: weeklyMetrics.omega3Days,
       daysWithMeals: weeklyMetrics.daysWithMeals,
     }),
-    lifeplateInsight: normalizeLifeplateInsight(lifeplateInsight),
+    lifeplateInsight: normalizeLifeplateInsight(lifeplateInsight ?? coachSummary),
     comparison,
   };
 }

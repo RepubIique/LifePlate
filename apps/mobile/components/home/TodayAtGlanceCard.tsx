@@ -8,10 +8,11 @@ import { DigitalPlate } from "./DigitalPlate";
 
 type Props = {
   dashboard: NutritionDashboardView;
+  title?: string;
   onPressInsights?: () => void;
 };
 
-export function TodayAtGlanceCard({ dashboard, onPressInsights }: Props) {
+export function TodayAtGlanceCard({ dashboard, title = "Today at a glance", onPressInsights }: Props) {
   const { score, coachSummary, essentials } = dashboard;
   const hasActivity =
     essentials.protein.consumed > 0 ||
@@ -24,7 +25,7 @@ export function TodayAtGlanceCard({ dashboard, onPressInsights }: Props) {
     <PremiumCard style={styles.card}>
       <View style={styles.header}>
         <Text variant="titleMedium" style={styles.title}>
-          Today at a glance
+          {title}
         </Text>
         {onPressInsights ? (
           <Pressable onPress={onPressInsights} style={styles.link} hitSlop={8}>

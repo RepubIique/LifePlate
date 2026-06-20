@@ -1,15 +1,21 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, IconButton, Snackbar, Text } from "react-native-paper";
-import { dateKeyFromIso, formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
+import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
+import {
+  buildHydrationPillarFromGlasses,
+  dateKeyFromIso,
+  formatLogDateLabel,
+  todayDateKey,
+} from "@lifeplate/shared";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
+import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
-import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { TextLogModal } from "@/components/meal/TextLogModal";
 import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
@@ -18,15 +24,17 @@ import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
+import { fetchNutritionDashboard } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
+import { expandDashboard, type NutritionDashboardView } from "@/lib/nutritionDashboardView";
 import { spacing } from "@/src/theme/lifeplate";
 
-function isToday(iso: string) {
-  return dateKeyFromIso(iso) === todayDateKey();
+function mealsForDate(iso: string, dateKey: string) {
+  return dateKeyFromIso(iso) === dateKey;
 }
 
 export default function HomeScreen() {
@@ -42,20 +50,53 @@ export default function HomeScreen() {
   const { adjustHydration, syncDate } = useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
+  const dayDashboardCacheRef = useRef<Map<string, NutritionDashboardView>>(new Map());
 
-  const handleTodayHydrationDelta = useCallback(
+  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [logDateKey, setLogDateKey] = useState(() => todayDateKey());
+  const [textLogOpen, setTextLogOpen] = useState(false);
+  const [textDescription, setTextDescription] = useState("");
+  const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
+  const [dayDashboard, setDayDashboard] = useState<NutritionDashboardView | null>(null);
+  const [dayDashboardLoading, setDayDashboardLoading] = useState(false);
+
+  const isViewingToday = logDateKey === todayDateKey();
+  const activeDashboard = isViewingToday ? dashboard : dayDashboard;
+  const glanceTitle = isViewingToday
+    ? "Today at a glance"
+    : `${formatLogDateLabel(logDateKey)} at a glance`;
+  const mealsTitle = isViewingToday
+    ? "Today's meals"
+    : `${formatLogDateLabel(logDateKey)}'s meals`;
+
+  const handleHydrationDelta = useCallback(
     (delta: number) => {
-      const dateKey = todayDateKey();
-      adjustHydration(dateKey, delta);
-      if (dashboard) {
-        const next = Math.max(
-          0,
-          Math.min(24, dashboard.essentials.hydration.consumed + delta),
-        );
+      adjustHydration(logDateKey, delta);
+      if (!activeDashboard) return;
+
+      const target = profile?.nutritionTargets?.dailyHydrationGlasses ?? 8;
+      const next = Math.max(
+        0,
+        Math.min(24, activeDashboard.essentials.hydration.consumed + delta),
+      );
+      const hydration = buildHydrationPillarFromGlasses(next, target);
+
+      if (isViewingToday) {
         patchHydrationRef.current(next);
+        return;
       }
+
+      setDayDashboard((prev) => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          essentials: { ...prev.essentials, hydration },
+        };
+        dayDashboardCacheRef.current.set(logDateKey, updated);
+        return updated;
+      });
     },
-    [adjustHydration, dashboard],
+    [adjustHydration, activeDashboard, isViewingToday, logDateKey, profile?.nutritionTargets?.dailyHydrationGlasses],
   );
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const {
@@ -69,16 +110,47 @@ export default function HomeScreen() {
     retryLastAsset,
     lastAssetRef,
   } = useMealPhotoUpload();
-  const [snackbar, setSnackbar] = useState<string | null>(null);
-  const [logDateKey, setLogDateKey] = useState(() => todayDateKey());
-  const [logDatePickerOpen, setLogDatePickerOpen] = useState(false);
-  const [textLogOpen, setTextLogOpen] = useState(false);
-  const [textDescription, setTextDescription] = useState("");
-  const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
+
+  const dayMeals = useMemo(
+    () => meals.filter((m) => mealsForDate(m.createdAt, logDateKey)),
+    [meals, logDateKey],
+  );
+  const dayMealsRevision = useMemo(
+    () => dayMeals.map((m) => `${m.id}:${m.calories ?? 0}:${m.protein ?? 0}`).join("|"),
+    [dayMeals],
+  );
 
   useEffect(() => {
     getLastPhotoSource().then(setPreferredSource);
   }, []);
+
+  useEffect(() => {
+    if (isViewingToday) {
+      setDayDashboard(null);
+      setDayDashboardLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDayDashboardLoading(true);
+    void fetchNutritionDashboard(logDateKey)
+      .then((raw) => {
+        if (cancelled) return;
+        const next = expandDashboard(raw, profile?.nutritionTargets ?? null);
+        dayDashboardCacheRef.current.set(logDateKey, next);
+        setDayDashboard(next);
+      })
+      .catch((e) => {
+        if (!cancelled) setSnackbar(friendlyErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setDayDashboardLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isViewingToday, logDateKey, dayMealsRevision, profile?.nutritionTargets]);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,18 +163,33 @@ export default function HomeScreen() {
   );
 
   const handleRefresh = useCallback(() => {
-    void Promise.all([refreshMeals(), refreshDashboard()]).catch((e) =>
-      setSnackbar(friendlyErrorMessage(e)),
-    );
-  }, [refreshMeals, refreshDashboard]);
+    const tasks: Promise<unknown>[] = [refreshMeals()];
+    if (isViewingToday) {
+      tasks.push(refreshDashboard());
+    } else {
+      dayDashboardCacheRef.current.delete(logDateKey);
+      setDayDashboardLoading(true);
+      tasks.push(
+        fetchNutritionDashboard(logDateKey)
+          .then((raw) => {
+            const next = expandDashboard(raw, profile?.nutritionTargets ?? null);
+            dayDashboardCacheRef.current.set(logDateKey, next);
+            setDayDashboard(next);
+          })
+          .finally(() => setDayDashboardLoading(false)),
+      );
+    }
+    void Promise.all(tasks).catch((e) => setSnackbar(friendlyErrorMessage(e)));
+  }, [isViewingToday, logDateKey, profile?.nutritionTargets, refreshDashboard, refreshMeals]);
 
   useEffect(() => {
-    if (!dashboard) return;
+    if (!dashboard || !isViewingToday) return;
     syncDate(todayDateKey(), dashboard.essentials.hydration.consumed);
-  }, [dashboard?.essentials.hydration.consumed, syncDate]);
+  }, [dashboard?.essentials.hydration.consumed, isViewingToday, syncDate]);
 
-  const todayMeals = meals.filter((m) => isToday(m.createdAt));
-  const showDashboardSkeleton = dashboardLoading && !dashboard;
+  const showDashboardSkeleton =
+    (isViewingToday && dashboardLoading && !dashboard) ||
+    (!isViewingToday && dayDashboardLoading && !dayDashboard);
   const showMealsSkeleton = mealsLoading && meals.length === 0;
 
   return (
@@ -111,7 +198,7 @@ export default function HomeScreen() {
       padded={false}
       refreshControl={
         <RefreshControl
-          refreshing={mealsRefreshing || dashboardRefreshing}
+          refreshing={mealsRefreshing || (isViewingToday ? dashboardRefreshing : dayDashboardLoading)}
           onRefresh={handleRefresh}
         />
       }
@@ -129,17 +216,14 @@ export default function HomeScreen() {
 
       <View style={styles.hero}>
         <PremiumCard>
-          <View style={styles.logDateRow}>
-            <View style={styles.logDateCopy}>
-              <Text variant="labelLarge" style={styles.logDateLabel}>
-                Logging for
-              </Text>
-              <Text variant="bodyLarge">{formatLogDateLabel(logDateKey)}</Text>
-            </View>
-            <Button mode="outlined" compact onPress={() => setLogDatePickerOpen(true)}>
-              Change
-            </Button>
-          </View>
+          <MealLogDateField
+            dateKey={logDateKey}
+            onChange={(loggedAt) => {
+              const dateKey = dateKeyFromIso(loggedAt);
+              setLogDateKey(dateKey);
+              setLogDate(dateKey);
+            }}
+          />
           <Text variant="titleLarge" style={styles.ctaText}>
             What are you eating?
           </Text>
@@ -199,22 +283,23 @@ export default function HomeScreen() {
 
       <View style={styles.dashboard}>
         <MealSlotsTracker
-          meals={todayMeals}
+          meals={dayMeals}
           onLogSuggested={() => pickAndAnalyze(preferredSource !== "library", logDateKey)}
         />
 
         {showDashboardSkeleton ? (
           <HomeDashboardSkeleton />
-        ) : dashboard ? (
+        ) : activeDashboard ? (
           <>
             <TodayAtGlanceCard
-              dashboard={dashboard}
+              dashboard={activeDashboard}
+              title={glanceTitle}
               onPressInsights={() => router.push("/(tabs)/insights")}
             />
             <HydrationQuickAdd
-              pillar={dashboard.essentials.hydration}
-              onIncrement={() => handleTodayHydrationDelta(1)}
-              onDecrement={() => handleTodayHydrationDelta(-1)}
+              pillar={activeDashboard.essentials.hydration}
+              onIncrement={() => handleHydrationDelta(1)}
+              onDecrement={() => handleHydrationDelta(-1)}
             />
           </>
         ) : null}
@@ -222,17 +307,19 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text variant="titleMedium" style={styles.sectionTitle}>
-          Today&apos;s meals
+          {mealsTitle}
         </Text>
-        {!showMealsSkeleton && !mealsLoading && todayMeals.length === 0 ? (
+        {!showMealsSkeleton && !mealsLoading && dayMeals.length === 0 ? (
           <Text variant="bodyMedium" style={styles.emptyMeals}>
-            No meals yet today. Snap a photo or log without one.
+            {isViewingToday
+              ? "No meals yet today. Snap a photo or log without one."
+              : `No meals logged for ${formatLogDateLabel(logDateKey).toLowerCase()}.`}
           </Text>
         ) : null}
         {showMealsSkeleton ? (
           <HomeMealsSkeleton />
         ) : (
-          todayMeals.map((meal) => (
+          dayMeals.map((meal) => (
             <MealRowCard
               key={meal.id}
               mealId={meal.id}
@@ -245,21 +332,16 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <LogDatePickerModal
-        visible={logDatePickerOpen}
-        selectedDateKey={logDateKey}
-        onSelect={(dateKey) => {
-          setLogDateKey(dateKey);
-          setLogDate(dateKey);
-        }}
-        onClose={() => setLogDatePickerOpen(false)}
-      />
-
       <TextLogModal
         visible={textLogOpen}
         description={textDescription}
+        logDateKey={logDateKey}
         loading={uploading}
         onChangeDescription={setTextDescription}
+        onChangeLogDateKey={(dateKey) => {
+          setLogDateKey(dateKey);
+          setLogDate(dateKey);
+        }}
         onSubmit={() => {
           void logWithText(textDescription, logDateKey).then(() => {
             setTextLogOpen(false);
@@ -273,7 +355,7 @@ export default function HomeScreen() {
         }}
       />
 
-      <Snackbar
+      <BottomSnackbar
         visible={!!snackbar || !!error}
         onDismiss={() => {
           setSnackbar(null);
@@ -287,27 +369,14 @@ export default function HomeScreen() {
         }
       >
         {error ?? snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  logDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  logDateCopy: { flex: 1, gap: 2 },
-  logDateLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  ctaText: { letterSpacing: 0.2 },
+  ctaText: { letterSpacing: 0.2, marginTop: spacing.sm },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
   textLogBtn: { alignSelf: "center", marginTop: spacing.xs },

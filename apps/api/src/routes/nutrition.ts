@@ -9,12 +9,16 @@ import {
 } from "../services/nutritionDashboard.js";
 
 export async function nutritionRoutes(app: FastifyInstance) {
-  app.get(
+  app.get<{ Querystring: { date?: string } }>(
     "/api/nutrition/dashboard",
     { preHandler: requireAuth },
-    async (request) => {
+    async (request, reply) => {
       const { userId } = request as AuthedRequest;
-      return buildNutritionDashboard(userId);
+      const dateKey = request.query.date?.trim();
+      if (dateKey && !isValidLogDateKey(dateKey)) {
+        return reply.status(400).send({ error: "Invalid date" });
+      }
+      return buildNutritionDashboard(userId, dateKey);
     },
   );
 

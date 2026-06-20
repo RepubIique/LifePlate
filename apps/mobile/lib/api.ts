@@ -185,8 +185,11 @@ export async function fetchInsights(): Promise<InsightsResponse> {
   return request<InsightsResponse>("/api/insights");
 }
 
-export async function fetchNutritionDashboard(): Promise<NutritionDashboardApiResponse> {
-  return request<NutritionDashboardApiResponse>("/api/nutrition/dashboard");
+export async function fetchNutritionDashboard(
+  date?: string,
+): Promise<NutritionDashboardApiResponse> {
+  const query = date?.trim() ? `?date=${encodeURIComponent(date)}` : "";
+  return request<NutritionDashboardApiResponse>(`/api/nutrition/dashboard${query}`);
 }
 
 export async function updateHydration(

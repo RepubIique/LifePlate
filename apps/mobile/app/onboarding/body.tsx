@@ -1,7 +1,8 @@
 import { router, Redirect } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Snackbar, Text } from "react-native-paper";
+import { Button, Text } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isOnboardingComplete, type Gender } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
@@ -130,9 +131,9 @@ export default function BodyMetricsOnboardingScreen() {
           Sign out
         </Button>
       </View>
-      <Snackbar visible={!!error} onDismiss={() => setError(null)} duration={6000}>
+      <BottomSnackbar visible={!!error} onDismiss={() => setError(null)} duration={6000}>
         {error}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }

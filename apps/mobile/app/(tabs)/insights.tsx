@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { Snackbar, Text } from "react-native-paper";
+import { Text } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { ComparisonPeriod } from "@lifeplate/shared";
 import { PeriodComparisonCard } from "@/components/insights/PeriodComparisonCard";
 import { PeriodSelector } from "@/components/insights/PeriodSelector";
@@ -59,9 +60,9 @@ export default function InsightsScreen() {
         ) : null}
       </View>
 
-      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
+      <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }

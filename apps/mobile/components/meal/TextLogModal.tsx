@@ -1,12 +1,16 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
+import { dateKeyFromIso } from "@lifeplate/shared";
+import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
   description: string;
+  logDateKey: string;
   loading?: boolean;
   onChangeDescription: (value: string) => void;
+  onChangeLogDateKey: (dateKey: string) => void;
   onSubmit: () => void;
   onClose: () => void;
 };
@@ -14,8 +18,10 @@ type Props = {
 export function TextLogModal({
   visible,
   description,
+  logDateKey,
   loading = false,
   onChangeDescription,
+  onChangeLogDateKey,
   onSubmit,
   onClose,
 }: Props) {
@@ -31,6 +37,10 @@ export function TextLogModal({
           <Text variant="bodyMedium" style={styles.subtitle}>
             Describe what you ate. We&apos;ll estimate nutrition and you can edit before saving.
           </Text>
+          <MealLogDateField
+            dateKey={logDateKey}
+            onChange={(loggedAt) => onChangeLogDateKey(dateKeyFromIso(loggedAt))}
+          />
           <TextInput
             label="What did you eat?"
             value={description}

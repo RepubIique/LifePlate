@@ -4,10 +4,10 @@ import { StyleSheet, View } from "react-native";
 import {
   Button,
   Chip,
-  Snackbar,
   Text,
   TextInput,
 } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
@@ -357,6 +357,7 @@ export default function EditMealScreen() {
         <MealLogDateField
           dateKey={mealDateKeyFromIso(loggedAt || meal.createdAt)}
           mealType={mealType}
+          label="Logged on"
           onChange={setLoggedAt}
         />
         <TextInput
@@ -514,9 +515,9 @@ export default function EditMealScreen() {
         </Button>
       </View>
 
-      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
+      <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </KeyboardAvoidingScrollView>
       ) : null}
     </View>

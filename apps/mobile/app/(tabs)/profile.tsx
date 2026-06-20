@@ -2,7 +2,8 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionSheetIOS, Alert, Platform, RefreshControl, StyleSheet, View } from "react-native";
-import { Button, Snackbar, Switch, Text, TextInput } from "react-native-paper";
+import { Button, Switch, Text, TextInput } from "react-native-paper";
+import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
   BodyMetricsForm,
@@ -451,9 +452,9 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Snackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
+      <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
-      </Snackbar>
+      </BottomSnackbar>
     </Screen>
   );
 }

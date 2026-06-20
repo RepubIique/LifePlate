@@ -9,22 +9,28 @@ import { spacing } from "@/src/theme/lifeplate";
 type Props = {
   dateKey: string;
   mealType?: MealType;
+  label?: string;
   onChange: (loggedAt: string) => void;
 };
 
-export function MealLogDateField({ dateKey, mealType, onChange }: Props) {
+export function MealLogDateField({
+  dateKey,
+  mealType,
+  label: fieldLabel = "Logging for",
+  onChange,
+}: Props) {
   const [open, setOpen] = useState(false);
-  const label = useMemo(() => formatLogDateLabel(dateKey), [dateKey]);
+  const dateLabel = useMemo(() => formatLogDateLabel(dateKey), [dateKey]);
 
   return (
     <>
       <View style={styles.wrap}>
         <View style={styles.copy}>
           <Text variant="labelLarge" style={styles.label}>
-            Logged on
+            {fieldLabel}
           </Text>
           <Text variant="bodyLarge" style={styles.value}>
-            {label}
+            {dateLabel}
           </Text>
         </View>
         <Button mode="outlined" compact onPress={() => setOpen(true)}>

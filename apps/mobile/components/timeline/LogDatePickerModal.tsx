@@ -1,6 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
-import { formatLogDateLabel, recentLogDateKeys } from "@lifeplate/shared";
+import { MAX_LOG_PAST_DAYS, formatLogDateLabel, recentLogDateKeys } from "@lifeplate/shared";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -11,14 +11,14 @@ type Props = {
 };
 
 export function LogDatePickerModal({ visible, selectedDateKey, onSelect, onClose }: Props) {
-  const options = recentLogDateKeys(30);
+  const options = recentLogDateKeys(MAX_LOG_PAST_DAYS);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text variant="titleMedium" style={styles.title}>
-            Choose a day
+            Which day was this meal?
           </Text>
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
             {options.map((dateKey) => {

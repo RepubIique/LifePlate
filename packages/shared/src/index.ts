@@ -536,6 +536,7 @@ export {
   loggedAtForDateKey,
   recentLogDateKeys,
   formatLogDateLabel,
+  offsetLogDateKey,
 } from "./logDate.js";
 
 /** Fields returned from PATCH /api/users/me — only what was edited. */
