@@ -4,18 +4,19 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useRef, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
-import { uploadMealImage } from "@/lib/api";
+import { uploadMealImage, analyzeMealText } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 
-export type UploadStage = "idle" | "preparing" | "analyzing";
+export type UploadStage = "idle" | "preparing" | "analyzing" | "analyzing-text";
 
 export function uploadStageLabel(stage: UploadStage): string {
   if (stage === "preparing") return "Preparing photo…";
   if (stage === "analyzing") return "Analyzing your meal…";
+  if (stage === "analyzing-text") return "Estimating nutrition…";
   return "";
 }
 
@@ -29,16 +30,15 @@ export function useMealPhotoUpload() {
     logDateRef.current = dateKey;
   }, []);
 
-  const processAsset = useCallback(async (asset: ImagePickerAsset) => {
-    setError(null);
-    setUploadStage("preparing");
-    try {
-      const prepared = await prepareMealImage(asset.uri);
-      setUploadStage("analyzing");
-      const analysis = await uploadMealImage(prepared);
+  const navigateToResult = useCallback(
+    (
+      analysis: Awaited<ReturnType<typeof uploadMealImage>>,
+      options?: { isTextLog?: boolean; localImageUri?: string },
+    ) => {
       saveMealUploadSession(analysis.draftId, {
         ...analysis,
-        localImageUri: prepared.uri,
+        localImageUri: options?.localImageUri,
+        isTextLog: options?.isTextLog,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
@@ -58,15 +58,58 @@ export function useMealPhotoUpload() {
           coachNudge: analysis.coachNudge,
           estimatedServings: String(analysis.estimatedServings ?? 1),
           logDate: logDateRef.current ?? todayDateKey(),
+          isTextLog: options?.isTextLog ? "true" : undefined,
         },
       });
-    } catch (e) {
-      setError(friendlyErrorMessage(e));
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setUploadStage("idle");
-    }
-  }, []);
+    },
+    [],
+  );
+
+  const processAsset = useCallback(
+    async (asset: ImagePickerAsset) => {
+      setError(null);
+      setUploadStage("preparing");
+      try {
+        const prepared = await prepareMealImage(asset.uri);
+        setUploadStage("analyzing");
+        const analysis = await uploadMealImage(prepared);
+        navigateToResult(analysis, { localImageUri: prepared.uri });
+      } catch (e) {
+        setError(friendlyErrorMessage(e));
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        setUploadStage("idle");
+      }
+    },
+    [navigateToResult],
+  );
+
+  const logWithText = useCallback(
+    async (description: string, logDate?: string | null) => {
+      const trimmed = description.trim();
+      if (!trimmed) {
+        setError("Describe what you ate first.");
+        return;
+      }
+
+      if (logDate !== undefined) {
+        logDateRef.current = logDate;
+      }
+
+      setError(null);
+      setUploadStage("analyzing-text");
+      try {
+        const analysis = await analyzeMealText(trimmed);
+        navigateToResult(analysis, { isTextLog: true });
+      } catch (e) {
+        setError(friendlyErrorMessage(e));
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } finally {
+        setUploadStage("idle");
+      }
+    },
+    [navigateToResult],
+  );
 
   const pickAndAnalyze = useCallback(
     async (useCamera: boolean, logDate?: string | null) => {
@@ -121,6 +164,7 @@ export function useMealPhotoUpload() {
     logDateRef,
     setLogDate,
     pickAndAnalyze,
+    logWithText,
     processAsset,
     retryLastAsset,
     lastAssetRef,

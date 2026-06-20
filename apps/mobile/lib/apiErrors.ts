@@ -35,10 +35,14 @@ export function friendlyErrorMessage(err: unknown): string {
       return err.message || "You've reached the limit for this hour. Try again in a bit.";
     }
     if (err.code === "NOT_FOOD") {
-      return "LifePlate works with food photos. Try again with your meal on the plate.";
+      return err.message.includes("doesn't sound like food")
+        ? err.message
+        : "LifePlate works with food photos. Try again with your meal on the plate.";
     }
     if (err.code === "UNCLEAR_PHOTO") {
-      return "We couldn't see the food clearly. Try brighter light or move closer.";
+      return err.message.includes("description")
+        ? err.message
+        : "We couldn't see the food clearly. Try brighter light or move closer.";
     }
     if (err.code === "PLUS_REQUIRED") {
       return "Cloud photo backup requires LifePlate Plus.";

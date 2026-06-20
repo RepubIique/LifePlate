@@ -5,6 +5,7 @@ import type {
   MealListSummary,
   MealPatchResponse,
   MealRefineRequest,
+  MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
 import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes } from "@lifeplate/shared";
@@ -16,7 +17,7 @@ import { getDraft, deleteDraft, updateDraftAnalysis, getDraftImage, saveDraft } 
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
 import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
-import { analyzeMealImage, refineMealImage } from "../services/openai.js";
+import { analyzeMealImage, analyzeMealText, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
 import { uploadMealImage } from "../services/storage.js";
@@ -87,6 +88,52 @@ export async function mealRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post<{ Body: MealTextLogRequest }>(
+    "/api/meals/log-text",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const description = request.body?.description?.trim() ?? "";
+
+      if (!description) {
+        return reply.code(400).send({ error: "description is required" });
+      }
+      if (description.length > 500) {
+        return reply.code(400).send({ error: "description must be 500 characters or fewer" });
+      }
+
+      try {
+        await reserveUploadAttempt(userId);
+        const { analysis, raw } = await analyzeMealText(description);
+
+        const draftId = await saveDraft({
+          userId,
+          imageUrl: "",
+          analysis,
+          rawAiResponse: raw,
+        });
+        const coachingContext = await buildCoachingContext(userId);
+        const coachNudge = await generateCoachNudge(coachingContext, analysis);
+
+        return {
+          ...analysis,
+          draftId,
+          imageUrl: "",
+          coachNudge,
+        };
+      } catch (err) {
+        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+    },
+  );
+
   app.post<{ Body: MealRefineRequest }>(
     "/api/meals/refine",
     { preHandler: requireAuth },
@@ -101,6 +148,12 @@ export async function mealRoutes(app: FastifyInstance) {
       const draft = await getDraft(draftId, userId);
       if (!draft) {
         return reply.code(404).send({ error: "Draft not found or expired" });
+      }
+
+      if (!draft.imageBuffer && !draft.imageUrl?.trim()) {
+        return reply.code(400).send({
+          error: "Text-only meals can't be refined. Edit the meal details instead.",
+        });
       }
 
       const { buffer, mimeType } = await getDraftImage(draft);

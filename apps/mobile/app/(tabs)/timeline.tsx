@@ -41,7 +41,7 @@ export default function TimelineScreen() {
     restoreMealLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
-  const { uploading, uploadStage, pickAndAnalyze, error, setError, retryLastAsset, lastAssetRef } =
+  const { uploading, uploadStage, error, setError, retryLastAsset, lastAssetRef } =
     useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
@@ -94,13 +94,8 @@ export default function TimelineScreen() {
   }
 
   function startMealLogForDay(dateKey: string) {
-    if (dateKey === todayDateKey()) {
-      setPendingLogDate(dateKey);
-      router.push("/(tabs)");
-      return;
-    }
-
-    void pickAndAnalyze(false, dateKey);
+    setPendingLogDate(dateKey);
+    router.push("/(tabs)");
   }
 
   function handlePastDaySelected(dateKey: string) {

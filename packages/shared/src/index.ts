@@ -348,6 +348,11 @@ export function hasCloudMealImageBackup(profile: {
   return profile.isPaid && profile.cloudImageBackup;
 }
 
+export interface MealTextLogRequest {
+  /** What the user ate, e.g. "chicken rice bowl with broccoli". */
+  description: string;
+}
+
 export interface MealRefineRequest {
   draftId: string;
   clarification: string;

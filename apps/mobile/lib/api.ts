@@ -203,6 +203,13 @@ export async function fetchHydrationHistory(days = 60): Promise<HydrationHistory
   return request<HydrationHistoryResponse>(`/api/nutrition/hydration?days=${days}`);
 }
 
+export async function analyzeMealText(description: string): Promise<MealUploadResponse> {
+  return request<MealUploadResponse>("/api/meals/log-text", {
+    method: "POST",
+    body: JSON.stringify({ description }),
+  });
+}
+
 export async function uploadMealImage(input: {
   uri: string;
   mimeType?: string | null;

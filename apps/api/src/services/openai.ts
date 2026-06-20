@@ -4,6 +4,7 @@ import type { MealAnalysisResult } from "@lifeplate/shared";
 import { config } from "../config.js";
 import {
   assertMealAnalysis,
+  rejectNonMealDescription,
   rejectNonMealPhoto,
 } from "./mealGuardrails.js";
 
@@ -20,6 +21,49 @@ const analysisFieldsSchema = z.object({
   confidence: z.number().min(0).max(1),
   estimatedServings: z.number().min(1).max(12).optional(),
 });
+
+const textResponseSchema = z.object({
+  isFoodDescription: z.boolean(),
+  rejectReason: z.string().nullable().optional(),
+  mealName: z.string().optional(),
+  foods: z.array(z.string()).optional(),
+  estimatedCalories: z.number().optional(),
+  protein: z.number().optional(),
+  carbs: z.number().optional(),
+  fat: z.number().optional(),
+  fibre: z.number().optional(),
+  sugar: z.number().optional(),
+  sodium: z.number().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  estimatedServings: z.number().min(1).max(12).optional(),
+});
+
+const TEXT_SYSTEM_PROMPT = `You are a nutrition assistant for LifePlate.
+The user is logging a meal without a photo by describing what they ate.
+Return JSON only.
+
+First decide if the description is about food someone ate or plans to eat.
+ACCEPT: meals, snacks, beverages, ingredients, restaurant orders, simple food lists.
+REJECT: non-food topics, gibberish, empty descriptions, questions with no food.
+
+Return these keys:
+- isFoodDescription (boolean): true only if the text describes food
+- rejectReason (string|null): brief reason when isFoodDescription is false, otherwise null
+
+When isFoodDescription is true, also return:
+- mealName
+- foods (non-empty array of identifiable food items)
+- estimatedCalories
+- protein (grams)
+- carbs (grams)
+- fat (grams)
+- fibre (grams)
+- sugar (grams)
+- sodium (milligrams)
+- confidence (0 to 1; lower when the description is vague)
+- estimatedServings (number ≥ 1; default 1 unless sharing is mentioned)
+
+Do not return markdown.`;
 
 const visionResponseSchema = z.object({
   isMealPhoto: z.boolean(),
@@ -91,6 +135,31 @@ function assertOpenAiConfigured() {
   if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
     throw new Error("OPENAI_API_KEY is not configured");
   }
+}
+
+function parseTextResponse(parsed: unknown): MealAnalysisResult {
+  const result = textResponseSchema.parse(parsed);
+
+  if (!result.isFoodDescription) {
+    rejectNonMealDescription(result.rejectReason);
+  }
+
+  const analysis = analysisFieldsSchema.parse({
+    mealName: result.mealName,
+    foods: result.foods,
+    estimatedCalories: result.estimatedCalories,
+    protein: result.protein,
+    carbs: result.carbs,
+    fat: result.fat,
+    fibre: result.fibre,
+    sugar: result.sugar,
+    sodium: result.sodium,
+    confidence: result.confidence,
+    estimatedServings: result.estimatedServings ?? 1,
+  });
+
+  assertMealAnalysis(analysis, "text");
+  return analysis;
 }
 
 function parseVisionResponse(parsed: unknown): MealAnalysisResult {
@@ -181,6 +250,83 @@ export async function analyzeMealImage(
       ) {
         if (isProduction) throw new Error("OpenAI authentication failed");
         return { analysis: MOCK, raw: { ...MOCK, isMealPhoto: true, mock: true } };
+      }
+      throw err2;
+    }
+  }
+}
+
+export async function analyzeMealText(
+  description: string,
+): Promise<{ analysis: MealAnalysisResult; raw: unknown }> {
+  const text = description.trim();
+  if (!text) {
+    rejectNonMealDescription("empty description");
+  }
+
+  if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
+    if (isProduction) assertOpenAiConfigured();
+    const mockName = text.length > 40 ? `${text.slice(0, 37)}…` : text;
+    return {
+      analysis: { ...MOCK, mealName: mockName },
+      raw: { ...MOCK, isFoodDescription: true, textOnly: true, mock: true },
+    };
+  }
+
+  const client = new OpenAI({ apiKey: config.openaiApiKey });
+
+  const run = async () => {
+    const response = await client.chat.completions.create({
+      model: config.openaiModel,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: TEXT_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `Describe what I ate:\n${text}`,
+        },
+      ],
+      max_tokens: 500,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("Empty OpenAI response");
+    const parsed = JSON.parse(content);
+    const analysis = parseTextResponse(parsed);
+    return { analysis, raw: { ...parsed, textOnly: true } };
+  };
+
+  try {
+    return await run();
+  } catch (err: unknown) {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "status" in err &&
+      (err as { status?: unknown }).status === 401
+    ) {
+      if (isProduction) throw new Error("OpenAI authentication failed");
+      const mockName = text.length > 40 ? `${text.slice(0, 37)}…` : text;
+      return {
+        analysis: { ...MOCK, mealName: mockName },
+        raw: { ...MOCK, isFoodDescription: true, textOnly: true, mock: true },
+      };
+    }
+    try {
+      return await run();
+    } catch (err2: unknown) {
+      if (
+        typeof err2 === "object" &&
+        err2 !== null &&
+        "status" in err2 &&
+        (err2 as { status?: unknown }).status === 401
+      ) {
+        if (isProduction) throw new Error("OpenAI authentication failed");
+        const mockName = text.length > 40 ? `${text.slice(0, 37)}…` : text;
+        return {
+          analysis: { ...MOCK, mealName: mockName },
+          raw: { ...MOCK, isFoodDescription: true, textOnly: true, mock: true },
+        };
       }
       throw err2;
     }

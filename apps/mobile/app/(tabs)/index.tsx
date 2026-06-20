@@ -10,6 +10,7 @@ import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
+import { TextLogModal } from "@/components/meal/TextLogModal";
 import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
@@ -64,12 +65,15 @@ export default function HomeScreen() {
     setLogDate,
     setError,
     pickAndAnalyze,
+    logWithText,
     retryLastAsset,
     lastAssetRef,
   } = useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [logDateKey, setLogDateKey] = useState(() => todayDateKey());
   const [logDatePickerOpen, setLogDatePickerOpen] = useState(false);
+  const [textLogOpen, setTextLogOpen] = useState(false);
+  const [textDescription, setTextDescription] = useState("");
   const [preferredSource, setPreferredSource] = useState<PhotoSource | null>(null);
 
   useEffect(() => {
@@ -172,6 +176,16 @@ export default function HomeScreen() {
             </Button>
           </View>
 
+          <Button
+            mode="text"
+            icon="text-box-outline"
+            onPress={() => setTextLogOpen(true)}
+            disabled={uploading}
+            style={styles.textLogBtn}
+          >
+            Log without photo
+          </Button>
+
           {uploading ? (
             <View style={styles.uploading}>
               <ActivityIndicator />
@@ -212,7 +226,7 @@ export default function HomeScreen() {
         </Text>
         {!showMealsSkeleton && !mealsLoading && todayMeals.length === 0 ? (
           <Text variant="bodyMedium" style={styles.emptyMeals}>
-            No meals yet today. Snap your first plate.
+            No meals yet today. Snap a photo or log without one.
           </Text>
         ) : null}
         {showMealsSkeleton ? (
@@ -239,6 +253,24 @@ export default function HomeScreen() {
           setLogDate(dateKey);
         }}
         onClose={() => setLogDatePickerOpen(false)}
+      />
+
+      <TextLogModal
+        visible={textLogOpen}
+        description={textDescription}
+        loading={uploading}
+        onChangeDescription={setTextDescription}
+        onSubmit={() => {
+          void logWithText(textDescription, logDateKey).then(() => {
+            setTextLogOpen(false);
+            setTextDescription("");
+          });
+        }}
+        onClose={() => {
+          if (uploading) return;
+          setTextLogOpen(false);
+          setTextDescription("");
+        }}
       />
 
       <Snackbar
@@ -278,6 +310,7 @@ const styles = StyleSheet.create({
   ctaText: { letterSpacing: 0.2 },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
   heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  textLogBtn: { alignSelf: "center", marginTop: spacing.xs },
   uploading: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, alignItems: "center" },
   stageText: { opacity: 0.7 },
   dashboard: {

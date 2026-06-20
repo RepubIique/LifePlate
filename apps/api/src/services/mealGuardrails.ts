@@ -15,12 +15,17 @@ export class MealGuardrailError extends Error {
   }
 }
 
-export function assertMealAnalysis(analysis: MealAnalysisResult): void {
+export function assertMealAnalysis(
+  analysis: MealAnalysisResult,
+  source: "photo" | "text" = "photo",
+): void {
   const foods = analysis.foods.map((f) => f.trim()).filter(Boolean);
   if (foods.length === 0) {
     throw new MealGuardrailError(
       "UNCLEAR_PHOTO",
-      "We couldn't identify any food in this photo. Try a clearer shot of your meal.",
+      source === "text"
+        ? "We couldn't identify any food from that description. Try listing what you ate."
+        : "We couldn't identify any food in this photo. Try a clearer shot of your meal.",
       422,
     );
   }
@@ -28,7 +33,9 @@ export function assertMealAnalysis(analysis: MealAnalysisResult): void {
   if (analysis.confidence < MIN_MEAL_CONFIDENCE) {
     throw new MealGuardrailError(
       "UNCLEAR_PHOTO",
-      "We couldn't see the food clearly. Try brighter light or move closer.",
+      source === "text"
+        ? "That description is too vague. Add a few more details about what you ate."
+        : "We couldn't see the food clearly. Try brighter light or move closer.",
       422,
     );
   }
@@ -36,10 +43,21 @@ export function assertMealAnalysis(analysis: MealAnalysisResult): void {
   if (analysis.estimatedCalories > MAX_REASONABLE_CALORIES) {
     throw new MealGuardrailError(
       "UNCLEAR_PHOTO",
-      "This photo doesn't look like a typical meal. Try again with your plate in frame.",
+      source === "text"
+        ? "That doesn't look like a typical meal. Try describing one meal at a time."
+        : "This photo doesn't look like a typical meal. Try again with your plate in frame.",
       422,
     );
   }
+}
+
+export function rejectNonMealDescription(rejectReason?: string | null): never {
+  const detail = rejectReason?.trim();
+  const message = detail
+    ? `That doesn't sound like food (${detail}). Describe what you ate.`
+    : "That doesn't sound like food. Describe what you ate.";
+
+  throw new MealGuardrailError("NOT_FOOD", message, 422);
 }
 
 export function rejectNonMealPhoto(rejectReason?: string | null): never {

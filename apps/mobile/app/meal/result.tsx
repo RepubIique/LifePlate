@@ -61,6 +61,7 @@ export default function MealResultScreen() {
     coachNudge: string;
     logDate?: string;
     estimatedServings?: string;
+    isTextLog?: string;
   }>();
 
   const draftId = routeParam(params.draftId);
@@ -68,6 +69,8 @@ export default function MealResultScreen() {
     () => getMealUploadSession(draftId),
     [draftId],
   );
+  const isTextLog =
+    routeParam(params.isTextLog) === "true" || uploadSession?.isTextLog === true;
   const imageUrl =
     uploadSession?.localImageUri ||
     routeParam(params.imageUrl) ||
@@ -460,37 +463,41 @@ export default function MealResultScreen() {
         ) : null}
         <Text variant="bodySmall" style={styles.confidenceCopy}>
           {lowConfidence
-            ? "Tricky photo—use Quick fix below or edit before saving."
+            ? isTextLog
+              ? "Low confidence—add more detail with Edit or try a clearer description next time."
+              : "Tricky photo—use Quick fix below or edit before saving."
             : "Looks good. You can edit foods and macros before saving."}
         </Text>
       </PremiumCard>
 
-      <PremiumCard>
-        <Text variant="titleMedium" style={styles.quickFixTitle}>
-          Quick fix
-        </Text>
-        <Text variant="bodySmall" style={styles.quickFixSub}>
-          One detail about this plate—we&apos;ll re-analyze the same photo.
-        </Text>
-        <TextInput
-          label="What should change?"
-          value={clarification}
-          onChangeText={setClarification}
-          mode="outlined"
-          placeholder="e.g. sauce was peanut, not sesame"
-          multiline
-        />
-        <Button
-          mode="contained-tonal"
-          icon="auto-fix"
-          onPress={handleRefine}
-          loading={refining}
-          disabled={refining || saving}
-          style={styles.refineBtn}
-        >
-          Refine analysis
-        </Button>
-      </PremiumCard>
+      {!isTextLog ? (
+        <PremiumCard>
+          <Text variant="titleMedium" style={styles.quickFixTitle}>
+            Quick fix
+          </Text>
+          <Text variant="bodySmall" style={styles.quickFixSub}>
+            One detail about this plate—we&apos;ll re-analyze the same photo.
+          </Text>
+          <TextInput
+            label="What should change?"
+            value={clarification}
+            onChangeText={setClarification}
+            mode="outlined"
+            placeholder="e.g. sauce was peanut, not sesame"
+            multiline
+          />
+          <Button
+            mode="contained-tonal"
+            icon="auto-fix"
+            onPress={handleRefine}
+            loading={refining}
+            disabled={refining || saving}
+            style={styles.refineBtn}
+          >
+            Refine analysis
+          </Button>
+        </PremiumCard>
+      ) : null}
 
       <View style={styles.actions}>
         <Button mode="contained" onPress={handleConfirm} loading={saving} disabled={refining}>

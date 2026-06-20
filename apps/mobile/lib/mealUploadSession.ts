@@ -2,7 +2,9 @@ import type { MealUploadResponse } from "@lifeplate/shared";
 
 export type MealUploadSession = MealUploadResponse & {
   /** Compressed photo kept on device for confirm + timeline display. */
-  localImageUri: string;
+  localImageUri?: string;
+  /** Logged from a text description instead of a photo. */
+  isTextLog?: boolean;
 };
 
 const sessions = new Map<string, MealUploadSession>();
