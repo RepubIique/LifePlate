@@ -136,6 +136,13 @@ export function applyBulletPrefix(
   return { text: nextText, selection: { start: cursor, end: cursor } };
 }
 
+export function notesSearchText(notes: string | null | undefined): string {
+  if (!notes?.trim()) return "";
+  return parseInlineNotes(notes)
+    .map((segment) => (segment.kind === "mention" ? segment.name : segment.text))
+    .join("");
+}
+
 export function parseInlineNotes(text: string): NotesInlineSegment[] {
   const segments: NotesInlineSegment[] = [];
   let i = 0;

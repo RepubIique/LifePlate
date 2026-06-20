@@ -6,6 +6,7 @@ import {
   todayDateKey,
   type MealListSummary,
 } from "@lifeplate/shared";
+import { notesSearchText } from "./mealNotesFormat";
 
 /** Most recent meal first — higher sortIndex and later createdAt appear at the top. */
 export function sortMealsRecentFirst<T extends MealListSummary>(meals: T[]): T[] {
@@ -63,6 +64,31 @@ export function buildTimelineDayGroups(
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });
+}
+
+export function mealMatchesTimelineSearch(meal: MealListSummary, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  const haystacks = [
+    meal.mealName,
+    formatMealTypeLabel(meal.mealType),
+    meal.sharedByName,
+    notesSearchText(meal.notes),
+  ];
+
+  return haystacks.some((text) => (text ?? "").toLowerCase().includes(normalized));
+}
+
+export function timelineDayMatchesSearch(
+  group: Pick<TimelineDayGroup, "day" | "subtitle" | "dateKey">,
+  query: string,
+): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  const haystacks = [group.day, group.subtitle, group.dateKey];
+  return haystacks.some((text) => text.toLowerCase().includes(normalized));
 }
 
 export function countMealsThisWeek(meals: MealListSummary[]): number {

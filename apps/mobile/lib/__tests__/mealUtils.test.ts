@@ -6,7 +6,9 @@ import {
   buildTimelineDayGroups,
   capitalize,
   countMealsThisWeek,
+  mealMatchesTimelineSearch,
   mealTypeIcon,
+  timelineDayMatchesSearch,
 } from "../mealUtils";
 
 function meal(
@@ -101,4 +103,66 @@ test("mealTypeIcon maps known meal types", () => {
 
 test("capitalize uppercases the first character", () => {
   assert.equal(capitalize("hello"), "Hello");
+});
+
+test("mealMatchesTimelineSearch matches meal name, type, notes, and shared by", () => {
+  const entry: MealListSummary = {
+    ...meal("1", new Date().toISOString(), "breakfast"),
+    mealName: "Avocado Toast",
+    notes: "With @[Sam](00000000-0000-4000-8000-000000000001)",
+    sharedByName: "Jordan",
+  };
+
+  assert.equal(mealMatchesTimelineSearch(entry, "avocado"), true);
+  assert.equal(mealMatchesTimelineSearch(entry, "breakfast"), true);
+  assert.equal(mealMatchesTimelineSearch(entry, "sam"), true);
+  assert.equal(mealMatchesTimelineSearch(entry, "jordan"), true);
+  assert.equal(mealMatchesTimelineSearch(entry, "pizza"), false);
+  assert.equal(mealMatchesTimelineSearch(entry, ""), true);
+  assert.equal(mealMatchesTimelineSearch(entry, "   "), true);
+});
+
+test("timelineDayMatchesSearch matches day labels, subtitles, and date keys", () => {
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-10", day: "Tuesday, Jun 10", subtitle: "Tuesday, June 10" },
+      "tuesday",
+    ),
+    true,
+  );
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-10", day: "Tuesday, Jun 10", subtitle: "Tuesday, June 10" },
+      "june",
+    ),
+    true,
+  );
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-10", day: "Tuesday, Jun 10", subtitle: "Tuesday, June 10" },
+      "2026-06-10",
+    ),
+    true,
+  );
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-20", day: "Today", subtitle: "Saturday, June 20" },
+      "today",
+    ),
+    true,
+  );
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-19", day: "Yesterday", subtitle: "Friday, June 19" },
+      "yesterday",
+    ),
+    true,
+  );
+  assert.equal(
+    timelineDayMatchesSearch(
+      { dateKey: "2026-06-10", day: "Tuesday, Jun 10", subtitle: "Tuesday, June 10" },
+      "wednesday",
+    ),
+    false,
+  );
 });

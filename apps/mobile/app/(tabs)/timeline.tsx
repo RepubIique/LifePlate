@@ -11,6 +11,7 @@ import { TimelineDayMeals } from "@/components/timeline/TimelineDayMeals";
 import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
 import { TimelineDayHydration } from "@/components/timeline/TimelineDayHydration";
 import { TimelineEmptyState } from "@/components/timeline/TimelineEmptyState";
+import { TimelineSearchBar } from "@/components/timeline/TimelineSearchBar";
 import { TimelineSummaryBar } from "@/components/timeline/TimelineSummaryBar";
 import { TimelineSkeleton } from "@/components/skeletons/TimelineSkeleton";
 import { PremiumHeader } from "@/components/PremiumHeader";
@@ -27,7 +28,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoUpload, uploadStageLabel } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
-import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
+import { buildTimelineDayGroups, countMealsThisWeek, mealMatchesTimelineSearch, timelineDayMatchesSearch } from "@/lib/mealUtils";
 import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
@@ -61,6 +62,7 @@ export default function TimelineScreen() {
   } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
@@ -173,6 +175,16 @@ export default function TimelineScreen() {
     () => buildTimelineDayGroups(meals, hydrationByDate),
     [meals, hydrationByDate],
   );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const isSearching = normalizedSearch.length > 0;
+  const visibleGroups = useMemo(() => {
+    if (!isSearching) return groups;
+    return groups.filter(
+      (group) =>
+        timelineDayMatchesSearch(group, normalizedSearch) ||
+        group.meals.some((meal) => mealMatchesTimelineSearch(meal, normalizedSearch)),
+    );
+  }, [groups, isSearching, normalizedSearch]);
   const weekMeals = countMealsThisWeek(meals);
   const hasAnyEntries = groups.length > 0;
   const showSkeleton = loading && !refreshing && meals.length === 0;
@@ -193,6 +205,10 @@ export default function TimelineScreen() {
             {pendingShareCount} meal share{pendingShareCount === 1 ? "" : "s"} waiting — review on Friends
           </Text>
         </Pressable>
+      ) : null}
+
+      {hasAnyEntries ? (
+        <TimelineSearchBar value={searchQuery} onChangeText={setSearchQuery} />
       ) : null}
 
       {hasAnyEntries ? (
@@ -226,7 +242,9 @@ export default function TimelineScreen() {
         {showSkeleton ? <TimelineSkeleton /> : null}
 
         {!showSkeleton
-          ? groups.map((group) => (
+          ? visibleGroups.map((group) => {
+          const dayMatchesSearch = timelineDayMatchesSearch(group, normalizedSearch);
+          return (
           <View key={group.dateKey} style={styles.dayGroup}>
             <TimelineDayHeader
               day={group.day}
@@ -244,6 +262,8 @@ export default function TimelineScreen() {
             <TimelineDayMeals
               dateKey={group.dateKey}
               meals={group.meals}
+              searchQuery={normalizedSearch}
+              dayMatchesSearch={dayMatchesSearch}
               onReorder={handleDayMealsReorder}
               onPress={(mealId) => openMealEdit(mealId, "timeline")}
               onDelete={confirmDelete}
@@ -257,8 +277,17 @@ export default function TimelineScreen() {
               Add meal for this day
             </Button>
           </View>
-        ))
+        );
+        })
           : null}
+
+        {!showSkeleton && isSearching && hasAnyEntries && visibleGroups.length === 0 ? (
+          <View style={styles.noResults}>
+            <Text variant="bodyMedium" style={styles.noResultsText}>
+              No meals or days match &ldquo;{searchQuery.trim()}&rdquo;
+            </Text>
+          </View>
+        ) : null}
 
         {!showSkeleton && !loading && !hasAnyEntries ? (
           <View style={styles.emptyWrap}>
@@ -270,7 +299,7 @@ export default function TimelineScreen() {
               Log a past day
             </Button>
           </View>
-        ) : !showSkeleton ? (
+        ) : !showSkeleton && !isSearching ? (
           <View style={styles.pastActions}>
             <Button mode="text" onPress={() => setPastDayPickerOpen(true)}>
               Log another past day
@@ -362,5 +391,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.sm,
     alignItems: "center",
+  },
+  noResults: {
+    paddingVertical: spacing.xl,
+    alignItems: "center",
+  },
+  noResultsText: {
+    opacity: 0.6,
+    textAlign: "center",
   },
 });

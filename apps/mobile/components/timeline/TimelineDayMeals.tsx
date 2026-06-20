@@ -5,11 +5,14 @@ import type { MealListSummary } from "@lifeplate/shared";
 import { MealTimelineRail, railPositionForIndex } from "@/components/home/MealTimelineRail";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { mealsShareDisplaySlot } from "@/lib/mealSlots";
+import { mealMatchesTimelineSearch } from "@/lib/mealUtils";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   dateKey: string;
   meals: MealListSummary[];
+  searchQuery?: string;
+  dayMatchesSearch?: boolean;
   onReorder: (dateKey: string, meals: MealListSummary[]) => void;
   onPress: (mealId: string) => void;
   onDelete: (meal: MealListSummary) => void;
@@ -18,12 +21,12 @@ type Props = {
 export function TimelineDayMeals({
   dateKey,
   meals,
+  searchQuery = "",
+  dayMatchesSearch = false,
   onReorder,
   onPress,
   onDelete,
 }: Props) {
-  const canReorder = meals.length > 1;
-
   const moveMeal = useCallback(
     (fromIndex: number, toIndex: number) => {
       if (toIndex < 0 || toIndex >= meals.length || fromIndex === toIndex) return;
@@ -38,20 +41,30 @@ export function TimelineDayMeals({
 
   if (meals.length === 0) return null;
 
+  const isSearching = searchQuery.trim().length > 0;
+  const visibleMeals =
+    isSearching && !dayMatchesSearch
+      ? meals.filter((meal) => mealMatchesTimelineSearch(meal, searchQuery))
+      : meals;
+
+  if (visibleMeals.length === 0) return null;
+
+  const canReorder = visibleMeals.length > 1 && (!isSearching || dayMatchesSearch);
+
   return (
     <View style={styles.timeline}>
-      {meals.map((meal, index) => (
+      {visibleMeals.map((meal, index) => (
         <View key={meal.id} style={styles.timelineRow}>
           <MealTimelineRail
-            position={railPositionForIndex(index, meals.length)}
+            position={railPositionForIndex(index, visibleMeals.length)}
             variant="filled"
             showReorder={canReorder}
             canMoveUp={
-              index > 0 && mealsShareDisplaySlot(meal, meals[index - 1]!)
+              index > 0 && mealsShareDisplaySlot(meal, visibleMeals[index - 1]!)
             }
             canMoveDown={
-              index < meals.length - 1 &&
-              mealsShareDisplaySlot(meal, meals[index + 1]!)
+              index < visibleMeals.length - 1 &&
+              mealsShareDisplaySlot(meal, visibleMeals[index + 1]!)
             }
             onMoveUp={() => moveMeal(index, index - 1)}
             onMoveDown={() => moveMeal(index, index + 1)}
