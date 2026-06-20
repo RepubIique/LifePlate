@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     height: QUARTER,
   },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.md,
