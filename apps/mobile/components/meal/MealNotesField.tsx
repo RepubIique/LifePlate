@@ -10,6 +10,7 @@ import type { FriendSummary } from "@lifeplate/shared";
 import { MAX_MEAL_NOTES_LENGTH } from "@lifeplate/shared";
 import { useFriends } from "@/context/FriendsContext";
 import { FriendMentionSuggestions } from "@/components/meal/FriendMentionSuggestions";
+import { FormattedNotesText } from "@/components/meal/FormattedNotesText";
 import {
   applyBulletPrefix,
   applyNotesFormat,
@@ -118,6 +119,8 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
     setMentionPickerOpen(true);
   }, [applySelection, ensureFriendsLoaded, friends.length, onChange, value]);
 
+  const showPreview = /\*\*|\*(?!\*)|@\[|^- /m.test(value);
+
   return (
     <View>
       {!compact ? (
@@ -193,6 +196,15 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
         style={styles.input}
       />
 
+      {value.trim() && showPreview ? (
+        <View style={styles.preview}>
+          <Text variant="labelSmall" style={styles.previewLabel}>
+            Preview
+          </Text>
+          <FormattedNotesText value={value} style={styles.previewText} />
+        </View>
+      ) : null}
+
       {value.length > MAX_MEAL_NOTES_LENGTH - 50 ? (
         <Text variant="bodySmall" style={styles.count}>
           {value.length}/{MAX_MEAL_NOTES_LENGTH}
@@ -224,5 +236,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   input: { minHeight: 112 },
+  preview: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: "#F8F9FA",
+    borderWidth: 1,
+    borderColor: premium.borderColor,
+    gap: spacing.xs,
+  },
+  previewLabel: {
+    opacity: 0.5,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  previewText: {
+    opacity: 0.85,
+  },
   count: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
 });

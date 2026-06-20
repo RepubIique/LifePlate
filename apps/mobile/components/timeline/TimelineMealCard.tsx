@@ -287,7 +287,6 @@ const styles = StyleSheet.create({
   notes: {
     opacity: 0.65,
     lineHeight: 18,
-    fontStyle: "italic",
   },
   sharedBy: {
     opacity: 0.55,
