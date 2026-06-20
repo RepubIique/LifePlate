@@ -1,5 +1,4 @@
 import type { PoolClient } from "pg";
-import { MEAL_UTC_DAY_DATE_SQL } from "./mealLogDate.js";
 
 export async function reorderMealsForDay(
   client: PoolClient,
@@ -10,9 +9,8 @@ export async function reorderMealsForDay(
   const { rows } = await client.query<{
     id: string;
     created_at: Date;
-    utc_day: string;
   }>(
-    `SELECT id, created_at, ${MEAL_UTC_DAY_DATE_SQL} AS utc_day
+    `SELECT id, created_at
      FROM meals
      WHERE user_id = $1 AND id = ANY($2::uuid[])`,
     [userId, mealIds],
@@ -20,17 +18,19 @@ export async function reorderMealsForDay(
 
   if (rows.length !== mealIds.length) {
     throw new ReorderMealsValidationError(
-      "mealIds must include every meal for this day exactly once",
+      "One or more mealIds were not found",
     );
   }
 
-  const utcDays = new Set(rows.map((row) => row.utc_day));
-  if (utcDays.size !== 1) {
+  const rowIds = new Set(rows.map((row) => row.id));
+  if (!mealIds.every((id) => rowIds.has(id))) {
     throw new ReorderMealsValidationError(
-      "mealIds must belong to a single calendar day",
+      "One or more mealIds were not found",
     );
   }
 
+  // Permute existing timestamps only — client groups by local calendar day, which
+  // may span two UTC dates; do not require a single UTC day here.
   const sortedAts = rows
     .map((row) => row.created_at)
     .sort((a, b) => b.getTime() - a.getTime());

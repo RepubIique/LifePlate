@@ -36,8 +36,6 @@ export function registerRequestLogging(app: FastifyInstance) {
     }
     if (reply.statusCode >= 400) {
       request.log.warn(payload, "request");
-      return;
     }
-    request.log.info(payload, "request");
   });
 }
