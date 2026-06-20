@@ -433,6 +433,7 @@ export default function EditMealScreen() {
           mealType,
           calories: nextCalories,
           protein: nextProtein,
+          fibre: nextFibre,
           notes: notes || null,
           mealSource: resolvedMealSource,
           createdAt: loggedAt,

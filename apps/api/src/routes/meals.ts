@@ -485,12 +485,13 @@ export async function mealRoutes(app: FastifyInstance) {
         notes: string | null;
         calories: number | null;
         protein: number | null;
+        fibre: number | null;
         shared_by_user_id: string | null;
         shared_by_name: string | null;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 m.log_date::text AS log_date, m.sort_index, m.notes,
-                m.calories, m.protein, m.shared_by_user_id, sharer.name AS shared_by_name
+                m.calories, m.protein, m.fibre, m.shared_by_user_id, sharer.name AS shared_by_name
          FROM meals m
          LEFT JOIN users sharer ON sharer.id = m.shared_by_user_id
          WHERE m.user_id = $1
@@ -511,6 +512,7 @@ export async function mealRoutes(app: FastifyInstance) {
           notes: r.notes,
           calories: r.calories,
           protein: r.protein,
+          fibre: r.fibre,
           sharedByUserId: r.shared_by_user_id,
           sharedByName: r.shared_by_name,
         })),

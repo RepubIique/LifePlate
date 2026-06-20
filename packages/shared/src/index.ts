@@ -545,6 +545,7 @@ export interface MealListSummary {
   sortIndex: number;
   calories?: number | null;
   protein?: number | null;
+  fibre?: number | null;
   notes?: string | null;
   /** Home cooked vs takeaway — used for weekly insights. */
   mealSource?: MealSource | null;

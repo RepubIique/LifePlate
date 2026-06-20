@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import type { MealListItem } from "@lifeplate/shared";
+import type { MealListSummary } from "@lifeplate/shared";
 import { HomeMealsEmptyState } from "@/components/home/HomeMealsEmptyState";
 import { SuggestedMealSlotCard } from "@/components/home/SuggestedMealSlotCard";
 import { HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
@@ -12,7 +12,7 @@ import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   title: string;
-  meals: MealListItem[];
+  meals: MealListSummary[];
   loading: boolean;
   showSkeleton: boolean;
   isViewingToday: boolean;
@@ -64,6 +64,12 @@ export function HomeDayMealsSection({
     return logged.reduce((sum, meal) => sum + (meal.protein ?? 0), 0);
   }, [sortedMeals]);
 
+  const totalFibre = useMemo(() => {
+    const logged = sortedMeals.filter((meal) => meal.fibre != null);
+    if (logged.length === 0) return null;
+    return logged.reduce((sum, meal) => sum + (meal.fibre ?? 0), 0);
+  }, [sortedMeals]);
+
   const mealCount = sortedMeals.length;
   const summaryParts: string[] = [];
   if (mealCount > 0) {
@@ -74,6 +80,9 @@ export function HomeDayMealsSection({
   }
   if (totalProtein != null) {
     summaryParts.push(`${Math.round(totalProtein)}g protein`);
+  }
+  if (totalFibre != null) {
+    summaryParts.push(`${Math.round(totalFibre)}g fibre`);
   }
 
   const showEmptyState =
