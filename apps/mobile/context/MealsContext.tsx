@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { MealListSummary } from "@lifeplate/shared";
-import { applyMealOrderTimestamps, compareMealsTimeline, mealLogDateKey } from "@lifeplate/shared";
+import { applyMealSortIndices, compareMealsTimeline, mealLogDateKey } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMeals } from "@/lib/api";
 import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
@@ -146,13 +146,10 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const reorderDayMealsLocally = useCallback(
     (dateKey: string, orderedMeals: MealListSummary[]) => {
       setMeals((prev) => {
-        const dayMeals = prev.filter(
-          (meal) => mealLogDateKey(meal) === dateKey,
-        );
         const otherDays = prev.filter(
           (meal) => mealLogDateKey(meal) !== dateKey,
         );
-        const reordered = applyMealOrderTimestamps(orderedMeals, dayMeals);
+        const reordered = applyMealSortIndices(orderedMeals);
         const next = [...otherDays, ...reordered].sort(compareMealsTimeline);
         persistMeals(next, fetchedAtRef.current);
         return next;

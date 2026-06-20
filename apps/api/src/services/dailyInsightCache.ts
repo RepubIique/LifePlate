@@ -1,5 +1,5 @@
 import { pool } from "../db.js";
-import { todayDateKey } from "./streaks.js";
+import { todayDateKey } from "@lifeplate/shared";
 
 export async function getCachedDailyInsight(
   userId: string,

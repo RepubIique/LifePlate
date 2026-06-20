@@ -1,4 +1,4 @@
-import { dateKeyFromIso, todayDateKey } from "@lifeplate/shared";
+import { todayDateKey } from "@lifeplate/shared";
 
 function shiftUtcDayKey(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T12:00:00.000Z`);
@@ -43,9 +43,3 @@ export function computeStreaksFromDayKeys(dayKeys: string[]): {
 
   return { current, longest };
 }
-
-export function mealDateKey(date: Date): string {
-  return dateKeyFromIso(date.toISOString());
-}
-
-export { dateKeyFromIso, todayDateKey };

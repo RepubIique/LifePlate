@@ -14,6 +14,22 @@ export class RateLimitError extends Error {
   }
 }
 
+const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
+let lastPruneAt = 0;
+
+export async function pruneStaleRateLimitRows(): Promise<void> {
+  const now = Date.now();
+  if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
+  lastPruneAt = now;
+
+  await pool.query(
+    `DELETE FROM upload_attempts WHERE created_at < NOW() - INTERVAL '2 hours'`,
+  );
+  await pool.query(
+    `DELETE FROM refine_attempts WHERE created_at < NOW() - INTERVAL '2 hours'`,
+  );
+}
+
 async function reserveAttempt(
   userId: string,
   table: "upload_attempts" | "refine_attempts",

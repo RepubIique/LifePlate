@@ -19,7 +19,8 @@ import {
   type MealMacroTotals,
 } from "@lifeplate/shared";
 import { MealPhotoAttachSection } from "@/components/meal/MealPhotoAttachSection";
-import { MealLogDateField, mealDateKeyFromIso } from "@/components/meal/MealLogDateField";
+import { MealLogDateField } from "@/components/meal/MealLogDateField";
+import { dateKeyFromIso } from "@lifeplate/shared";
 import { EditMealSkeleton } from "@/components/skeletons/EditMealSkeleton";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
 import { MacroNutritionPanel } from "@/components/MacroNutritionPanel";
@@ -296,8 +297,8 @@ export default function EditMealScreen() {
       const nextFibre = toNumber(fibre, 0);
       const nextSugar = toNumber(sugar, 0);
       const nextSodium = toNumber(sodium, 0);
-      const currentLogDate = meal.logDate ?? mealDateKeyFromIso(meal.createdAt);
-      const nextLogDate = mealDateKeyFromIso(loggedAt);
+      const currentLogDate = meal.logDate ?? dateKeyFromIso(meal.createdAt);
+      const nextLogDate = dateKeyFromIso(loggedAt);
       const logDateChanged = nextLogDate !== currentLogDate;
 
       await updateMeal(id, {
@@ -431,7 +432,7 @@ export default function EditMealScreen() {
       <View style={styles.cardWrap}>
       <PremiumCard>
         <MealLogDateField
-          dateKey={mealDateKeyFromIso(loggedAt || meal.createdAt)}
+          dateKey={dateKeyFromIso(loggedAt || meal.createdAt)}
           mealType={mealType}
           label="Logged on"
           onChange={setLoggedAt}

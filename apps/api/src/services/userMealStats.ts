@@ -45,11 +45,3 @@ async function countMeals(userId: string, client?: PoolClient): Promise<number> 
   );
   return Number(rows[0]?.count ?? 0);
 }
-
-// Recompute streak columns for all users (e.g. after migration backfill).
-export async function backfillAllUserMealStats(): Promise<void> {
-  const { rows } = await pool.query<{ id: string }>(`SELECT id FROM users`);
-  for (const row of rows) {
-    await syncUserMealStats(row.id);
-  }
-}

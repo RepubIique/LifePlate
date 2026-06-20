@@ -48,10 +48,6 @@ export function MealLogDateField({
   );
 }
 
-export function mealDateKeyFromIso(iso: string): string {
-  return dateKeyFromIso(iso);
-}
-
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",

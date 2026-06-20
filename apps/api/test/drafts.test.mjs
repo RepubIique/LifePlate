@@ -14,23 +14,14 @@ const baseDraft = {
 test("draftHasImage is false for text-only drafts", () => {
   assert.equal(draftHasImage({ ...baseDraft, imageUrl: "" }), false);
   assert.equal(draftHasImage({ ...baseDraft, imageUrl: "   " }), false);
-  assert.equal(draftHasImage({ ...baseDraft, hasImageData: false }), false);
 });
 
-test("draftHasImage is true when draft has buffer, URL, or stored image flag", () => {
-  assert.equal(
-    draftHasImage({ ...baseDraft, imageBuffer: Buffer.from("img") }),
-    true,
-  );
+test("draftHasImage is true when draft has a cloud image URL", () => {
   assert.equal(
     draftHasImage({
       ...baseDraft,
       imageUrl: "https://example.com/meal.jpg",
     }),
-    true,
-  );
-  assert.equal(
-    draftHasImage({ ...baseDraft, hasImageData: true }),
     true,
   );
 });

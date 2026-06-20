@@ -42,23 +42,6 @@ export function loggedAtForDateKey(
   return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
 }
 
-/** Timeline order index 0 = top = latest time on the given calendar day. */
-export function createdAtForDayPosition(
-  dateKey: string,
-  index: number,
-  total: number,
-): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const startMinutes = 6 * 60;
-  const endMinutes = 22 * 60;
-  const span = endMinutes - startMinutes;
-  const ratio = total <= 1 ? 0.5 : index / (total - 1);
-  const minutes = Math.round(endMinutes - ratio * span);
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return new Date(year, month - 1, day, hours, mins, index, 0).toISOString();
-}
-
 export type MealTimelineFields = {
   createdAt: string;
   logDate?: string;
@@ -86,9 +69,8 @@ export function compareMealsTimeline(
 }
 
 /** Assign within-day timeline order without mutating logged timestamps. */
-export function applyMealOrderTimestamps<T extends MealTimelineFields>(
+export function applyMealSortIndices<T extends MealTimelineFields>(
   orderedMeals: T[],
-  _dayMeals: T[],
 ): T[] {
   return orderedMeals.map((meal, index) => ({
     ...meal,

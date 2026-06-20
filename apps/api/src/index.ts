@@ -5,6 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import { assertRuntimeConfig, config } from "./config.js";
 import { runMigrations, pool } from "./db.js";
+import { pruneStaleRateLimitRows } from "./services/uploadRateLimit.js";
 import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { MealGuardrailError } from "./services/mealGuardrails.js";
 import { RateLimitError } from "./services/uploadRateLimit.js";
@@ -56,6 +57,7 @@ await app.register(multipart, {
 if (config.runMigrations) {
   try {
     await runMigrations();
+    await pruneStaleRateLimitRows();
     app.log.info("Database migrations applied");
   } catch (err) {
     app.log.error(

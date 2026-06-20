@@ -11,24 +11,15 @@ export interface Draft {
   id: string;
   userId: string;
   imageUrl: string;
-  imageBuffer?: Buffer;
-  hasImageData?: boolean;
   mimeType?: string;
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
   expiresAt: number;
 }
 
-export type GetDraftOptions = {
-  /** When false, skips loading BYTEA image_data (lazy-loaded by getDraftImage). Default true. */
-  includeImageData?: boolean;
-};
-
 type DraftRow = {
   user_id: string;
   image_url: string;
-  image_data: Buffer | null;
-  has_image_data: boolean;
   mime_type: string;
   analysis: MealAnalysisResult;
   raw_ai_response: unknown;
@@ -40,8 +31,6 @@ function rowToDraft(draftId: string, row: DraftRow): Draft {
     id: draftId,
     userId: row.user_id,
     imageUrl: row.image_url,
-    imageBuffer: row.image_data ?? undefined,
-    hasImageData: row.has_image_data,
     mimeType: row.mime_type,
     analysis: row.analysis,
     rawAiResponse: row.raw_ai_response,
@@ -59,7 +48,6 @@ async function pruneExpiredDraftsIfDue() {
 export async function saveDraft(input: {
   userId: string;
   imageUrl: string;
-  imageBuffer?: Buffer;
   mimeType?: string;
   analysis: MealAnalysisResult;
   rawAiResponse: unknown;
@@ -69,14 +57,13 @@ export async function saveDraft(input: {
   const expiresAt = new Date(Date.now() + TTL_MS);
   const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO meal_drafts (
-       user_id, image_url, image_data, mime_type, analysis, raw_ai_response, expires_at
+       user_id, image_url, mime_type, analysis, raw_ai_response, expires_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id`,
     [
       input.userId,
       input.imageUrl,
-      input.imageBuffer ?? null,
       input.mimeType ?? "image/jpeg",
       input.analysis,
       input.rawAiResponse,
@@ -106,19 +93,11 @@ export async function draftBelongsToUser(
 export async function getDraft(
   draftId: string,
   userId: string,
-  options?: GetDraftOptions,
 ): Promise<Draft | null> {
   await pruneExpiredDraftsIfDue();
 
-  const includeImageData = options?.includeImageData !== false;
-  const imageDataColumn = includeImageData
-    ? "image_data"
-    : "NULL::bytea AS image_data";
-
   const { rows } = await pool.query<DraftRow>(
-    `SELECT user_id, image_url, ${imageDataColumn},
-            (image_data IS NOT NULL) AS has_image_data,
-            mime_type, analysis, raw_ai_response, expires_at
+    `SELECT user_id, image_url, mime_type, analysis, raw_ai_response, expires_at
      FROM meal_drafts
      WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
     [draftId, userId],
@@ -128,32 +107,13 @@ export async function getDraft(
   return row ? rowToDraft(draftId, row) : null;
 }
 
-async function loadDraftImageData(
-  draftId: string,
-  userId: string,
-): Promise<{ buffer: Buffer; mimeType: string } | null> {
-  const { rows } = await pool.query<{ image_data: Buffer | null; mime_type: string }>(
-    `SELECT image_data, mime_type FROM meal_drafts
-     WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
-    [draftId, userId],
-  );
-  const row = rows[0];
-  if (!row?.image_data) return null;
-  return {
-    buffer: row.image_data,
-    mimeType: row.mime_type ?? "image/jpeg",
-  };
-}
-
 export async function deleteDraft(draftId: string | undefined) {
   if (!draftId) return;
   await pool.query(`DELETE FROM meal_drafts WHERE id = $1`, [draftId]);
 }
 
 export function draftHasImage(draft: Draft): boolean {
-  return Boolean(
-    draft.imageBuffer || draft.hasImageData || draft.imageUrl?.trim(),
-  );
+  return Boolean(draft.imageUrl?.trim());
 }
 
 export async function updateDraftAnalysis(
@@ -183,21 +143,19 @@ export async function updateDraftAnalysis(
 export async function updateDraftImage(
   draftId: string,
   userId: string,
-  input: { imageUrl: string; imageBuffer: Buffer; mimeType: string },
+  input: { imageUrl: string; mimeType: string },
 ): Promise<boolean> {
   const expiresAt = new Date(Date.now() + TTL_MS);
   const { rowCount } = await pool.query(
     `UPDATE meal_drafts
      SET image_url = $3,
-         image_data = $4,
-         mime_type = $5,
-         expires_at = $6
+         mime_type = $4,
+         expires_at = $5
      WHERE id = $1 AND user_id = $2 AND expires_at > NOW()`,
     [
       draftId,
       userId,
       input.imageUrl,
-      input.imageBuffer,
       input.mimeType,
       expiresAt,
     ],
@@ -208,16 +166,6 @@ export async function updateDraftImage(
 export async function getDraftImage(
   draft: Draft,
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  if (draft.imageBuffer) {
-    return {
-      buffer: draft.imageBuffer,
-      mimeType: draft.mimeType ?? "image/jpeg",
-    };
-  }
-  if (draft.hasImageData) {
-    const loaded = await loadDraftImageData(draft.id, draft.userId);
-    if (loaded) return loaded;
-  }
   if (!draft.imageUrl?.trim()) {
     throw new Error("Draft has no image");
   }

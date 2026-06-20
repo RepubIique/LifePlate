@@ -3,6 +3,7 @@ import {
   formatLogDateLabel,
   mealLogDateKey,
   mealTypeLabel,
+  offsetLogDateKey,
   todayDateKey,
   type MealListSummary,
 } from "@lifeplate/shared";
@@ -56,25 +57,9 @@ export function buildTimelineDayGroups(
     });
 }
 
-export function groupMealsByDay(
-  meals: MealListSummary[],
-): { day: string; subtitle: string; dateKey: string; isToday: boolean; meals: MealListSummary[] }[] {
-  return buildTimelineDayGroups(meals, {}).map(
-    ({ day, subtitle, dateKey, isToday, meals: dayMeals }) => ({
-      day,
-      subtitle,
-      dateKey,
-      isToday,
-      meals: dayMeals,
-    }),
-  );
-}
-
 export function countMealsThisWeek(meals: MealListSummary[]): number {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  cutoff.setHours(0, 0, 0, 0);
-  return meals.filter((meal) => new Date(meal.createdAt) >= cutoff).length;
+  const cutoffKey = offsetLogDateKey(todayDateKey(), -7);
+  return meals.filter((meal) => mealLogDateKey(meal) >= cutoffKey).length;
 }
 
 export function mealTypeIcon(

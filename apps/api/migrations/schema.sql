@@ -63,6 +63,7 @@ ALTER TABLE meals ADD COLUMN IF NOT EXISTS sugar INTEGER;
 ALTER TABLE meals ADD COLUMN IF NOT EXISTS sodium INTEGER;
 ALTER TABLE meals ADD COLUMN IF NOT EXISTS confidence DECIMAL(4, 3);
 ALTER TABLE meals ADD COLUMN IF NOT EXISTS foods TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE meals ADD COLUMN IF NOT EXISTS raw_ai_response JSONB;
 
 ALTER TABLE meals ALTER COLUMN image_url DROP NOT NULL;
 ALTER TABLE meals ALTER COLUMN image_url SET DEFAULT '';
@@ -73,36 +74,13 @@ CREATE INDEX IF NOT EXISTS meals_user_log_date_sort_idx
 CREATE INDEX IF NOT EXISTS meals_user_log_date_idx ON meals (user_id, log_date);
 
 -- ---------------------------------------------------------------------------
--- Meal AI audit (macros and foods live on meals)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS meal_analysis (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  meal_id UUID NOT NULL UNIQUE REFERENCES meals(id) ON DELETE CASCADE,
-  raw_ai_response JSONB
-);
-
--- Legacy cleanup (safe on fresh DBs and after old migrations)
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS calories;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS protein;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS carbs;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS fat;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS fibre;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS sugar;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS sodium;
-ALTER TABLE meal_analysis DROP COLUMN IF EXISTS confidence;
-
-DROP INDEX IF EXISTS meals_user_utc_day_idx;
-
--- ---------------------------------------------------------------------------
--- Meal drafts (pre-confirm upload buffer)
+-- Meal drafts (pre-confirm upload buffer; photos via cloud URL only)
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS meal_drafts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   image_url TEXT NOT NULL DEFAULT '',
-  image_data BYTEA,
   mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
   analysis JSONB NOT NULL,
   raw_ai_response JSONB,
@@ -173,7 +151,7 @@ CREATE INDEX IF NOT EXISTS idx_alpha_feedback_messages_created_at
   ON alpha_feedback_messages (created_at DESC);
 
 -- ---------------------------------------------------------------------------
--- Backfills (safe to re-run)
+-- Backfills (safe to re-run on existing rows)
 -- ---------------------------------------------------------------------------
 
 UPDATE meals
@@ -194,42 +172,7 @@ SET sort_index = ranked.idx
 FROM ranked
 WHERE m.id = ranked.id;
 
-UPDATE meals m
-SET calories = COALESCE(m.calories, a.calories),
-    protein = COALESCE(m.protein, a.protein),
-    carbs = COALESCE(m.carbs, a.carbs),
-    fat = COALESCE(m.fat, a.fat),
-    fibre = COALESCE(m.fibre, a.fibre),
-    sugar = COALESCE(m.sugar, a.sugar),
-    sodium = COALESCE(m.sodium, a.sodium),
-    confidence = COALESCE(m.confidence, a.confidence)
-FROM meal_analysis a
-WHERE a.meal_id = m.id;
-
-DO $$
-BEGIN
-  IF to_regclass('public.foods') IS NOT NULL THEN
-    UPDATE meals m
-    SET foods = COALESCE(agg.food_names, '{}')
-    FROM (
-      SELECT meal_id, array_agg(food_name ORDER BY food_name) AS food_names
-      FROM foods
-      GROUP BY meal_id
-    ) agg
-    WHERE m.id = agg.meal_id
-      AND cardinality(m.foods) = 0;
-  END IF;
-END $$;
-
-DROP TABLE IF EXISTS foods;
-
 ALTER TABLE meals ALTER COLUMN log_date SET NOT NULL;
-
-UPDATE meals
-SET image_url = ''
-WHERE image_url LIKE 'data:%'
-   OR image_url LIKE '%data:image%'
-   OR image_url LIKE '%data%3Aimage%';
 
 UPDATE users u
 SET meals_logged = stats.meal_count

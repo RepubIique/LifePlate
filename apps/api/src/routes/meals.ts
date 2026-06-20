@@ -26,7 +26,7 @@ import {
 } from "../services/drafts.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
-import { RateLimitError, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
+import { RateLimitError, pruneStaleRateLimitRows, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
 import { analyzeMealImage, analyzeMealText, refineMealImage } from "../services/openai.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import {
@@ -75,7 +75,6 @@ export async function mealRoutes(app: FastifyInstance) {
         const draftId = await saveDraft({
           userId,
           imageUrl,
-          imageBuffer: buffer,
           mimeType,
           analysis,
           rawAiResponse: raw,
@@ -159,7 +158,7 @@ export async function mealRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "draftId and clarification are required" });
       }
 
-      const draft = await getDraft(draftId, userId, { includeImageData: false });
+      const draft = await getDraft(draftId, userId);
       if (!draft) {
         return reply.code(404).send({ error: "Draft not found or expired" });
       }
@@ -244,7 +243,6 @@ export async function mealRoutes(app: FastifyInstance) {
 
       const updated = await updateDraftImage(draftId, userId, {
         imageUrl,
-        imageBuffer: buffer,
         mimeType,
       });
       if (!updated) {
@@ -263,7 +261,7 @@ export async function mealRoutes(app: FastifyInstance) {
       const body = request.body;
 
       const draft = body.draftId
-        ? await getDraft(body.draftId, userId, { includeImageData: false })
+        ? await getDraft(body.draftId, userId)
         : null;
       let imageUrl = normalizeMealCloudImageUrl(
         body.imageUrl?.trim() || draft?.imageUrl,
@@ -329,9 +327,10 @@ export async function mealRoutes(app: FastifyInstance) {
         const mealResult = await client.query<{ id: string }>(
           `INSERT INTO meals (
              user_id, meal_type, meal_name, image_url, created_at, log_date, sort_index,
-             calories, protein, carbs, fat, fibre, sugar, sodium, confidence, foods
+             calories, protein, carbs, fat, fibre, sugar, sodium, confidence, foods,
+             raw_ai_response
            )
-           VALUES ($1, $2, $3, $4, $5, $6::date, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+           VALUES ($1, $2, $3, $4, $5, $6::date, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
            RETURNING id`,
           [
             userId,
@@ -349,23 +348,15 @@ export async function mealRoutes(app: FastifyInstance) {
             body.sodium,
             body.confidence,
             body.foods,
+            mergeRawAiPortionMeta(draft?.rawAiResponse, body.portionMeta),
           ],
         );
         const mealId = mealResult.rows[0].id;
 
-        await client.query(
-          `INSERT INTO meal_analysis (meal_id, raw_ai_response)
-           VALUES ($1, $2)`,
-          [
-            mealId,
-            mergeRawAiPortionMeta(draft?.rawAiResponse, body.portionMeta),
-          ],
-        );
-
         await client.query("COMMIT");
         await deleteDraft(body.draftId);
 
-        await onMealDataChanged(userId, { mealCreatedAt: loggedAtDate });
+        await onMealDataChanged(userId, { mealLogDate: logDate });
 
         return { id: mealId };
       } catch (err) {
@@ -639,9 +630,8 @@ export async function mealRoutes(app: FastifyInstance) {
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 m.log_date::text AS log_date, m.sort_index, m.notes,
                 m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
-                m.confidence, m.foods, a.raw_ai_response
+                m.confidence, m.foods, m.raw_ai_response
          FROM meals m
-         LEFT JOIN meal_analysis a ON a.meal_id = m.id
          WHERE m.user_id = $1 AND m.id = $2`,
         [userId, id],
       );
@@ -689,22 +679,20 @@ export async function mealRoutes(app: FastifyInstance) {
 
         const owned = await client.query<{
           id: string;
-          created_at: Date;
           log_date: string;
           raw_ai_response: unknown;
         }>(
-          `SELECT m.id, m.created_at, m.log_date::text AS log_date, a.raw_ai_response
-           FROM meals m
-           LEFT JOIN meal_analysis a ON a.meal_id = m.id
-           WHERE m.id = $1 AND m.user_id = $2`,
+          `SELECT id, log_date::text AS log_date, raw_ai_response
+           FROM meals
+           WHERE id = $1 AND user_id = $2`,
           [id, userId],
         );
         if (!owned.rows[0]) {
           await client.query("ROLLBACK");
           return reply.code(404).send({ error: "Not found" });
         }
-        const mealCreatedAt = owned.rows[0].created_at;
-        let nextCreatedAt = mealCreatedAt;
+        const previousLogDate = owned.rows[0].log_date;
+        let nextLogDate = previousLogDate;
 
         if (body.loggedAt !== undefined) {
           const parsed = new Date(body.loggedAt);
@@ -724,7 +712,7 @@ export async function mealRoutes(app: FastifyInstance) {
              WHERE id = $3 AND user_id = $4`,
             [parsed, logDate, id, userId],
           );
-          nextCreatedAt = parsed;
+          nextLogDate = logDate;
         }
 
         if (
@@ -792,21 +780,24 @@ export async function mealRoutes(app: FastifyInstance) {
 
         if (body.portionMeta !== undefined) {
           await client.query(
-            `INSERT INTO meal_analysis (meal_id, raw_ai_response)
-             VALUES ($1, $2::jsonb)
-             ON CONFLICT (meal_id) DO UPDATE
-             SET raw_ai_response = EXCLUDED.raw_ai_response`,
+            `UPDATE meals
+             SET raw_ai_response = $1::jsonb
+             WHERE id = $2 AND user_id = $3`,
             [
-              id,
               mergeRawAiPortionMeta(owned.rows[0].raw_ai_response, body.portionMeta),
+              id,
+              userId,
             ],
           );
         }
 
         await client.query("COMMIT");
         await onMealDataChanged(userId, {
-          mealCreatedAt: nextCreatedAt,
-          previousMealCreatedAt: mealCreatedAt,
+          mealLogDate: nextLogDate,
+          previousMealLogDate:
+            body.loggedAt !== undefined && nextLogDate !== previousLogDate
+              ? previousLogDate
+              : undefined,
         });
 
         const patch: MealPatchResponse = { id };
@@ -837,13 +828,13 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const { id } = request.params as { id: string };
 
-      const { rows } = await pool.query<{ created_at: Date }>(
-        `SELECT created_at FROM meals WHERE id = $1 AND user_id = $2`,
+      const { rows } = await pool.query<{ log_date: string }>(
+        `SELECT log_date::text AS log_date FROM meals WHERE id = $1 AND user_id = $2`,
         [id, userId],
       );
       if (!rows[0]) return reply.code(404).send({ error: "Not found" });
 
-      const mealCreatedAt = rows[0].created_at;
+      const mealLogDate = rows[0].log_date;
 
       const { rowCount } = await pool.query(
         `DELETE FROM meals WHERE id = $1 AND user_id = $2`,
@@ -851,7 +842,7 @@ export async function mealRoutes(app: FastifyInstance) {
       );
 
       if (!rowCount) return reply.code(404).send({ error: "Not found" });
-      await onMealDataChanged(userId, { mealCreatedAt });
+      await onMealDataChanged(userId, { mealLogDate });
       return { ok: true };
     },
   );
