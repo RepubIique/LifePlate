@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
+import { semantic } from "@/src/theme/palette";
 import test from "node:test";
 import { hexWithAlpha } from "@/lib/nutritionIcons";
 
