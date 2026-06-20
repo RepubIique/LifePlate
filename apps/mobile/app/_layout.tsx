@@ -59,9 +59,7 @@ export default function RootLayout() {
               options={{ presentation: "modal", headerShown: true, title: "Edit meal" }}
             />
           </Stack>
-          {(__DEV__ || process.env.EXPO_PUBLIC_ENABLE_ALPHA_FEEDBACK === "true") && (
-            <AlphaFeedbackBubble />
-          )}
+          <AlphaFeedbackBubble />
           </HydrationProvider>
           </NutritionDashboardProvider>
           </PendingLogDateProvider>

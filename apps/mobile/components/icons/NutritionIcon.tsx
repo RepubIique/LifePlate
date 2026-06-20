@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { NutritionIconKey } from "@lifeplate/shared";
 import { hexWithAlpha, resolveNutritionIconKey } from "@/lib/nutritionIcons";
+import { PILLAR_COLORS } from "@/lib/pillarTheme";
 import { StyleSheet, View, type ViewStyle } from "react-native";
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
@@ -33,7 +34,7 @@ const ICON_COLORS: Record<NutritionIconKey, string> = {
   broccoli: "#52B788",
   pepper: "#E76F51",
   carrot: "#E9A319",
-  water: "#4895EF",
+  water: PILLAR_COLORS.hydration,
   carbs: "#E9A319",
   fat: "#1B4332",
   fermented: "#40916C",

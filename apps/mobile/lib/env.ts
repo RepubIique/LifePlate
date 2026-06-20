@@ -1,13 +1,23 @@
-const REQUIRED_VARS = [
-  "EXPO_PUBLIC_API_URL",
-  "EXPO_PUBLIC_SUPABASE_URL",
-  "EXPO_PUBLIC_SUPABASE_ANON_KEY",
-] as const;
+function missingProductionEnvVars(): string[] {
+  // Metro only inlines static `process.env.EXPO_PUBLIC_*` reads at build time.
+  // Dynamic lookups like `process.env[key]` stay undefined in Release bundles.
+  const missing: string[] = [];
+  if (!process.env.EXPO_PUBLIC_API_URL?.trim()) {
+    missing.push("EXPO_PUBLIC_API_URL");
+  }
+  if (!process.env.EXPO_PUBLIC_SUPABASE_URL?.trim()) {
+    missing.push("EXPO_PUBLIC_SUPABASE_URL");
+  }
+  if (!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim()) {
+    missing.push("EXPO_PUBLIC_SUPABASE_ANON_KEY");
+  }
+  return missing;
+}
 
 export function assertMobileEnv() {
   if (__DEV__) return;
 
-  const missing = REQUIRED_VARS.filter((key) => !process.env[key]?.trim());
+  const missing = missingProductionEnvVars();
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
   }

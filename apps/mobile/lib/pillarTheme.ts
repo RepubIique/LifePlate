@@ -5,7 +5,7 @@ export const PILLAR_COLORS: Record<PillarKey, string> = {
   fibre: "#E9A319",
   plants: "#52B788",
   carbs: "#C46A2A",
-  hydration: "#4895EF",
+  hydration: "#D7F0FB",
 };
 
 /** Macro ring/bar colors aligned with the DigitalPlate pillar palette. */
