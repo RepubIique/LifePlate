@@ -24,7 +24,6 @@ export function buildWeeklyTrends(metrics: WeeklyMetrics): WeeklyTrendItem[] {
   const plantRatio =
     metrics.plantTarget > 0 ? metrics.avgPlantFoods / metrics.plantTarget : 0;
   const gutRatio = metrics.gutScore / 10;
-  const processedRatio = 1 - metrics.processedPercent / 100;
   const omegaRatio =
     metrics.daysWithMeals > 0 ? metrics.omega3Days / metrics.daysWithMeals : 0;
 
@@ -32,10 +31,6 @@ export function buildWeeklyTrends(metrics: WeeklyMetrics): WeeklyTrendItem[] {
     { label: "Muscle Support", status: trendFromRatio(muscleRatio) },
     { label: "Gut Health", status: trendFromRatio(gutRatio) },
     { label: "Plant Diversity", status: trendFromRatio(plantRatio) },
-    {
-      label: "Processed Food Intake",
-      status: metrics.processedPercent <= 20 ? "on_track" : metrics.processedPercent <= 40 ? "moderate" : "needs_improvement",
-    },
     { label: "Omega-3 Intake", status: trendFromRatio(omegaRatio) },
   ];
 }

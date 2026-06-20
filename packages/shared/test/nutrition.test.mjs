@@ -342,8 +342,8 @@ test("weeklyGutScore caps at 10 with fermented and prebiotic foods", () => {
   );
 });
 
-test("buildWeeklyTrends marks processed food intake bands", () => {
-  const onTrack = buildWeeklyTrends({
+test("buildWeeklyTrends omits processed food intake", () => {
+  const trends = buildWeeklyTrends({
     avgDailyProtein: 60,
     proteinTarget: 60,
     avgPlantFoods: 7,
@@ -353,23 +353,8 @@ test("buildWeeklyTrends marks processed food intake bands", () => {
     omega3Days: 3,
     daysWithMeals: 5,
   });
-  const processed = onTrack.find((t) => t.label === "Processed Food Intake");
-  assert.equal(processed?.status, "on_track");
-
-  const moderate = buildWeeklyTrends({
-    avgDailyProtein: 30,
-    proteinTarget: 60,
-    avgPlantFoods: 3,
-    plantTarget: 7,
-    gutScore: 4,
-    processedPercent: 35,
-    omega3Days: 1,
-    daysWithMeals: 5,
-  });
-  assert.equal(
-    moderate.find((t) => t.label === "Processed Food Intake")?.status,
-    "moderate",
-  );
+  assert.equal(trends.some((t) => t.label === "Processed Food Intake"), false);
+  assert.equal(trends.length, 4);
 });
 
 test("parsePlantFoodText reads amounts and units from food strings", () => {
