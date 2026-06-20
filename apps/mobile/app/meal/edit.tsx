@@ -13,6 +13,7 @@ import {
   buildMealPortionMeta,
   clampMealPortions,
   isMealSource,
+  isMealSourceOptional,
   isMealType,
   MAX_MEAL_REANALYZES,
   mealListItemToMacros,
@@ -122,7 +123,7 @@ export default function EditMealScreen() {
 
   const [mealName, setMealName] = useState("");
   const [mealType, setMealType] = useState<MealType>("lunch");
-  const [mealSource, setMealSource] = useState<MealSource>("home_cooked");
+  const [mealSource, setMealSource] = useState<MealSource | null>("home_cooked");
   const [foods, setFoods] = useState<string[]>([]);
   const [newFood, setNewFood] = useState("");
   const [calories, setCalories] = useState("0");
@@ -226,6 +227,13 @@ export default function EditMealScreen() {
     );
   }, [meal, totalPortions, portionsEaten, baseMacros]);
 
+  useEffect(() => {
+    if (isMealSourceOptional(mealType)) return;
+    if (mealSource === null) {
+      setMealSource("home_cooked");
+    }
+  }, [mealType, mealSource]);
+
   const applyMealDetail = useCallback((m: MealDetail) => {
     setMeal(m);
     const stored = mealListItemToMacros(m);
@@ -249,7 +257,14 @@ export default function EditMealScreen() {
     setLoggedAt(m.createdAt);
     setNotes(m.notes ?? "");
     const source = m.mealSource ?? "";
-    setMealSource(isMealSource(source) ? source : "home_cooked");
+    const type = isMealType(m.mealType ?? "") ? m.mealType : "lunch";
+    if (isMealSource(source)) {
+      setMealSource(source);
+    } else if (isMealSourceOptional(type)) {
+      setMealSource(null);
+    } else {
+      setMealSource("home_cooked");
+    }
     setReanalyzeRemaining(
       m.reanalyzeRemaining ?? Math.max(0, MAX_MEAL_REANALYZES - (m.reanalyzeCount ?? 0)),
     );
@@ -359,6 +374,9 @@ export default function EditMealScreen() {
       const currentLogDate = meal.logDate ?? dateKeyFromIso(meal.createdAt);
       const nextLogDate = dateKeyFromIso(loggedAt);
       const logDateChanged = nextLogDate !== currentLogDate;
+      const resolvedMealSource = isMealSourceOptional(mealType)
+        ? mealSource
+        : (mealSource ?? "home_cooked");
 
       await updateMeal(id, {
         mealName,
@@ -374,7 +392,7 @@ export default function EditMealScreen() {
         loggedAt,
         notes,
         portionMeta,
-        mealSource,
+        mealSource: resolvedMealSource,
       });
 
       let sharesSent = 0;
@@ -407,7 +425,7 @@ export default function EditMealScreen() {
           logDate: nextLogDate,
           notes: notes || null,
           portionMeta: portionMeta ?? undefined,
-          mealSource,
+          mealSource: resolvedMealSource,
           pendingShareFriendIds,
         });
         patchMealLocally(id, {
@@ -416,7 +434,7 @@ export default function EditMealScreen() {
           calories: nextCalories,
           protein: nextProtein,
           notes: notes || null,
-          mealSource,
+          mealSource: resolvedMealSource,
           createdAt: loggedAt,
           logDate: nextLogDate,
         });
@@ -520,7 +538,12 @@ export default function EditMealScreen() {
           />
           <View style={styles.metaGroup}>
             <MealTypePicker compact value={mealType} onChange={setMealType} />
-            <MealSourcePicker compact value={mealSource} onChange={setMealSource} />
+            <MealSourcePicker
+              compact
+              optional={isMealSourceOptional(mealType)}
+              value={mealSource}
+              onChange={setMealSource}
+            />
           </View>
         </PremiumCard>
       </View>

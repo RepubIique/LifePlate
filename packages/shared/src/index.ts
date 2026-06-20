@@ -164,14 +164,19 @@ export function mealTypeLabel(mealType: MealType | string | null | undefined): s
 }
 
 export const MEAL_SOURCE_OPTIONS = [
-  { value: "home_cooked", label: "Home cooked" },
-  { value: "takeaway", label: "Takeaway" },
+  { value: "home_cooked", label: "Homecook" },
+  { value: "takeaway", label: "Eat out" },
 ] as const;
 
 export type MealSource = (typeof MEAL_SOURCE_OPTIONS)[number]["value"];
 
 export function isMealSource(value: string): value is MealSource {
   return MEAL_SOURCE_OPTIONS.some((o) => o.value === value);
+}
+
+/** Snacks and beverages don't require a homecook / eat out choice. */
+export function isMealSourceOptional(mealType: MealType | string | null | undefined): boolean {
+  return mealType === "snack" || mealType === "beverage";
 }
 
 export function mealSourceLabel(mealSource: MealSource | string | null | undefined): string {
