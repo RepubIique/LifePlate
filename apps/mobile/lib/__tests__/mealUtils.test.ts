@@ -58,12 +58,12 @@ test("buildTimelineDayGroups groups meals by day and sorts newest first", () => 
   assert.equal(groups[1]?.meals.length, 0);
 });
 
-test("buildTimelineDayGroups sorts meals within a day by meal slot order", () => {
+test("buildTimelineDayGroups sorts meals within a day with most recent first", () => {
   const groups = buildTimelineDayGroups(
     [
+      mealOnLocalDay("breakfast", "2026-06-10", 8, 0, "breakfast"),
       mealOnLocalDay("dinner", "2026-06-10", 20, 0, "dinner"),
-      mealOnLocalDay("breakfast", "2026-06-10", 8, 2, "breakfast"),
-      mealOnLocalDay("snack", "2026-06-10", 15, 1, "snack"),
+      mealOnLocalDay("snack", "2026-06-10", 15, 0, "snack"),
     ],
     {},
   );
@@ -72,7 +72,7 @@ test("buildTimelineDayGroups sorts meals within a day by meal slot order", () =>
   assert.ok(day);
   assert.deepEqual(
     day.meals.map((entry) => entry.id),
-    ["breakfast", "dinner", "snack"],
+    ["dinner", "snack", "breakfast"],
   );
 });
 

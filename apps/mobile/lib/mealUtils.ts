@@ -6,7 +6,15 @@ import {
   todayDateKey,
   type MealListSummary,
 } from "@lifeplate/shared";
-import { sortMealsByDaySlots } from "@/lib/mealSlots";
+
+/** Most recent meal first — higher sortIndex and later createdAt appear at the top. */
+export function sortMealsRecentFirst<T extends MealListSummary>(meals: T[]): T[] {
+  return [...meals].sort((a, b) => {
+    const sortDiff = (b.sortIndex ?? 0) - (a.sortIndex ?? 0);
+    if (sortDiff !== 0) return sortDiff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
 
 export function formatDayLabel(dateKey: string): string {
   return formatLogDateLabel(dateKey);
@@ -51,7 +59,7 @@ export function buildTimelineDayGroups(
           day: "numeric",
         }),
         isToday: dateKey === todayKey,
-        meals: sortMealsByDaySlots(dayMeals),
+        meals: sortMealsRecentFirst(dayMeals),
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });

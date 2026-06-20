@@ -5,7 +5,7 @@ import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealListSummary } from "@lifeplate/shared";
 import { todayDateKey, mealLogDateKey } from "@lifeplate/shared";
-import { sortMealsByDaySlots } from "@/lib/mealSlots";
+import { sortMealsRecentFirst } from "@/lib/mealUtils";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { TimelineDayMeals } from "@/components/timeline/TimelineDayMeals";
 import { TimelineDayHeader } from "@/components/timeline/TimelineDayHeader";
@@ -153,7 +153,7 @@ export default function TimelineScreen() {
 
   const handleDayMealsReorder = useCallback(
     (dateKey: string, orderedMeals: MealListSummary[]) => {
-      const previous = sortMealsByDaySlots(
+      const previous = sortMealsRecentFirst(
         meals.filter((meal) => mealLogDateKey(meal) === dateKey),
       );
       reorderDayMealsLocally(dateKey, orderedMeals);
