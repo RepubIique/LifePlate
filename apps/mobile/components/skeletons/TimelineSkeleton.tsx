@@ -1,17 +1,21 @@
 import { StyleSheet, View } from "react-native";
+import { MealTimelineRail, railPositionForIndex } from "@/components/home/MealTimelineRail";
 import { PremiumCard } from "@/components/PremiumCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { spacing } from "@/src/theme/lifeplate";
 
 const THUMB = 88;
 
-function TimelineMealRowSkeleton() {
+function TimelineMealRowSkeleton({ index, total }: { index: number; total: number }) {
   return (
     <View style={styles.mealRow}>
-      <View style={styles.rail}>
-        <Skeleton width={10} height={10} borderRadius={5} />
-        <Skeleton width={2} height={48} borderRadius={1} style={styles.railLine} />
-      </View>
+      <MealTimelineRail
+        position={railPositionForIndex(index, total)}
+        variant="filled"
+        showReorder
+        canMoveUp={index > 0}
+        canMoveDown={index < total - 1}
+      />
       <PremiumCard noBlur style={styles.mealCard}>
         <Skeleton width={THUMB} height={THUMB} borderRadius={14} />
         <View style={styles.mealBody}>
@@ -53,8 +57,8 @@ export function TimelineSkeleton() {
           <Skeleton width={140} height={16} />
           <Skeleton width="100%" height={8} borderRadius={999} style={styles.gap} />
         </PremiumCard>
-        <TimelineMealRowSkeleton />
-        <TimelineMealRowSkeleton />
+        <TimelineMealRowSkeleton index={0} total={2} />
+        <TimelineMealRowSkeleton index={1} total={2} />
       </View>
     </View>
   );
@@ -89,14 +93,7 @@ const styles = StyleSheet.create({
   mealRow: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  rail: {
-    width: 16,
-    alignItems: "center",
-  },
-  railLine: {
-    marginTop: 4,
+    marginBottom: spacing.xs,
   },
   mealCard: {
     flex: 1,

@@ -14,11 +14,7 @@ import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meal: MealListSummary;
-  showReorder?: boolean;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+  dimmed?: boolean;
   onPress: () => void;
   onDelete?: () => void;
 };
@@ -33,46 +29,9 @@ function NutritionChip({ label }: { label: string }) {
   );
 }
 
-function ReorderButton({
-  icon,
-  disabled,
-  onPress,
-  label,
-}: {
-  icon: "chevron-up" | "chevron-down";
-  disabled?: boolean;
-  onPress?: () => void;
-  label: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      hitSlop={6}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [
-        styles.reorderButton,
-        disabled && styles.reorderButtonDisabled,
-        pressed && !disabled && styles.reorderButtonPressed,
-      ]}
-    >
-      <MaterialCommunityIcons
-        name={icon}
-        size={18}
-        color={disabled ? "#D5DBD8" : "#636E72"}
-      />
-    </Pressable>
-  );
-}
-
 export function TimelineMealCard({
   meal,
-  showReorder = false,
-  canMoveUp = false,
-  canMoveDown = false,
-  onMoveUp,
-  onMoveDown,
+  dimmed = false,
   onPress,
   onDelete,
 }: Props) {
@@ -81,32 +40,9 @@ export function TimelineMealCard({
   const time = formatMealTime(meal.createdAt);
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, dimmed && styles.rowDimmed]}>
       <PremiumCard style={styles.card} noBlur>
         <View style={styles.cardInner}>
-          {showReorder ? (
-            <View style={styles.reorderCol}>
-              <ReorderButton
-                icon="chevron-up"
-                disabled={!canMoveUp}
-                onPress={onMoveUp}
-                label="Move meal earlier in the day"
-              />
-              <MaterialCommunityIcons
-                name="menu"
-                size={16}
-                color="#B2BEC3"
-                style={styles.gripIcon}
-              />
-              <ReorderButton
-                icon="chevron-down"
-                disabled={!canMoveDown}
-                onPress={onMoveDown}
-                label="Move meal later in the day"
-              />
-            </View>
-          ) : null}
-
           <Pressable
             onPress={onPress}
             style={({ pressed }) => [styles.main, pressed && styles.mainPressed]}
@@ -194,6 +130,9 @@ const styles = StyleSheet.create({
   row: {
     marginBottom: spacing.md,
   },
+  rowDimmed: {
+    opacity: 0.52,
+  },
   card: {
     padding: 0,
     overflow: "hidden",
@@ -203,32 +142,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     minHeight: THUMB + spacing.sm * 2,
-  },
-  reorderCol: {
-    width: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-    backgroundColor: "#F7F9F8",
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: "#E2E8E4",
-    paddingVertical: spacing.xs,
-  },
-  gripIcon: {
-    marginVertical: 2,
-  },
-  reorderButton: {
-    width: 32,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-  },
-  reorderButtonPressed: {
-    backgroundColor: "#E8EDEA",
-  },
-  reorderButtonDisabled: {
-    opacity: 0.45,
   },
   main: {
     flex: 1,

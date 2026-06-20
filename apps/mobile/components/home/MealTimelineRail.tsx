@@ -1,0 +1,193 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Pressable, StyleSheet, View } from "react-native";
+
+export type RailPosition = "first" | "middle" | "last" | "only";
+
+export function railPositionForIndex(index: number, total: number): RailPosition {
+  if (total <= 1) return "only";
+  if (index === 0) return "first";
+  if (index === total - 1) return "last";
+  return "middle";
+}
+
+type ReorderProps = {
+  showReorder?: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+};
+
+type Props = ReorderProps & {
+  position: RailPosition;
+  variant?: "default" | "filled" | "suggested";
+};
+
+function RailReorderButton({
+  icon,
+  disabled,
+  onPress,
+  label,
+}: {
+  icon: "chevron-up" | "chevron-down";
+  disabled?: boolean;
+  onPress?: () => void;
+  label: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.reorderButton,
+        disabled && styles.reorderButtonDisabled,
+        pressed && !disabled && styles.reorderButtonPressed,
+      ]}
+    >
+      <MaterialCommunityIcons
+        name={icon}
+        size={16}
+        color={disabled ? "#D5DBD8" : "#40916C"}
+      />
+    </Pressable>
+  );
+}
+
+export function MealTimelineRail({
+  position,
+  variant = "default",
+  showReorder = false,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
+}: Props) {
+  const showTopLine = position === "middle" || position === "last";
+  const showBottomLine = position === "first" || position === "middle";
+
+  return (
+    <View style={[styles.rail, showReorder && styles.railReorder]}>
+      <View style={styles.lineCol}>
+        {showReorder ? (
+          <RailReorderButton
+            icon="chevron-up"
+            disabled={!canMoveUp}
+            onPress={onMoveUp}
+            label="Move meal earlier in the day"
+          />
+        ) : null}
+
+        {showTopLine ? (
+          <View
+            style={[
+              styles.line,
+              variant === "suggested" && styles.lineSuggested,
+              variant === "filled" && styles.lineFilled,
+            ]}
+          />
+        ) : (
+          <View style={styles.lineGap} />
+        )}
+
+        <View
+          style={[
+            styles.dot,
+            variant === "filled" && styles.dotFilled,
+            variant === "suggested" && styles.dotSuggested,
+          ]}
+        />
+
+        {showBottomLine ? (
+          <View
+            style={[
+              styles.line,
+              variant === "filled" && styles.lineFilled,
+            ]}
+          />
+        ) : (
+          <View style={styles.lineGap} />
+        )}
+
+        {showReorder ? (
+          <RailReorderButton
+            icon="chevron-down"
+            disabled={!canMoveDown}
+            onPress={onMoveDown}
+            label="Move meal later in the day"
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const DOT = 10;
+
+const styles = StyleSheet.create({
+  rail: {
+    width: 22,
+    alignSelf: "stretch",
+  },
+  railReorder: {
+    width: 32,
+  },
+  lineCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  line: {
+    flex: 1,
+    width: 2,
+    backgroundColor: "#E2E8E4",
+    borderRadius: 1,
+    minHeight: 8,
+  },
+  lineFilled: {
+    backgroundColor: "#B7E4C7",
+  },
+  lineSuggested: {
+    backgroundColor: "#95D5B2",
+  },
+  lineGap: {
+    flex: 1,
+    minHeight: 8,
+  },
+  dot: {
+    width: DOT,
+    height: DOT,
+    borderRadius: DOT / 2,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#C8D6CF",
+    marginVertical: 2,
+  },
+  dotFilled: {
+    borderColor: "#40916C",
+    backgroundColor: "#D8F3DC",
+  },
+  dotSuggested: {
+    width: DOT + 4,
+    height: DOT + 4,
+    borderRadius: (DOT + 4) / 2,
+    borderColor: "#40916C",
+    backgroundColor: "#40916C",
+    marginVertical: 0,
+  },
+  reorderButton: {
+    width: 28,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  reorderButtonPressed: {
+    backgroundColor: "#E8F5E9",
+  },
+  reorderButtonDisabled: {
+    opacity: 0.4,
+  },
+});

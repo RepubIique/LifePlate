@@ -1,8 +1,11 @@
 import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { MealListSummary } from "@lifeplate/shared";
+import { MealTimelineRail, railPositionForIndex } from "@/components/home/MealTimelineRail";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
+import { mealsShareDisplaySlot } from "@/lib/mealSlots";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   dateKey: string;
@@ -36,20 +39,47 @@ export function TimelineDayMeals({
   if (meals.length === 0) return null;
 
   return (
-    <View>
+    <View style={styles.timeline}>
       {meals.map((meal, index) => (
-        <TimelineMealCard
-          key={meal.id}
-          meal={meal}
-          showReorder={canReorder}
-          canMoveUp={index > 0}
-          canMoveDown={index < meals.length - 1}
-          onMoveUp={() => moveMeal(index, index - 1)}
-          onMoveDown={() => moveMeal(index, index + 1)}
-          onPress={() => onPress(meal.id)}
-          onDelete={() => onDelete(meal)}
-        />
+        <View key={meal.id} style={styles.timelineRow}>
+          <MealTimelineRail
+            position={railPositionForIndex(index, meals.length)}
+            variant="filled"
+            showReorder={canReorder}
+            canMoveUp={
+              index > 0 && mealsShareDisplaySlot(meal, meals[index - 1]!)
+            }
+            canMoveDown={
+              index < meals.length - 1 &&
+              mealsShareDisplaySlot(meal, meals[index + 1]!)
+            }
+            onMoveUp={() => moveMeal(index, index - 1)}
+            onMoveDown={() => moveMeal(index, index + 1)}
+          />
+          <View style={styles.timelineContent}>
+            <TimelineMealCard
+              meal={meal}
+              onPress={() => onPress(meal.id)}
+              onDelete={() => onDelete(meal)}
+            />
+          </View>
+        </View>
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  timeline: {
+    gap: 0,
+  },
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.sm,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: spacing.xs,
+  },
+});

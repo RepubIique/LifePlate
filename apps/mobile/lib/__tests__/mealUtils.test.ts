@@ -31,10 +31,11 @@ function mealOnLocalDay(
   dateKey: string,
   hour = 12,
   sortIndex = 0,
+  mealType = "lunch",
 ): MealListSummary {
   const [year, month, day] = dateKey.split("-").map(Number);
   return {
-    ...meal(id, new Date(year, month - 1, day, hour, 0, 0, 0).toISOString(), "lunch", sortIndex),
+    ...meal(id, new Date(year, month - 1, day, hour, 0, 0, 0).toISOString(), mealType, sortIndex),
     logDate: dateKey,
   };
 }
@@ -57,12 +58,12 @@ test("buildTimelineDayGroups groups meals by day and sorts newest first", () => 
   assert.equal(groups[1]?.meals.length, 0);
 });
 
-test("buildTimelineDayGroups sorts meals within a day by sortIndex ascending", () => {
+test("buildTimelineDayGroups sorts meals within a day by meal slot order", () => {
   const groups = buildTimelineDayGroups(
     [
-      mealOnLocalDay("early", "2026-06-10", 8, 2),
-      mealOnLocalDay("late", "2026-06-10", 20, 0),
-      mealOnLocalDay("mid", "2026-06-10", 14, 1),
+      mealOnLocalDay("dinner", "2026-06-10", 20, 0, "dinner"),
+      mealOnLocalDay("breakfast", "2026-06-10", 8, 2, "breakfast"),
+      mealOnLocalDay("snack", "2026-06-10", 15, 1, "snack"),
     ],
     {},
   );
@@ -71,7 +72,7 @@ test("buildTimelineDayGroups sorts meals within a day by sortIndex ascending", (
   assert.ok(day);
   assert.deepEqual(
     day.meals.map((entry) => entry.id),
-    ["late", "mid", "early"],
+    ["breakfast", "dinner", "snack"],
   );
 });
 

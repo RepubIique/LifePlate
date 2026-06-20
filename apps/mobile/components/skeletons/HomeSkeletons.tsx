@@ -37,10 +37,17 @@ export function HomeMealsSkeleton() {
     <>
       {[0, 1, 2].map((index) => (
         <PremiumCard key={index} noBlur style={styles.mealRow}>
-          <Skeleton width={56} height={56} borderRadius={8} />
+          <Skeleton width={80} height={80} borderRadius={14} />
           <View style={styles.mealText}>
-            <Skeleton width="72%" height={18} />
-            <Skeleton width="38%" height={14} style={styles.gap} />
+            <View style={styles.mealMeta}>
+              <Skeleton width={72} height={22} borderRadius={999} />
+              <Skeleton width={48} height={14} />
+            </View>
+            <Skeleton width="78%" height={18} style={styles.gap} />
+            <View style={styles.chipRow}>
+              <Skeleton width={64} height={22} borderRadius={999} />
+              <Skeleton width={72} height={22} borderRadius={999} />
+            </View>
           </View>
         </PremiumCard>
       ))}
@@ -66,8 +73,18 @@ const styles = StyleSheet.create({
   mealRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.sm,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.sm,
   },
-  mealText: { flex: 1 },
+  mealText: { flex: 1, gap: spacing.xs },
+  mealMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  chipRow: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
 });

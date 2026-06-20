@@ -9,16 +9,15 @@ import {
   mealLogDateKey,
   todayDateKey,
 } from "@lifeplate/shared";
+import { HomeDayMealsSection } from "@/components/home/HomeDayMealsSection";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
-import { HomeMealsEmptyState } from "@/components/home/HomeMealsEmptyState";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
-import { MealRowCard } from "@/components/MealRowCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { TextLogModal } from "@/components/meal/TextLogModal";
-import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
+import { HomeDashboardSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { useGamification } from "@/context/GamificationContext";
@@ -32,7 +31,6 @@ import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { useDayDashboard } from "@/lib/useDayDashboard";
 import { refreshDashboardCoaching } from "@/lib/nutritionDashboardView";
 import { openMealEdit } from "@/lib/mealNavigation";
-import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
 import { MilestoneCelebrationModal } from "@/components/gamification/MilestoneCelebrationModal";
 import { spacing } from "@/src/theme/lifeplate";
@@ -330,42 +328,26 @@ export default function HomeScreen() {
         ) : null}
       </View>
 
-      <View style={styles.section}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          {mealsTitle}
-        </Text>
-        {!showMealsSkeleton && !mealsLoading && dayMeals.length === 0 ? (
-          <HomeMealsEmptyState
-            title={isViewingToday ? "No meals yet today" : "Nothing logged"}
-            subtitle={
-              isViewingToday
-                ? "Snap a photo or describe what you ate — you can edit before saving."
-                : `No meals logged for ${formatLogDateLabel(logDateKey).toLowerCase()}.`
-            }
-            onLogPhoto={
-              isViewingToday
-                ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
-                : undefined
-            }
-            onLogText={isViewingToday ? () => setTextLogOpen(true) : undefined}
-          />
-        ) : null}
-        {showMealsSkeleton ? (
-          <HomeMealsSkeleton />
-        ) : (
-          dayMeals.map((meal) => (
-            <MealRowCard
-              key={meal.id}
-              mealId={meal.id}
-              mealName={meal.mealName}
-              subtitle={formatMealTypeLabel(meal.mealType)}
-              mealType={meal.mealType}
-              imageUrl={meal.imageUrl}
-              onPress={() => openMealEdit(meal.id, "home")}
-            />
-          ))
-        )}
-      </View>
+      <HomeDayMealsSection
+        title={mealsTitle}
+        meals={dayMeals}
+        loading={mealsLoading}
+        showSkeleton={showMealsSkeleton}
+        isViewingToday={isViewingToday}
+        dateLabel={formatLogDateLabel(logDateKey)}
+        onMealPress={(mealId) => openMealEdit(mealId, "home")}
+        onLogSuggested={
+          isViewingToday
+            ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
+            : undefined
+        }
+        onLogPhoto={
+          isViewingToday
+            ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
+            : undefined
+        }
+        onLogText={isViewingToday ? () => setTextLogOpen(true) : undefined}
+      />
 
       <TextLogModal
         visible={textLogOpen}
@@ -428,8 +410,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.md,
   },
-  section: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, paddingTop: spacing.xs },
-  sectionTitle: { marginBottom: spacing.md, letterSpacing: 0.15 },
   errorCard: { gap: spacing.sm, alignItems: "flex-start" },
   errorText: { opacity: 0.7, lineHeight: 22 },
 });

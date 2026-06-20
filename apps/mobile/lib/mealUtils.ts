@@ -1,5 +1,4 @@
 import {
-  compareMealsTimeline,
   formatLogDateLabel,
   mealLogDateKey,
   mealTypeLabel,
@@ -7,6 +6,7 @@ import {
   todayDateKey,
   type MealListSummary,
 } from "@lifeplate/shared";
+import { sortMealsByDaySlots } from "@/lib/mealSlots";
 
 export function formatDayLabel(dateKey: string): string {
   return formatLogDateLabel(dateKey);
@@ -51,7 +51,7 @@ export function buildTimelineDayGroups(
           day: "numeric",
         }),
         isToday: dateKey === todayKey,
-        meals: [...dayMeals].sort(compareMealsTimeline),
+        meals: sortMealsByDaySlots(dayMeals),
         hydrationGlasses: hydrationByDate[dateKey] ?? 0,
       };
     });
