@@ -1,21 +1,17 @@
-import * as FileSystem from "expo-file-system/legacy";
+import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import { fetchMealImageUrl } from "@/lib/api";
 import { ApiError } from "@/lib/apiErrors";
+import { copyUriToFile, downloadUrlToFile } from "@/lib/localFileOps";
 
-const MEALS_DIR = `${FileSystem.documentDirectory ?? ""}meals/`;
 const WEB_INDEX_PREFIX = "lifeplate:meal-image:";
 
-function mealFilePath(mealId: string): string {
-  return `${MEALS_DIR}${mealId}.jpg`;
+function mealsDir(): Directory {
+  return new Directory(Paths.document, "meals");
 }
 
-async function ensureMealsDir(): Promise<void> {
-  if (Platform.OS === "web" || !FileSystem.documentDirectory) return;
-  const info = await FileSystem.getInfoAsync(MEALS_DIR);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(MEALS_DIR, { intermediates: true });
-  }
+function mealFile(mealId: string): File {
+  return new File(mealsDir(), `${mealId}.jpg`);
 }
 
 function webIndexKey(mealId: string): string {
@@ -47,14 +43,13 @@ export async function saveMealImage(
   if (!mealId.trim() || !sourceUri.trim()) return null;
 
   try {
-    if (Platform.OS === "web" || !FileSystem.documentDirectory) {
+    if (Platform.OS === "web") {
       return await writeWebImage(mealId, sourceUri);
     }
 
-    await ensureMealsDir();
-    const dest = mealFilePath(mealId);
-    await FileSystem.copyAsync({ from: sourceUri, to: dest });
-    return dest;
+    const dest = mealFile(mealId);
+    await copyUriToFile(sourceUri, dest);
+    return dest.uri;
   } catch {
     return null;
   }
@@ -64,13 +59,12 @@ export async function getLocalMealImageUri(mealId: string): Promise<string | nul
   if (!mealId.trim()) return null;
 
   try {
-    if (Platform.OS === "web" || !FileSystem.documentDirectory) {
+    if (Platform.OS === "web") {
       return await readWebImage(mealId);
     }
 
-    const path = mealFilePath(mealId);
-    const info = await FileSystem.getInfoAsync(path);
-    return info.exists ? path : null;
+    const file = mealFile(mealId);
+    return file.exists ? file.uri : null;
   } catch {
     return null;
   }
@@ -94,14 +88,13 @@ async function cacheRemoteMealImage(
   if (!mealId.trim() || !remoteUrl.trim()) return null;
 
   try {
-    if (Platform.OS === "web" || !FileSystem.documentDirectory) {
+    if (Platform.OS === "web") {
       return await writeWebImage(mealId, remoteUrl);
     }
 
-    await ensureMealsDir();
-    const dest = mealFilePath(mealId);
-    await FileSystem.downloadAsync(remoteUrl, dest);
-    return dest;
+    const dest = mealFile(mealId);
+    const file = await downloadUrlToFile(remoteUrl, dest);
+    return file.uri;
   } catch {
     return null;
   }
@@ -153,15 +146,14 @@ export async function deleteMealImage(mealId: string): Promise<void> {
   if (!mealId.trim()) return;
 
   try {
-    if (Platform.OS === "web" || !FileSystem.documentDirectory) {
+    if (Platform.OS === "web") {
       globalThis.localStorage?.removeItem(webIndexKey(mealId));
       return;
     }
 
-    const path = mealFilePath(mealId);
-    const info = await FileSystem.getInfoAsync(path);
-    if (info.exists) {
-      await FileSystem.deleteAsync(path, { idempotent: true });
+    const file = mealFile(mealId);
+    if (file.exists) {
+      file.delete();
     }
   } catch {
     // Best-effort cleanup.

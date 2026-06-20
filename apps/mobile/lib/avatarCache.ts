@@ -1,55 +1,47 @@
 import { useEffect, useState } from "react";
-import * as FileSystem from "expo-file-system/legacy";
+import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
+import { copyUriToFile, downloadUrlToFile } from "@/lib/localFileOps";
 
-const AVATAR_DIR = `${FileSystem.cacheDirectory}lifeplate/avatars/`;
-
-function avatarFilePath(userId: string): string {
-  return `${AVATAR_DIR}${userId}.jpg`;
+function avatarDir(): Directory {
+  return new Directory(Paths.cache, "lifeplate", "avatars");
 }
 
-async function ensureDir(): Promise<void> {
-  const info = await FileSystem.getInfoAsync(AVATAR_DIR);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(AVATAR_DIR, { intermediates: true });
-  }
+function avatarFile(userId: string): File {
+  return new File(avatarDir(), `${userId}.jpg`);
 }
 
 export async function getCachedAvatarUri(userId: string): Promise<string | null> {
   if (Platform.OS === "web") return null;
-  const path = avatarFilePath(userId);
-  const info = await FileSystem.getInfoAsync(path);
-  return info.exists ? path : null;
+  const file = avatarFile(userId);
+  return file.exists ? file.uri : null;
 }
 
 export async function downloadAndCacheAvatar(
   userId: string,
   url: string,
 ): Promise<string> {
-  await ensureDir();
-  const path = avatarFilePath(userId);
-  const result = await FileSystem.downloadAsync(url, path);
-  return result.uri;
+  const file = avatarFile(userId);
+  const downloaded = await downloadUrlToFile(url, file);
+  return downloaded.uri;
 }
 
 export async function saveAvatarFromLocalUri(
   userId: string,
   sourceUri: string,
 ): Promise<string> {
-  await ensureDir();
-  const path = avatarFilePath(userId);
-  if (sourceUri !== path) {
-    await FileSystem.copyAsync({ from: sourceUri, to: path });
+  const dest = avatarFile(userId);
+  if (sourceUri !== dest.uri) {
+    await copyUriToFile(sourceUri, dest);
   }
-  return path;
+  return dest.uri;
 }
 
 export async function clearCachedAvatar(userId: string): Promise<void> {
   if (Platform.OS === "web") return;
-  const path = avatarFilePath(userId);
-  const info = await FileSystem.getInfoAsync(path);
-  if (info.exists) {
-    await FileSystem.deleteAsync(path, { idempotent: true });
+  const file = avatarFile(userId);
+  if (file.exists) {
+    file.delete();
   }
 }
 

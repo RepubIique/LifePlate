@@ -1,7 +1,8 @@
-import * as FileSystem from "expo-file-system/legacy";
+import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Platform, Share } from "react-native";
 import type { MealListItem, UserProfile } from "@lifeplate/shared";
+import { writeTextFile } from "@/lib/localFileOps";
 
 export async function exportUserData(profile: UserProfile, meals: MealListItem[]) {
   const payload = {
@@ -23,15 +24,20 @@ export async function exportUserData(profile: UserProfile, meals: MealListItem[]
     return;
   }
 
-  const path = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.writeAsStringAsync(path, json);
+  try {
+    const file = new File(Paths.cache, filename);
+    writeTextFile(file, json);
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(path, {
-      mimeType: "application/json",
-      dialogTitle: "Export LifePlate data",
-    });
-  } else {
-    await Share.share({ message: json, title: "LifePlate export" });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "application/json",
+        dialogTitle: "Export LifePlate data",
+      });
+      return;
+    }
+  } catch {
+    // Fall through to inline share if the cache file cannot be written.
   }
+
+  await Share.share({ message: json, title: "LifePlate export" });
 }
