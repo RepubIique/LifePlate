@@ -16,7 +16,6 @@ import type {
   MealShareAcceptRequest,
   MealShareExistingRequest,
   MealShareExistingResponse,
-  GamificationStatsResponse,
   GamificationBundleResponse,
   CoopChallengeSummary,
   CoopChallengeInviteRequest,
@@ -432,17 +431,6 @@ export async function shareMealWithFriends(
 
 export async function fetchGamificationBundle(): Promise<GamificationBundleResponse> {
   return request<GamificationBundleResponse>("/api/gamification");
-}
-
-/** @deprecated Prefer fetchGamificationBundle — stats are mostly computed client-side. */
-export async function fetchGamificationStats(): Promise<GamificationStatsResponse> {
-  return request<GamificationStatsResponse>("/api/gamification/stats");
-}
-
-/** @deprecated Prefer fetchGamificationBundle. */
-export async function fetchCoopChallenges(): Promise<{ challenges: CoopChallengeSummary[] }> {
-  const bundle = await fetchGamificationBundle();
-  return { challenges: bundle.challenges };
 }
 
 export async function inviteCoopChallenge(

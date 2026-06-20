@@ -1,8 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type {
-  CoopChallengeInviteRequest,
-  GamificationStatsResponse,
-} from "@lifeplate/shared";
+import type { CoopChallengeInviteRequest } from "@lifeplate/shared";
 import { computeNutritionTargets } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
@@ -13,9 +10,7 @@ import {
   CoopChallengeError,
   declineCoopChallenge,
   inviteCoopChallenge,
-  listCoopChallenges,
 } from "../services/coopChallenges.js";
-import { getGamificationStats } from "../services/gamificationStats.js";
 import { getGamificationBundle } from "../services/gamificationBundle.js";
 
 async function hydrationTargetForUser(userId: string): Promise<number> {
@@ -51,25 +46,6 @@ export async function gamificationRoutes(app: FastifyInstance) {
     const { userId } = request as AuthedRequest;
     const target = await hydrationTargetForUser(userId);
     return getGamificationBundle(userId, target);
-  });
-
-  app.get("/api/gamification/stats", { preHandler: requireAuth }, async (request) => {
-    const { userId } = request as AuthedRequest;
-    const target = await hydrationTargetForUser(userId);
-    const stats = await getGamificationStats(userId, target);
-    const response: GamificationStatsResponse = {
-      sharesSentCount: stats.sharesSentCount,
-      breakfastLogDays: stats.breakfastLogDays,
-      mealsWithNotesCount: stats.mealsWithNotesCount,
-      hydrationGoalDaysLast7: stats.hydrationGoalDaysLast7,
-    };
-    return response;
-  });
-
-  app.get("/api/gamification/coop-challenges", { preHandler: requireAuth }, async (request) => {
-    const { userId } = request as AuthedRequest;
-    const target = await hydrationTargetForUser(userId);
-    return { challenges: await listCoopChallenges(userId, target) };
   });
 
   app.post<{ Body: CoopChallengeInviteRequest }>(

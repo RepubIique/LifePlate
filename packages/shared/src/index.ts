@@ -745,14 +745,6 @@ export interface UserProfile {
   streakFreezeAvailable?: boolean;
 }
 
-/** @deprecated Client computes breakfast/notes/hydration locally. */
-export interface GamificationStatsResponse {
-  sharesSentCount: number;
-  breakfastLogDays: number;
-  mealsWithNotesCount: number;
-  hydrationGoalDaysLast7: number;
-}
-
 export {
   CORE_MEAL_SLOT_KEYS,
   STREAK_MILESTONE_DAYS,

@@ -217,8 +217,3 @@ export async function getFriendsSocialResponse(userId: string): Promise<FriendsL
   ]);
   return { friendCode, friends, pendingShares };
 }
-
-/** @deprecated Use getFriendsSocialResponse */
-export async function getFriendsListResponse(userId: string): Promise<FriendsListResponse> {
-  return getFriendsSocialResponse(userId);
-}
