@@ -42,6 +42,7 @@ type Props = {
   nutritionScore?: number;
   hasMeals?: boolean;
   plateMessage?: string | null;
+  afterDinner?: boolean;
 };
 
 function clampProgress(value: number) {
@@ -180,10 +181,12 @@ function LegendCard({
   pillar,
   color,
   onPress,
+  afterDinner = false,
 }: {
   pillar: PillarProgress;
   color: string;
   onPress: () => void;
+  afterDinner?: boolean;
 }) {
   const statusColor = pillarColor(pillar.status);
 
@@ -200,7 +203,7 @@ function LegendCard({
           {pillar.label}
         </Text>
         <Text variant="labelSmall" style={[styles.legendStatus, { color: statusColor }]}>
-          {pillarStatusHeadline(pillar.status)}
+          {pillarStatusHeadline(pillar.status, afterDinner)}
         </Text>
       </View>
     </Pressable>
@@ -216,6 +219,7 @@ export function DigitalPlate({
   nutritionScore,
   hasMeals = true,
   plateMessage = null,
+  afterDinner = false,
 }: Props) {
   const [activeKey, setActiveKey] = useState<PlatePillarKey | null>(null);
   const [todayMeals, setTodayMeals] = useState<MealListItem[]>([]);
@@ -302,7 +306,7 @@ export function DigitalPlate({
     <>
       <View style={styles.wrap}>
         {hasMeals && displayScoreStatus ? (
-          <PlateStatusHeader status={displayScoreStatus} />
+          <PlateStatusHeader status={displayScoreStatus} afterDinner={afterDinner} />
         ) : (
           <PlateEmptyHeader />
         )}
@@ -369,6 +373,7 @@ export function DigitalPlate({
               pillar={pillar}
               color={color}
               onPress={() => openPillar(key)}
+              afterDinner={afterDinner}
             />
           ))}
         </View>

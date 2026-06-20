@@ -77,7 +77,7 @@ export function isWrapUpMode(context?: CoachDayContext): boolean {
   const mealTypes = context?.mealTypes;
   const phase = dayPhaseFromHour(hour);
 
-  if (hasLoggedDinner(mealTypes) && hour >= 19) return true;
+  if (isViewingToday(context) && hasLoggedDinner(mealTypes)) return true;
   if (phase === "late") return true;
   if (hour >= 21 && (context?.mealsCount ?? 0) >= 1) return true;
   return false;
@@ -185,10 +185,45 @@ export function buildPlateMessage(
   }
 
   if (isWrapUpMode(context)) {
+    const wrapUpProgress = {
+      protein: pillars.find((p) => p.label === "Protein")?.progress ?? 0,
+      fibre: pillars.find((p) => p.label === "Fibre")?.progress ?? 0,
+      plants: pillars.find((p) => p.label === "Plants")?.progress ?? 0,
+      hydration: 1,
+    };
+    const foodNeeds = collectFoodNeeds(wrapUpProgress, { hydrationGlasses: 0 }, context).filter(
+      (n) => n !== "hydration",
+    );
+
     if (hasLoggedDinner(context?.mealTypes)) {
-      return "Dinner's logged — today's plate is winding down.";
+      if (foodNeeds.length === 0) {
+        return "Dinner's logged — rest up. Tomorrow is a fresh plate.";
+      }
+      return `Dinner's logged. Aim for more ${formatNeedList(foodNeeds, true)} tomorrow.`;
     }
-    return "Day's wrapping up — focus on hydration if you can.";
+
+    if (foodNeeds.length === 0) {
+      return "Day's wrapping up — focus on hydration if you can.";
+    }
+    return `Day's wrapping up. More ${formatNeedList(foodNeeds, true)} tomorrow would help.`;
+  }
+
+  if (hasLoggedDinner(context?.mealTypes) && isViewingToday(context)) {
+    const foodNeeds = collectFoodNeeds(
+      {
+        protein: pillars.find((p) => p.label === "Protein")?.progress ?? 0,
+        fibre: pillars.find((p) => p.label === "Fibre")?.progress ?? 0,
+        plants: pillars.find((p) => p.label === "Plants")?.progress ?? 0,
+        hydration: 1,
+      },
+      { hydrationGlasses: 0 },
+      context,
+    ).filter((n) => n !== "hydration");
+
+    if (foodNeeds.length === 0) {
+      return "Dinner's logged — rest up. Tomorrow is a fresh plate.";
+    }
+    return `Dinner's logged. Aim for more ${formatNeedList(foodNeeds, true)} tomorrow.`;
   }
 
   const needs = collectFoodNeeds(

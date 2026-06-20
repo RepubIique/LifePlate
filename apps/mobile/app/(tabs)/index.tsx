@@ -30,6 +30,7 @@ import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { useDayDashboard } from "@/lib/useDayDashboard";
+import { refreshDashboardCoaching } from "@/lib/nutritionDashboardView";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
@@ -86,7 +87,38 @@ export default function HomeScreen() {
     onError: (e) => setSnackbar(friendlyErrorMessage(e)),
   });
 
+  const dayMealTypes = useMemo(
+    () => [
+      ...new Set(
+        dayMeals
+          .map((m) => m.mealType?.trim().toLowerCase())
+          .filter((type): type is string => !!type),
+      ),
+    ],
+    [dayMeals],
+  );
+
   const activeDashboard = isViewingToday ? dashboard : dayDashboard;
+  const afterDinner = isViewingToday && dayMealTypes.includes("dinner");
+  const glanceDashboard = useMemo(() => {
+    if (!activeDashboard) return null;
+    if (!isViewingToday || dayMealTypes.length === 0) return activeDashboard;
+    return {
+      ...activeDashboard,
+      ...refreshDashboardCoaching(
+        activeDashboard,
+        profile?.nutritionTargets ?? null,
+        dayMealTypes,
+        dayMeals.length,
+      ),
+    };
+  }, [
+    activeDashboard,
+    dayMealTypes,
+    dayMeals.length,
+    isViewingToday,
+    profile?.nutritionTargets,
+  ]);
   const glanceTitle = isViewingToday
     ? "Today at a glance"
     : `${formatLogDateLabel(logDateKey)} at a glance`;
@@ -283,15 +315,16 @@ export default function HomeScreen() {
 
         {showDashboardSkeleton ? (
           <HomeDashboardSkeleton />
-        ) : activeDashboard ? (
+        ) : glanceDashboard ? (
           <>
             <TodayAtGlanceCard
-              dashboard={activeDashboard}
+              dashboard={glanceDashboard}
               title={glanceTitle}
               onPressInsights={() => router.push("/(tabs)/insights")}
+              afterDinner={afterDinner}
             />
             <HydrationQuickAdd
-              pillar={activeDashboard.essentials.hydration}
+              pillar={glanceDashboard.essentials.hydration}
               onIncrement={() => handleHydrationDelta(1)}
               onDecrement={() => handleHydrationDelta(-1)}
             />

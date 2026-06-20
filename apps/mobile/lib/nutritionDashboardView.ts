@@ -35,6 +35,8 @@ export type NutritionDashboardView = Omit<NutritionDashboardResponse, "essential
 export type ExpandDashboardOptions = {
   /** Local hour (0–23) for time-aware coaching. Defaults to device time. */
   hour?: number;
+  /** Extra meal types to merge (e.g. from local meal list before API refresh). */
+  mealTypes?: readonly string[];
 };
 
 function toExtendedTargets(nutritionTargets: NutritionTargets | null): ExtendedNutritionTargets {
@@ -124,10 +126,17 @@ export function expandDashboard(
     plants: plants.progress,
     hydration: hydration.progress,
   };
+  const mergedMealTypes = [
+    ...new Set(
+      [...(api.today.mealTypes ?? []), ...(options?.mealTypes ?? [])].map((type) =>
+        type.trim().toLowerCase(),
+      ),
+    ),
+  ].filter(Boolean);
   const coachContext = {
     hour: options?.hour ?? new Date().getHours(),
     logDate: api.date,
-    mealTypes: api.today.mealTypes ?? [],
+    mealTypes: mergedMealTypes,
     mealsCount: totals.mealsCount,
   };
   const hasActivity =
@@ -173,5 +182,72 @@ export function expandDashboard(
     weeklyTrends: api.weeklyTrends,
     lifeplateInsight: api.lifeplateInsight,
     comparison,
+  };
+}
+
+/** Recompute coaching copy when local meal types are ahead of the API payload. */
+export function refreshDashboardCoaching(
+  view: NutritionDashboardView,
+  nutritionTargets: NutritionTargets | null,
+  mealTypes: readonly string[],
+  mealsCount: number,
+  options?: ExpandDashboardOptions,
+): Pick<NutritionDashboardView, "coachSummary" | "plateMessage" | "recommendations"> {
+  const targets = toExtendedTargets(nutritionTargets);
+  const mergedMealTypes = [
+    ...new Set(mealTypes.map((type) => type.trim().toLowerCase()).filter(Boolean)),
+  ];
+  const coachContext = {
+    hour: options?.hour ?? new Date().getHours(),
+    logDate: view.date,
+    mealTypes: mergedMealTypes,
+    mealsCount,
+  };
+  const { essentials } = view;
+  const totals = {
+    calories: 0,
+    protein: essentials.protein.consumed,
+    carbs: essentials.carbs.consumed,
+    fat: view.energyBalance.fats.grams,
+    fibre: essentials.fibre.consumed,
+    mealsCount,
+  };
+  const classification: FoodClassification = {
+    plants: essentials.plants.sources ?? [],
+    plantServes: essentials.plants.consumed,
+    protein: essentials.protein.sources ?? [],
+    fibre: essentials.fibre.sources ?? [],
+    carbs: essentials.carbs.sources ?? [],
+    fermented: [],
+    prebiotic: [],
+    omega3: [],
+    processedMealCount: 0,
+  };
+  const gaps = computeNutritionGaps(
+    totals,
+    targets,
+    classification,
+    essentials.hydration.consumed,
+  );
+  const pillarProgress = {
+    protein: essentials.protein.progress,
+    fibre: essentials.fibre.progress,
+    plants: essentials.plants.progress,
+    hydration: essentials.hydration.progress,
+  };
+  const hasActivity =
+    mealsCount > 0 ||
+    totals.protein > 0 ||
+    totals.fibre > 0 ||
+    essentials.hydration.consumed > 0;
+
+  return {
+    coachSummary: buildCoachSummary(gaps, view.score, pillarProgress, coachContext),
+    plateMessage: buildPlateMessage(
+      [essentials.protein, essentials.fibre, essentials.plants, essentials.carbs],
+      hasActivity,
+      coachContext,
+    ),
+    recommendations: buildFoodRecommendations(gaps, coachContext),
   };
 }

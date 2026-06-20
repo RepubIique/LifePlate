@@ -6,7 +6,12 @@ export function scoreStatusHeadline(status: ScoreStatus): string {
   return "Room to grow";
 }
 
-export function scoreStatusSubline(status: ScoreStatus): string {
+export function scoreStatusSubline(status: ScoreStatus, afterDinner = false): string {
+  if (afterDinner) {
+    if (status === "excellent") return "Strong day — tomorrow is a fresh plate";
+    if (status === "good") return "Dinner's in — small gaps can wait until tomorrow";
+    return "You showed up today — focus on tomorrow's plate";
+  }
   if (status === "excellent") return "You're hitting your nutrition targets";
   if (status === "good") return "A few small gaps left today";
   return "Tap a section below to see what helps";
@@ -19,10 +24,10 @@ export function scoreStatusAsPillarStatus(status: ScoreStatus): PillarStatus {
   return "low";
 }
 
-export function pillarStatusHeadline(status: PillarStatus): string {
+export function pillarStatusHeadline(status: PillarStatus, afterDinner = false): string {
   if (status === "good") return "On track";
-  if (status === "moderate") return "Getting there";
-  return "Needs attention";
+  if (status === "moderate") return afterDinner ? "Fine for today" : "Getting there";
+  return afterDinner ? "For tomorrow" : "Needs attention";
 }
 
 /** Fallback when scoreStatus is unavailable — mirrors score bands on plate fill. */

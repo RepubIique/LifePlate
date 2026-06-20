@@ -11,9 +11,10 @@ import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   status: ScoreStatus;
+  afterDinner?: boolean;
 };
 
-export function PlateStatusHeader({ status }: Props) {
+export function PlateStatusHeader({ status, afterDinner = false }: Props) {
   const pillarStatus = scoreStatusAsPillarStatus(status);
   const color = pillarColor(pillarStatus);
 
@@ -25,7 +26,7 @@ export function PlateStatusHeader({ status }: Props) {
           {scoreStatusHeadline(status)}
         </Text>
         <Text variant="bodySmall" style={styles.headerSubline} numberOfLines={2}>
-          {scoreStatusSubline(status)}
+          {scoreStatusSubline(status, afterDinner)}
         </Text>
       </View>
     </View>

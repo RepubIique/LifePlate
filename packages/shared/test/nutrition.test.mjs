@@ -6,6 +6,7 @@ import {
   buildDayComparison,
   buildFoodRecommendations,
   buildLifeplateInsightTemplate,
+  buildPlateMessage,
   buildPeriodSnapshot,
   buildWeeklyTrends,
   classifyFoods,
@@ -189,6 +190,52 @@ test("buildCoachSummary switches to tomorrow after dinner is logged", () => {
   );
   assert.match(summary, /tomorrow|wrapped up|wind down|call it a win/i);
   assert.doesNotMatch(summary, /would make today excellent/i);
+});
+
+test("buildPlateMessage focuses on tomorrow once dinner is logged, even before 7pm", () => {
+  const lowPillars = [
+    { label: "Protein", status: "moderate", progress: 0.55 },
+    { label: "Fibre", status: "low", progress: 0.3 },
+    { label: "Plants", status: "low", progress: 0.2 },
+    { label: "Carbs", status: "low", progress: 0.4 },
+  ];
+  const message = buildPlateMessage(lowPillars, true, {
+    hour: 18,
+    logDate: "2026-06-20",
+    mealTypes: ["breakfast", "lunch", "dinner"],
+    mealsCount: 3,
+  });
+  assert.match(message, /tomorrow/i);
+  assert.doesNotMatch(message, /later today/i);
+});
+
+test("buildCoachSummary after early dinner avoids eat-more-today nudges", () => {
+  const gaps = computeNutritionGaps(
+    {
+      calories: 1400,
+      protein: 40,
+      carbs: 120,
+      fat: 45,
+      fibre: 10,
+      mealsCount: 3,
+    },
+    targets,
+    classifyFoods(["rice", "chicken"], ["Dinner"]),
+    4,
+  );
+  const summary = buildCoachSummary(
+    gaps,
+    55,
+    { protein: 0.5, fibre: 0.35, plants: 0.2, hydration: 0.5 },
+    {
+      hour: 18,
+      logDate: "2026-06-20",
+      mealTypes: ["breakfast", "lunch", "dinner"],
+      mealsCount: 3,
+    },
+  );
+  assert.match(summary, /tomorrow|wrapped up|wind down|call it a win/i);
+  assert.doesNotMatch(summary, /make today stronger/i);
 });
 
 test("classifyFoods detects omega-3 foods", () => {
