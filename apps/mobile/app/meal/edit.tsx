@@ -12,13 +12,13 @@ import type { MealDetail, MealListItem, MealType } from "@lifeplate/shared";
 import {
   buildMealPortionMeta,
   isMealType,
-  MAX_MEAL_NOTES_LENGTH,
   MAX_MEAL_REANALYZES,
   mealListItemToMacros,
   resolveMealPortionState,
   scaleMealForPortions,
   type MealMacroTotals,
 } from "@lifeplate/shared";
+import { MealNotesField } from "@/components/meal/MealNotesField";
 import { MealPhotoAttachSection } from "@/components/meal/MealPhotoAttachSection";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { dateKeyFromIso } from "@lifeplate/shared";
@@ -486,27 +486,7 @@ export default function EditMealScreen() {
 
         <MealTypePicker value={mealType} onChange={setMealType} />
 
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Journal notes
-        </Text>
-        <Text variant="bodySmall" style={styles.notesHint}>
-          Who you ate with, where you went, or a quick recipe note.
-        </Text>
-        <TextInput
-          label="Notes"
-          value={notes}
-          onChangeText={(text) => setNotes(text.slice(0, MAX_MEAL_NOTES_LENGTH))}
-          mode="outlined"
-          multiline
-          numberOfLines={4}
-          placeholder="e.g. Dinner with Sam at Hawker Centre. Mum's chicken curry — coconut milk, no potatoes."
-          style={styles.notesInput}
-        />
-        {notes.length > MAX_MEAL_NOTES_LENGTH - 50 ? (
-          <Text variant="bodySmall" style={styles.notesCount}>
-            {notes.length}/{MAX_MEAL_NOTES_LENGTH}
-          </Text>
-        ) : null}
+        <MealNotesField value={notes} onChange={setNotes} />
 
         <SharedMealPortionsCard
           variant="edit"
@@ -672,9 +652,6 @@ const styles = StyleSheet.create({
   imagePlaceholder: { width: "100%", height: 220, borderRadius: premium.imageRadius },
   cardWrap: { paddingHorizontal: spacing.lg },
   sectionTitle: { marginTop: spacing.md, marginBottom: spacing.xs },
-  notesHint: { opacity: 0.65, marginBottom: spacing.sm, lineHeight: 18 },
-  notesInput: { minHeight: 112 },
-  notesCount: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   reanalyzeBlock: { gap: spacing.sm, marginTop: spacing.sm },
   reanalyzeHint: { opacity: 0.7, lineHeight: 18 },

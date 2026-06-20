@@ -2,6 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
+import { FormattedNotesText } from "@/components/meal/FormattedNotesText";
 import { MealImage } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
 import {
@@ -137,9 +138,11 @@ export function TimelineMealCard({
               </Text>
 
               {meal.notes?.trim() ? (
-                <Text variant="bodySmall" style={styles.notes} numberOfLines={2}>
-                  {meal.notes.trim()}
-                </Text>
+                <FormattedNotesText
+                  value={meal.notes}
+                  style={styles.notes}
+                  numberOfLines={2}
+                />
               ) : null}
 
               {meal.calories != null || meal.protein != null ? (
