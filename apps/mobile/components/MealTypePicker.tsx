@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { MEAL_TYPE_OPTIONS, type MealType } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type MealTypePickerProps = {
   value: MealType;
@@ -86,10 +86,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
-  textSelected: { color: "#1B4332" },
+  textSelected: { color: semantic.primary },
   compactRoot: { gap: spacing.xs },
   compactLabel: {
     opacity: 0.55,
@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFBFA",
   },
   compactChipSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
   compactChipText: { color: "#495057" },
-  compactChipTextSelected: { color: "#1B4332" },
+  compactChipTextSelected: { color: semantic.primary },
 });

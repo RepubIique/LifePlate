@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { authFriendlyErrorMessage } from "@/lib/apiErrors";
 import { supabase } from "@/lib/supabase";
 import { premium } from "@/src/theme/premium";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function SignInScreen() {
   const { signInWithEmail, signUpWithEmail, signInWithProvider } = useAuth();
@@ -163,6 +163,6 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   divider: { marginVertical: spacing.sm },
   hint: { opacity: 0.55, textAlign: "center" },
-  info: { color: "#1B4332", marginTop: spacing.xs, lineHeight: 20 },
+  info: { color: semantic.primary, marginTop: spacing.xs, lineHeight: 20 },
   error: { color: premium.danger, marginTop: spacing.xs },
 });

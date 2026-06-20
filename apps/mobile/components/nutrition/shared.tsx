@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { PillarStatus } from "@lifeplate/shared";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export function statusLabel(status: PillarStatus | "on_track" | "moderate" | "needs_improvement"): string {
   if (status === "good" || status === "on_track") return "Good";
@@ -77,13 +77,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
   },
   chipText: {
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: 0.1,
   },
   empty: { opacity: 0.55, fontStyle: "italic" },

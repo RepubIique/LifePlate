@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Share, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type FriendCodeCardProps = {
   friendCode: string;
@@ -34,7 +34,7 @@ export function FriendCodeCard({
     <PremiumCard style={styles.card}>
       <View style={styles.sectionHeader}>
         <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name="qrcode" size={20} color="#40916C" />
+          <MaterialCommunityIcons name="qrcode" size={20} color={semantic.primary} />
         </View>
         <View style={styles.sectionCopy}>
           <Text variant="titleMedium" style={styles.title}>
@@ -64,7 +64,7 @@ export function FriendCodeCard({
 
       <View style={styles.sectionHeader}>
         <View style={[styles.iconWrap, styles.addIconWrap]}>
-          <MaterialCommunityIcons name="account-plus-outline" size={20} color="#1B4332" />
+          <MaterialCommunityIcons name="account-plus-outline" size={20} color={semantic.primary} />
         </View>
         <View style={styles.sectionCopy}>
           <Text variant="titleMedium" style={styles.title}>
@@ -116,20 +116,20 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
-  addIconWrap: { backgroundColor: "#EEF2F0" },
+  addIconWrap: { backgroundColor: ui.trackBackground },
   sectionCopy: { flex: 1, gap: 2 },
-  title: { color: "#1B4332", letterSpacing: 0.1 },
+  title: { color: semantic.primary, letterSpacing: 0.1 },
   subtitle: { opacity: 0.6, lineHeight: 18 },
   codePill: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.sm,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     borderRadius: 14,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
   },
   code: {
     letterSpacing: 5,
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
   divider: {
     height: 1,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
   },
   addRow: {
     flexDirection: "row",

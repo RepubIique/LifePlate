@@ -5,7 +5,7 @@ import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type FriendsListProps = {
   friends: FriendSummary[];
@@ -52,7 +52,7 @@ function FriendRow({
           </Text>
           {streak > 0 ? (
             <View style={styles.streakBadge}>
-              <MaterialCommunityIcons name="fire" size={13} color="#E67E22" />
+              <MaterialCommunityIcons name="fire" size={13} color={ui.iconStreak} />
               <Text variant="labelSmall" style={styles.streakText}>
                 {streak} day{streak === 1 ? "" : "s"} together
               </Text>
@@ -63,7 +63,7 @@ function FriendRow({
             </Text>
           )}
         </View>
-        <MaterialCommunityIcons name="chevron-right" size={22} color="#B2BEC3" />
+        <MaterialCommunityIcons name="chevron-right" size={22} color={semantic.textMuted} />
       </Pressable>
       {showDivider ? <View style={styles.divider} /> : null}
     </>
@@ -75,7 +75,7 @@ export function FriendsList({ friends, onRemove }: FriendsListProps) {
     return (
       <PremiumCard style={styles.empty} noBlur>
         <View style={styles.emptyIconWrap}>
-          <MaterialCommunityIcons name="account-group-outline" size={28} color="#40916C" />
+          <MaterialCommunityIcons name="account-group-outline" size={28} color={semantic.primary} />
         </View>
         <Text variant="titleMedium" style={styles.emptyTitle}>
           No friends yet
@@ -114,35 +114,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     borderRadius: 12,
   },
-  rowPressed: { backgroundColor: "#F8FBF9" },
+  rowPressed: { backgroundColor: ui.cardBackground },
   rowCopy: { flex: 1, gap: 2 },
-  name: { color: "#1B4332" },
+  name: { color: semantic.primary },
   streakBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  streakText: { color: "#E67E22", fontWeight: "600" },
+  streakText: { color: ui.iconStreak, fontWeight: "600" },
   hint: { opacity: 0.45 },
   divider: {
     height: 1,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     marginLeft: 56,
   },
   empty: {
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     paddingVertical: spacing.lg,
   },
   emptyIconWrap: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyTitle: { color: "#1B4332" },
+  emptyTitle: { color: semantic.primary },
   emptyText: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

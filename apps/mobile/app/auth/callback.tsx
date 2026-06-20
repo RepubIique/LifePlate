@@ -5,7 +5,7 @@ import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { authFriendlyErrorMessage } from "@/lib/apiErrors";
 import { createSessionFromUrl } from "@/lib/authRedirect";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function AuthCallbackScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export default function AuthCallbackScreen() {
         </>
       ) : (
         <>
-          <ActivityIndicator size="large" color="#40916C" />
+          <ActivityIndicator size="large" color={semantic.primary} />
           <Text variant="bodyMedium" style={styles.body}>
             Finishing sign-in…
           </Text>
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   logo: { width: 72, height: 72, marginBottom: spacing.sm },
-  title: { color: "#1B4332", textAlign: "center" },
+  title: { color: semantic.primary, textAlign: "center" },
   body: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

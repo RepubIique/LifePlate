@@ -10,7 +10,7 @@ import {
   formatMealTypeLabel,
   mealTypeIcon,
 } from "@/lib/mealUtils";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meal: MealListSummary;
@@ -59,7 +59,7 @@ export function TimelineMealCard({
             <View style={styles.body}>
               <View style={styles.metaRow}>
                 <View style={styles.typeBadge}>
-                  <MaterialCommunityIcons name={icon} size={14} color="#1B4332" />
+                  <MaterialCommunityIcons name={icon} size={14} color={semantic.primary} />
                   <Text variant="labelMedium" style={styles.typeText}>
                     {typeLabel}
                   </Text>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     width: THUMB,
     height: THUMB,
     borderRadius: 14,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
   },
   typeText: {
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: 0.1,
   },
   time: {
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   sharedBy: {
     opacity: 0.55,
-    color: "#40916C",
+    color: semantic.primary,
     fontSize: 12,
   },
   chips: {
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: "#E2E8E4",
+    borderLeftColor: ui.borderSubtle,
   },
   deleteBtnPressed: {
     backgroundColor: "#FDF2F2",

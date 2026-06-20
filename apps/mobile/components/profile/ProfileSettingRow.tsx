@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -15,7 +15,7 @@ export function ProfileSettingRow({ icon, title, subtitle, trailing }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.iconWrap}>
-        <MaterialCommunityIcons name={icon} size={20} color="#40916C" />
+        <MaterialCommunityIcons name={icon} size={20} color={semantic.primary} />
       </View>
       <View style={styles.copy}>
         <Text variant="titleMedium" style={styles.title}>
@@ -42,12 +42,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#F0F7F4",
+    backgroundColor: tints.tealLight,
     alignItems: "center",
     justifyContent: "center",
   },
   copy: { flex: 1, gap: 2 },
-  title: { color: "#1B4332", letterSpacing: 0.1 },
+  title: { color: semantic.primary, letterSpacing: 0.1 },
   subtitle: { opacity: 0.65, lineHeight: 18 },
   trailing: { alignItems: "center", justifyContent: "center" },
 });

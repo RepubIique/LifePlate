@@ -5,7 +5,7 @@ import { IconButton, Text } from "react-native-paper";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type EditField = "name" | "goal" | null;
 
@@ -67,9 +67,9 @@ export function ProfileHeroCard({
         <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
           <Defs>
             <LinearGradient id="profileHeroGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#F4FAF7" />
-              <Stop offset="0.45" stopColor="#E6F4EC" />
-              <Stop offset="1" stopColor="#F0F7F4" />
+              <Stop offset="0" stopColor={tints.tealLight} />
+              <Stop offset="0.45" stopColor={ui.selectedBackground} />
+              <Stop offset="1" stopColor={palette.cream} />
             </LinearGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#profileHeroGrad)" />
@@ -96,7 +96,7 @@ export function ProfileHeroCard({
                 onSubmitEditing={finishEditing}
                 returnKeyType="done"
                 placeholder="Your name"
-                placeholderTextColor="#95A5A6"
+                placeholderTextColor={semantic.textMuted}
                 style={[styles.nameInput, styles.heroName]}
                 accessibilityLabel="Edit name"
               />
@@ -110,7 +110,7 @@ export function ProfileHeroCard({
                 <Text variant="headlineSmall" style={styles.heroName}>
                   {displayName}
                 </Text>
-                <MaterialCommunityIcons name="pencil-outline" size={14} color="#40916C" />
+                <MaterialCommunityIcons name="pencil-outline" size={14} color={semantic.primary} />
               </Pressable>
             )}
 
@@ -129,7 +129,7 @@ export function ProfileHeroCard({
                     onSubmitEditing={finishEditing}
                     returnKeyType="done"
                     placeholder="e.g. Increase protein"
-                    placeholderTextColor="#7CB892"
+                    placeholderTextColor={palette.sage}
                     style={styles.goalInput}
                     accessibilityLabel="Edit goal"
                   />
@@ -153,7 +153,7 @@ export function ProfileHeroCard({
                   <MaterialCommunityIcons
                     name={displayGoal ? "pencil-outline" : "plus"}
                     size={14}
-                    color={displayGoal ? "#40916C" : "#7CB892"}
+                    color={displayGoal ? semantic.primary : palette.sage}
                   />
                 </Pressable>
               )}
@@ -187,7 +187,7 @@ export function ProfileHeroCard({
               <IconButton
                 icon="share-variant"
                 size={18}
-                iconColor="#40916C"
+                iconColor={semantic.primary}
                 disabled={!friendCode}
                 onPress={onShareFriendCode}
               />
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   heroName: {
     letterSpacing: 0.15,
-    color: "#1B4332",
+    color: semantic.primary,
     textAlign: "center",
     fontWeight: "600",
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#B7E4C7",
+    borderColor: palette.sage,
     backgroundColor: "rgba(255, 255, 255, 0.85)",
   },
   heroEmail: {
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.72)",
     borderWidth: 1,
-    borderColor: "#B7E4C7",
+    borderColor: palette.sage,
   },
   goalChipEmpty: {
     flexDirection: "row",
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.45)",
     borderWidth: 1,
-    borderColor: "#B7E4C7",
+    borderColor: palette.sage,
     borderStyle: "dashed",
   },
   goalChipEditing: {
@@ -288,31 +288,31 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
-    borderColor: "#40916C",
+    borderColor: semantic.primary,
   },
   goalInput: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
     fontSize: 13,
     textAlign: "center",
     padding: 0,
   },
   goalChipText: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
   goalChipEmptyText: {
-    color: "#40916C",
+    color: semantic.primary,
     fontWeight: "600",
   },
   plusChip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#1B4332",
+    backgroundColor: semantic.primary,
   },
   plusChipText: {
-    color: "#FFFFFF",
+    color: palette.white,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   friendCode: {
     letterSpacing: 3,
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "700",
   },
   shareButton: {

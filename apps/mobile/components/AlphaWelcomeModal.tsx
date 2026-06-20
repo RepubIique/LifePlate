@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PremiumCard } from "@/components/PremiumCard";
 import { useAuth } from "@/context/AuthContext";
 import { getHasSeenAlphaWelcome, setHasSeenAlphaWelcome } from "@/lib/alphaWelcomePrefs";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 function shouldShowWelcome(segments: string[], hasSession: boolean) {
   if (!hasSession) return false;
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: 0.2,
-    color: "#1B4332",
+    color: semantic.primary,
     textAlign: "center",
   },
   body: {

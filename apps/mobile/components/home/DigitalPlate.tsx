@@ -9,7 +9,7 @@ import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
 import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const PLATE_SIZE = 196;
 const STROKE = 16;
@@ -63,7 +63,7 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cy={cy}
         r={outerR}
         fill="#FFFFFF"
-        stroke="#C5D0D8"
+        stroke={palette.slateBlue}
         strokeWidth={2.5}
       />
       <Circle
@@ -71,15 +71,15 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cy={cy}
         r={rimR}
         fill="none"
-        stroke="#DDE5EA"
+        stroke={ui.borderSubtle}
         strokeWidth={1.5}
       />
       <Circle
         cx={cx}
         cy={cy}
         r={wellR}
-        fill="#F3F7F5"
-        stroke="#E2E8E4"
+        fill={ui.cardBackground}
+        stroke={ui.borderSubtle}
         strokeWidth={1}
       />
       <Ellipse
@@ -161,7 +161,7 @@ function QuadrantArc({
         cx={cx}
         cy={cy}
         r={radius}
-        stroke="#EEF2F0"
+        stroke={ui.trackBackground}
         strokeWidth={STROKE}
         fill="none"
         strokeDasharray={dash}
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   completeness: {
     fontWeight: "700",
     letterSpacing: -0.5,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   centerLabel: {
     opacity: 0.65,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   legendItemPressed: {
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   legendDot: {
     width: 8,

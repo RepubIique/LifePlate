@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { updateGoal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function GoalScreen() {
   const { profile, profileLoading, patchProfile, signOut } = useAuth();
@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   goalCardSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
-  goalTextSelected: { color: "#1B4332" },
+  goalTextSelected: { color: semantic.primary },
   cta: { marginTop: spacing.lg },
   signOut: { alignSelf: "flex-start" },
 });

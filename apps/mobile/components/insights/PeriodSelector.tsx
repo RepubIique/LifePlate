@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { ComparisonPeriod } from "@lifeplate/shared";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   value: ComparisonPeriod;
@@ -59,7 +59,7 @@ export function PeriodSelector({ value, onChange }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     borderRadius: 12,
     padding: 4,
     gap: 4,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   optionTextActive: {
     opacity: 1,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   optionTextDisabled: {
     opacity: 0.35,

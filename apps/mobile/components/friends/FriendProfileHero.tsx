@@ -4,7 +4,7 @@ import { Text } from "react-native-paper";
 import type { FriendProfileSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   profile: FriendProfileSummary;
@@ -35,7 +35,7 @@ export function FriendProfileHero({ profile }: Props) {
             <MaterialCommunityIcons
               name={profile.loggedToday ? "check-circle-outline" : "clock-outline"}
               size={14}
-              color={profile.loggedToday ? "#40916C" : "#636E72"}
+              color={profile.loggedToday ? semantic.primary : semantic.textMuted}
             />
             <Text
               variant="labelMedium"
@@ -47,7 +47,7 @@ export function FriendProfileHero({ profile }: Props) {
 
           {profile.togetherStreak > 0 ? (
             <View style={styles.streakChip}>
-              <MaterialCommunityIcons name="fire" size={14} color="#E67E22" />
+              <MaterialCommunityIcons name="fire" size={14} color={ui.iconStreak} />
               <Text variant="labelMedium" style={styles.streakText}>
                 {profile.togetherStreak} day{profile.togetherStreak === 1 ? "" : "s"} together
               </Text>
@@ -61,14 +61,14 @@ export function FriendProfileHero({ profile }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   content: {
     alignItems: "center",
     gap: spacing.sm,
   },
   name: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
     letterSpacing: 0.15,
     textAlign: "center",
@@ -89,17 +89,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusChipActive: {
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   statusChipIdle: {
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
   },
   statusActiveText: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
   statusIdleText: {
-    color: "#636E72",
+    color: semantic.textMuted,
     fontWeight: "600",
   },
   streakChip: {
@@ -109,10 +109,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#FFF3E0",
+    backgroundColor: tints.orangeLight,
   },
   streakText: {
-    color: "#E67E22",
+    color: ui.iconStreak,
     fontWeight: "600",
   },
 });

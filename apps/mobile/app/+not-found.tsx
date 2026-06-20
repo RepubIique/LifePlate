@@ -2,7 +2,7 @@ import { router, Stack } from "expo-router";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { Screen } from "@/components/Screen";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function NotFoundScreen() {
   return (
@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   logo: { width: 72, height: 72 },
-  title: { color: "#1B4332", textAlign: "center" },
+  title: { color: semantic.primary, textAlign: "center" },
   subtitle: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

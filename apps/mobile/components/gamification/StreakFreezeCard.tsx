@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   available: boolean;
@@ -45,7 +45,7 @@ export function StreakFreezeCard({ available, isPaid, loading, onUse }: Props) {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  title: { color: "#1B4332" },
+  title: { color: semantic.primary },
   subtitle: { opacity: 0.65, lineHeight: 20 },
   button: { alignSelf: "flex-start", marginTop: spacing.xs },
 });

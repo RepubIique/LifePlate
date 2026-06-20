@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { clampMealPortions } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const TOTAL_PORTION_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -143,10 +143,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chipSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
-  chipTextSelected: { color: "#1B4332" },
+  chipTextSelected: { color: semantic.primary },
   hint: { opacity: 0.65, marginTop: spacing.sm, lineHeight: 18 },
   embedded: { gap: spacing.xs },
   sectionLabelFirst: { marginTop: 0 },

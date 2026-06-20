@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   mealsLogged: number;
@@ -24,7 +24,7 @@ export function ProfileStatsRow({ mealsLogged, currentStreak, longestStreak }: P
           {index > 0 ? <View style={styles.divider} /> : null}
           <View style={styles.stat}>
             <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={stat.icon} size={18} color="#40916C" />
+              <MaterialCommunityIcons name={stat.icon} size={18} color={semantic.primary} />
             </View>
             <Text variant="headlineSmall" style={styles.value}>
               {stat.value}
@@ -59,14 +59,14 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     marginVertical: spacing.xs,
   },
   iconWrap: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F0F7F4",
+    backgroundColor: tints.tealLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   value: {
     fontWeight: "700",
     letterSpacing: -0.3,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   label: {
     opacity: 0.55,

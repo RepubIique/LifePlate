@@ -21,7 +21,7 @@ import {
   removeFriend,
 } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function FriendProfileScreen() {
   const { id, name: nameParam } = useLocalSearchParams<{ id: string; name?: string }>();
@@ -211,7 +211,7 @@ export default function FriendProfileScreen() {
 
           <Button
             mode="text"
-            textColor="#c0392b"
+            textColor={semantic.danger}
             onPress={confirmRemoveFriend}
             style={styles.removeBtn}
           >

@@ -36,7 +36,7 @@ import { getCachedAvatarUri, saveAvatarFromLocalUri } from "@/lib/avatarCache";
 import { authFriendlyErrorMessage, friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { prepareProfileImage } from "@/lib/imagePrep";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 import { useGamificationStatsInput } from "@/lib/useGamificationStatsInput";
 
 function applyProfileToForm(
@@ -545,7 +545,7 @@ export default function ProfileScreen() {
           <Button
             mode="text"
             icon="logout"
-            textColor="#c0392b"
+            textColor={semantic.danger}
             onPress={confirmSignOut}
             contentStyle={styles.footerButtonContent}
           >
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   footerDivider: {
     height: 1,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     marginHorizontal: spacing.sm,
   },
 });

@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { FriendProfileSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   profile: FriendProfileSummary;
@@ -21,7 +21,7 @@ function ShareStat({
   return (
     <View style={styles.stat}>
       <View style={styles.iconWrap}>
-        <MaterialCommunityIcons name={icon} size={18} color="#40916C" />
+        <MaterialCommunityIcons name={icon} size={18} color={semantic.primary} />
       </View>
       <Text variant="headlineSmall" style={styles.value}>
         {value}
@@ -76,9 +76,9 @@ export function FriendSharingCard({ profile }: Props) {
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
-  title: { color: "#1B4332", letterSpacing: 0.1 },
+  title: { color: semantic.primary, letterSpacing: 0.1 },
   subtitle: { opacity: 0.6, lineHeight: 18 },
   empty: { opacity: 0.65, lineHeight: 20 },
   row: {
@@ -96,13 +96,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   value: {
     fontWeight: "700",
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: -0.3,
   },
   label: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     marginVertical: spacing.sm,
   },
 });

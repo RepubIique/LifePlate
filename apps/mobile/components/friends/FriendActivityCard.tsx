@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { FriendProfileSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   profile: FriendProfileSummary;
@@ -25,7 +25,7 @@ function StatBlock({
       <MaterialCommunityIcons
         name={icon}
         size={20}
-        color={accent ? "#E67E22" : "#40916C"}
+        color={accent ? ui.iconStreak : semantic.primary}
       />
       <Text variant="headlineSmall" style={styles.value}>
         {value}
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: "#FFFFFF",
   },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.6, lineHeight: 18 },
   row: {
     flexDirection: "row",
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontWeight: "700",
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: -0.3,
   },
   label: {

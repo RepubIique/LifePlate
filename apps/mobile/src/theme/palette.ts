@@ -56,3 +56,16 @@ export const semantic = {
   dangerBackground: tints.coralLight,
   streakBackground: tints.orangeLight,
 } as const;
+
+/** Common UI surfaces — prefer these over raw hex in components. */
+export const ui = {
+  cardBackground: tints.tealLight,
+  selectedBackground: tints.sageLight,
+  pressedBackground: tints.tealLight,
+  trackBackground: tints.sageLight,
+  borderSubtle: tints.sageLight,
+  iconPrimary: semantic.primary,
+  iconMuted: semantic.textMuted,
+  iconStreak: palette.terracotta,
+  disabled: palette.slateBlue,
+} as const;

@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
 import { Pressable, StyleSheet, View } from "react-native";
 
 export type RailPosition = "first" | "middle" | "last" | "only";
@@ -50,7 +51,7 @@ function RailReorderButton({
       <MaterialCommunityIcons
         name={icon}
         size={16}
-        color={disabled ? "#D5DBD8" : "#40916C"}
+        color={disabled ? ui.disabled : semantic.primary}
       />
     </Pressable>
   );
@@ -142,15 +143,15 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     width: 2,
-    backgroundColor: "#E2E8E4",
+    backgroundColor: ui.borderSubtle,
     borderRadius: 1,
     minHeight: 8,
   },
   lineFilled: {
-    backgroundColor: "#B7E4C7",
+    backgroundColor: palette.sage,
   },
   lineSuggested: {
-    backgroundColor: "#95D5B2",
+    backgroundColor: palette.teal,
   },
   lineGap: {
     flex: 1,
@@ -160,21 +161,21 @@ const styles = StyleSheet.create({
     width: DOT,
     height: DOT,
     borderRadius: DOT / 2,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.white,
     borderWidth: 2,
-    borderColor: "#C8D6CF",
+    borderColor: ui.borderSubtle,
     marginVertical: 2,
   },
   dotFilled: {
-    borderColor: "#40916C",
-    backgroundColor: "#D8F3DC",
+    borderColor: semantic.primary,
+    backgroundColor: ui.selectedBackground,
   },
   dotSuggested: {
     width: DOT + 4,
     height: DOT + 4,
     borderRadius: (DOT + 4) / 2,
-    borderColor: "#40916C",
-    backgroundColor: "#40916C",
+    borderColor: semantic.primary,
+    backgroundColor: semantic.primary,
     marginVertical: 0,
   },
   reorderButton: {
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   reorderButtonPressed: {
-    backgroundColor: "#E8F5E9",
+    backgroundColor: ui.selectedBackground,
   },
   reorderButtonDisabled: {
     opacity: 0.4,

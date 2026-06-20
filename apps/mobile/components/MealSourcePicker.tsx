@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { SegmentedButtons, Text } from "react-native-paper";
 import { MEAL_SOURCE_OPTIONS, type MealSource } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type MealSourcePickerProps = {
   value: MealSource | null;
@@ -115,10 +115,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
-  textSelected: { color: "#1B4332" },
+  textSelected: { color: semantic.primary },
   compactRoot: { gap: spacing.xs },
   compactLabel: {
     opacity: 0.55,
@@ -137,9 +137,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   compactOptionSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
   compactText: { opacity: 0.7 },
-  compactTextSelected: { color: "#1B4332" },
+  compactTextSelected: { color: semantic.primary },
 });

@@ -11,14 +11,14 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { G, Path, Rect } from "react-native-svg";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, tints, spacing } from "@/src/theme/lifeplate";
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
 const WATER_DEEP = PILLAR_COLORS.hydration;
-const WATER_MID = "#6BAEF2";
-const WATER_LIGHT = "#A8D8FF";
-const GLASS_FILLED = "#6BAEF2";
+const WATER_MID = "#7ABFB7";
+const WATER_LIGHT = "#B5DFDB";
+const GLASS_FILLED = PILLAR_COLORS.hydration;
 const GLASS_EMPTY = "rgba(255, 255, 255, 0.92)";
 
 type Props = {
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 132,
     overflow: "hidden",
-    backgroundColor: "#F8FBFF",
+    backgroundColor: tints.tealLight,
   },
   water: {
     position: "absolute",
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
   glassFilled: {
     backgroundColor: GLASS_FILLED,
     borderWidth: 1,
-    borderColor: "#4A90D9",
+    borderColor: palette.slateBlue,
   },
   glassEmpty: {
     backgroundColor: GLASS_EMPTY,
     borderWidth: 1.5,
-    borderColor: "#C5D4E0",
+    borderColor: palette.teal,
   },
 });

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { friendMentionLabel } from "@/lib/mealNotesFormat";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 import { premium } from "@/src/theme/premium";
 
 type Props = {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   name: {
-    color: "#1B4332",
+    color: semantic.primary,
   },
   empty: {
     opacity: 0.65,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   link: {
-    color: "#1B4332",
+    color: semantic.primary,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },

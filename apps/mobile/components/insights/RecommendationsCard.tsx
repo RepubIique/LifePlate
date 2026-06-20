@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { NutritionIconKey, NutritionDashboardResponse } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   recommendations: NutritionDashboardResponse["recommendations"];
@@ -46,7 +46,7 @@ export function RecommendationsCard({ recommendations }: Props) {
               <MaterialCommunityIcons
                 name={ICON_MAP[item.icon] ?? "food"}
                 size={18}
-                color="#40916C"
+                color={semantic.primary}
               />
             </View>
             <Text variant="bodyLarge" style={styles.itemName}>
@@ -79,7 +79,7 @@ export function RecommendationsCard({ recommendations }: Props) {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.55, lineHeight: 18 },
   items: { gap: spacing.xs, marginTop: spacing.xs },
   item: {
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E2E8E4",
+    borderTopColor: ui.borderSubtle,
   },
   impactLabel: {
     opacity: 0.5,
@@ -116,5 +116,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   impactName: { opacity: 0.75, flex: 1 },
-  impactDetail: { color: "#40916C", fontWeight: "600" },
+  impactDetail: { color: semantic.primary, fontWeight: "600" },
 });

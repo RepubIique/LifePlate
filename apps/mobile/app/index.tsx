@@ -4,7 +4,7 @@ import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { isOnboardingComplete } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function Index() {
   const { session, profile, loading, profileLoading, loadProfile, signOut } = useAuth();
@@ -18,7 +18,7 @@ export default function Index() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <ActivityIndicator size="large" color="#40916C" />
+        <ActivityIndicator size="large" color={semantic.primary} />
         <Text variant="bodySmall" style={styles.bootHint}>
           Loading your plate…
         </Text>
@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
   },
   logo: { width: 88, height: 88 },
   bootHint: { opacity: 0.5 },
-  errorTitle: { color: "#1B4332", textAlign: "center" },
+  errorTitle: { color: semantic.primary, textAlign: "center" },
   errorBody: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

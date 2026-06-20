@@ -8,7 +8,7 @@ import { pillarColorForLabel, pillarKeyFromLabel } from "@/lib/pillarTheme";
 import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
 import { buildMacroSources } from "@/lib/macroSources";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 import { BulletList, DetailBlock, FoodChips } from "./shared";
 import { PlantSourcesEditor } from "./PlantSourcesEditor";
 import type { MealListItem } from "@lifeplate/shared";
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   statusHeadline: { fontWeight: "700", letterSpacing: -0.3 },
   metricDetail: { opacity: 0.55 },
   tipBox: {
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     borderRadius: 12,
     padding: spacing.sm,
   },

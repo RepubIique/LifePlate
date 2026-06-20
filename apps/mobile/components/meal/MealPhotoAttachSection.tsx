@@ -3,7 +3,7 @@ import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper"
 import { MealImagePlaceholder } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
 import { premium } from "@/src/theme/premium";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   mealType?: string | null;
@@ -44,7 +44,7 @@ export function MealPhotoAttachSection({
               icon="camera"
               mode="contained"
               containerColor="rgba(255,255,255,0.92)"
-              iconColor="#1B4332"
+              iconColor={semantic.primary}
               size={18}
               onPress={onPickCamera}
               disabled={attaching}
@@ -54,7 +54,7 @@ export function MealPhotoAttachSection({
               icon="image"
               mode="contained"
               containerColor="rgba(255,255,255,0.92)"
-              iconColor="#1B4332"
+              iconColor={semantic.primary}
               size={18}
               onPress={onPickLibrary}
               disabled={attaching}

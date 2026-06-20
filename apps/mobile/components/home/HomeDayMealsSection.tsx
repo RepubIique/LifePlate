@@ -8,7 +8,7 @@ import { SuggestedMealSlotCard } from "@/components/home/SuggestedMealSlotCard";
 import { HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
 import { buildHomeMealsTimeline } from "@/lib/homeMealsTimeline";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   title: string;
@@ -109,7 +109,7 @@ export function HomeDayMealsSection({
         </View>
         {mealCount > 0 ? (
           <View style={styles.countPill}>
-            <MaterialCommunityIcons name="silverware-fork-knife" size={14} color="#40916C" />
+            <MaterialCommunityIcons name="silverware-fork-knife" size={14} color={semantic.primary} />
             <Text variant="labelMedium" style={styles.countText}>
               {mealCount}
             </Text>
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: 0.15,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   summary: {
     opacity: 0.6,
@@ -188,12 +188,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#F0F7F4",
+    backgroundColor: tints.tealLight,
     borderWidth: 1,
-    borderColor: "#D8F3DC",
+    borderColor: ui.selectedBackground,
   },
   countText: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "700",
   },
   list: {

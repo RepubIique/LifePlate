@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import { PillarIcon } from "@/components/icons/PillarIcon";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   glasses: number;
@@ -40,7 +40,7 @@ export function TimelineDayHydration({
           icon="minus"
           size={16}
           mode="contained-tonal"
-          containerColor="#F1F3F5"
+          containerColor={ui.trackBackground}
           onPress={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onDecrement();
@@ -51,8 +51,8 @@ export function TimelineDayHydration({
           icon="plus"
           size={16}
           mode="contained"
-          containerColor="#1B4332"
-          iconColor="#FFFFFF"
+          containerColor={palette.slateBlue}
+          iconColor={palette.white}
           onPress={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onIncrement();
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     borderRadius: 14,
     paddingLeft: spacing.sm,
     paddingVertical: spacing.xs,

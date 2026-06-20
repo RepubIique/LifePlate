@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Chip, Text } from "react-native-paper";
 import { useFriends } from "@/context/FriendsContext";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type ShareWithFriendsPickerProps = {
   selectedFriendIds: string[];
@@ -93,16 +93,16 @@ export function ShareWithFriendsPicker({
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  title: { color: "#1B4332" },
+  title: { color: semantic.primary },
   subtitle: { opacity: 0.65 },
   chips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
   },
-  chip: { backgroundColor: "#F1F3F5" },
+  chip: { backgroundColor: ui.trackBackground },
   link: {
-    color: "#1B4332",
+    color: semantic.primary,
     textDecorationLine: "underline",
     opacity: 0.85,
   },

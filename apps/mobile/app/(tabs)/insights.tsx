@@ -26,7 +26,7 @@ import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { currentWeekStartKey } from "@/lib/weekInsightsWindow";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export default function InsightsScreen() {
   const { profile } = useAuth();
@@ -147,7 +147,7 @@ export default function InsightsScreen() {
         {!showDashboardSkeleton && !dashboard ? (
           <PremiumCard style={styles.emptyCard} noBlur>
             <View style={styles.emptyIcon}>
-              <MaterialCommunityIcons name="chart-line" size={28} color="#40916C" />
+              <MaterialCommunityIcons name="chart-line" size={28} color={semantic.primary} />
             </View>
             <Text variant="titleMedium" style={styles.emptyTitle}>
               Insights unlock as you log
@@ -191,18 +191,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     paddingVertical: spacing.xl,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   emptyIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyTitle: {
-    color: "#1B4332",
+    color: semantic.primary,
     textAlign: "center",
     letterSpacing: 0.15,
   },

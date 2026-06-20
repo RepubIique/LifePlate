@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { resolveMealImageUri } from "@/lib/mealImages";
 import { mealTypeIcon } from "@/lib/mealUtils";
 import { premiumStyles } from "@/src/theme/premium";
+import { semantic, ui } from "@/src/theme/lifeplate";
 
 type MealImagePlaceholderProps = {
   mealType?: string | null;
@@ -24,7 +25,7 @@ export function MealImagePlaceholder({
       <MaterialCommunityIcons
         name={mealTypeIcon(mealType)}
         size={iconSize}
-        color="#40916C"
+        color={semantic.primary}
       />
     </View>
   );
@@ -86,6 +87,6 @@ export const mealImageStyles = StyleSheet.create({
   placeholder: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
   },
 });

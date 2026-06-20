@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   day: string;
@@ -44,25 +44,25 @@ const styles = StyleSheet.create({
     color: "#2D3436",
   },
   dayToday: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
   subtitle: { opacity: 0.5 },
   pill: {
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
   },
   pillToday: {
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   pillText: {
     opacity: 0.65,
     letterSpacing: 0.1,
   },
   pillTextToday: {
-    color: "#1B4332",
+    color: semantic.primary,
     opacity: 0.9,
     fontWeight: "600",
   },

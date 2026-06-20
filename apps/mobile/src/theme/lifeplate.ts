@@ -19,7 +19,7 @@ export const lifeplateTheme = {
     onPrimaryContainer: semantic.primary,
     secondary: semantic.secondary,
     onSecondary: semantic.textOnPrimary,
-    secondaryContainer: tints.creamLight,
+    secondaryContainer: tints.sageLight,
     onSecondaryContainer: semantic.primary,
     tertiary: semantic.tertiary,
     onTertiary: semantic.textOnDark,
@@ -40,7 +40,7 @@ export const lifeplateTheme = {
   },
 };
 
-export { palette, semantic, tints } from "./palette";
+export { palette, semantic, tints, ui } from "./palette";
 
 export const spacing = {
   xs: 8,

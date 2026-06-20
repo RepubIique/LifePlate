@@ -1,7 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { MAX_LOG_PAST_DAYS, formatLogDateLabel, recentLogDateKeys } from "@lifeplate/shared";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -76,13 +76,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   optionSelected: {
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   optionText: {
     letterSpacing: 0.1,
   },
   optionTextSelected: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
 });

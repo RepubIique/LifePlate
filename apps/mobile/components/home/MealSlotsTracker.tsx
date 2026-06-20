@@ -11,7 +11,7 @@ import {
   getSuggestedSlot,
   MEAL_SLOTS,
 } from "@/lib/mealSlots";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meals: MealListSummary[];
@@ -46,7 +46,7 @@ export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggest
 
       {coreComplete ? (
         <View style={styles.completeBanner}>
-          <MaterialCommunityIcons name="check-circle-outline" size={18} color="#40916C" />
+          <MaterialCommunityIcons name="check-circle-outline" size={18} color={semantic.primary} />
           <Text variant="bodySmall" style={styles.completeText}>
             Breakfast, lunch & dinner logged — nice work today.
           </Text>
@@ -102,7 +102,7 @@ function SlotChip({
           <MaterialCommunityIcons
             name={icon}
             size={16}
-            color={suggested ? "#1B4332" : "#636E72"}
+            color={suggested ? semantic.primary : semantic.textMuted}
           />
         )}
       </View>
@@ -143,14 +143,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   completeText: {
     flex: 1,
-    color: "#1B4332",
+    color: semantic.primary,
     opacity: 0.85,
     lineHeight: 18,
   },
@@ -174,19 +174,19 @@ const styles = StyleSheet.create({
   },
   chipFilled: {},
   chipSuggested: {
-    backgroundColor: "#D8F3DC",
-    borderColor: "#40916C",
+    backgroundColor: ui.selectedBackground,
+    borderColor: semantic.primary,
   },
   iconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   iconWrapFilled: {
-    backgroundColor: "#40916C",
+    backgroundColor: semantic.primary,
   },
   chipLabel: {
     opacity: 0.65,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   chipLabelFilled: {
     opacity: 0.9,
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
   pressed: { opacity: 0.85 },

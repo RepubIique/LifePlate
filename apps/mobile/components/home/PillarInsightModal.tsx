@@ -3,7 +3,7 @@ import { IconButton, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightContent } from "@/components/nutrition/PillarInsightContent";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#E2E8E4",
+    backgroundColor: ui.borderSubtle,
     marginBottom: spacing.xs,
   },
   sheetHeader: {

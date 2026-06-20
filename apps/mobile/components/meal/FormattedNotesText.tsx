@@ -5,6 +5,7 @@ import {
   type TextStyle,
 } from "react-native";
 import { parseInlineNotes } from "@/lib/mealNotesFormat";
+import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
 
 type Props = {
   value: string;
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   mention: {
-    color: "#40916C",
+    color: semantic.primary,
     fontWeight: "600",
     fontStyle: "normal",
   },

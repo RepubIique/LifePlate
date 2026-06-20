@@ -8,7 +8,7 @@ import { PillarIcon } from "@/components/icons/PillarIcon";
 import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
 import { pillarColor } from "@/components/ui/pillarColors";
 import { pillarColorForLabel } from "@/lib/pillarTheme";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   pillar: PillarProgress;
@@ -67,8 +67,8 @@ export function HydrationQuickAdd({
                 icon="plus"
                 size={18}
                 mode="contained"
-                containerColor="#1B4332"
-                iconColor="#FFFFFF"
+                containerColor={palette.slateBlue}
+                iconColor={palette.white}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   onIncrement();
@@ -86,7 +86,7 @@ export function HydrationQuickAdd({
 const styles = StyleSheet.create({
   card: {
     padding: 0,
-    backgroundColor: "#F8FBFF",
+    backgroundColor: palette.teal,
   },
   header: {
     flexDirection: "row",
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: 0.15,
-    color: "#1B4332",
+    color: semantic.primary,
   },
   subtitle: {
     opacity: 0.55,

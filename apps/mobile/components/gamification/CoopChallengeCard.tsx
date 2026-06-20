@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import type { CoopChallengeSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   challenge: CoopChallengeSummary;
@@ -71,10 +71,10 @@ export function CoopChallengeCard({ challenge, busy, onAccept, onDecline }: Prop
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: "#F8FBF9" },
-  title: { color: "#1B4332" },
+  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
+  title: { color: semantic.primary },
   subtitle: { opacity: 0.6 },
-  status: { color: "#1B4332", lineHeight: 22, opacity: 0.85 },
+  status: { color: semantic.primary, lineHeight: 22, opacity: 0.85 },
   progressList: { gap: spacing.xs, marginTop: spacing.xs },
   progressRow: {
     flexDirection: "row",
@@ -82,6 +82,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   progressName: { opacity: 0.7 },
-  progressValue: { color: "#40916C", fontWeight: "600" },
+  progressValue: { color: semantic.primary, fontWeight: "600" },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
 });

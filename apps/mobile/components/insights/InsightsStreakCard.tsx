@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   currentStreak: number;
@@ -37,7 +37,7 @@ function StatBlock({
 }) {
   return (
     <View style={styles.stat}>
-      <MaterialCommunityIcons name={icon} size={20} color="#40916C" />
+      <MaterialCommunityIcons name={icon} size={20} color={semantic.primary} />
       <Text variant="headlineSmall" style={styles.value}>
         {value}
       </Text>
@@ -80,14 +80,14 @@ export function InsightsStreakCard({
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.55, lineHeight: 18 },
   encouragement: {
     opacity: 0.7,
     lineHeight: 18,
-    color: "#1B4332",
+    color: semantic.primary,
     fontStyle: "italic",
   },
   row: {
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontWeight: "700",
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: -0.3,
   },
   label: {

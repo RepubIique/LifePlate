@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { semantic, ui } from "@/src/theme/lifeplate";
 
 type Props = {
   progress: number;
@@ -6,7 +7,7 @@ type Props = {
   height?: number;
 };
 
-export function ProgressBar({ progress, color = "#40916C", height = 6 }: Props) {
+export function ProgressBar({ progress, color = semantic.primary, height = 6 }: Props) {
   const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
 
   return (
@@ -19,7 +20,7 @@ export function ProgressBar({ progress, color = "#40916C", height = 6 }: Props) 
 const styles = StyleSheet.create({
   track: {
     borderRadius: 999,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     overflow: "hidden",
   },
   fill: {

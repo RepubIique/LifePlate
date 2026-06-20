@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type CollapsibleSectionProps = {
   title: string;
@@ -55,5 +55,5 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, gap: 2 },
   title: { letterSpacing: 0.15 },
   subtitle: { opacity: 0.6, lineHeight: 18 },
-  body: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: "#EEF2F0" },
+  body: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: ui.trackBackground },
 });

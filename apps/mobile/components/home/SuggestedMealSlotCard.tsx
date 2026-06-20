@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
 import { MEAL_SLOTS, type MealSlotKey } from "@/lib/mealSlots";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   slot: MealSlotKey;
@@ -23,7 +23,7 @@ export function SuggestedMealSlotCard({ slot, onPress }: Props) {
         accessibilityLabel={`Log ${slotMeta.label.toLowerCase()}`}
       >
         <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name={slotMeta.icon} size={24} color="#1B4332" />
+          <MaterialCommunityIcons name={slotMeta.icon} size={24} color={semantic.primary} />
         </View>
         <View style={styles.copy}>
           <Text variant="labelMedium" style={styles.eyebrow}>
@@ -37,7 +37,7 @@ export function SuggestedMealSlotCard({ slot, onPress }: Props) {
           </Text>
         </View>
         {onPress ? (
-          <MaterialCommunityIcons name="chevron-right" size={22} color="#40916C" />
+          <MaterialCommunityIcons name="chevron-right" size={22} color={semantic.primary} />
         ) : null}
       </Pressable>
     </PremiumCard>
@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 0,
     overflow: "hidden",
-    backgroundColor: "#F0F7F4",
-    borderColor: "#40916C",
+    backgroundColor: tints.tealLight,
+    borderColor: semantic.primary,
     borderWidth: 1.5,
     marginBottom: spacing.md,
   },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -76,13 +76,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   eyebrow: {
-    color: "#40916C",
+    color: semantic.primary,
     letterSpacing: 0.6,
     textTransform: "uppercase",
     fontWeight: "600",
   },
   title: {
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: 0.1,
   },
   subtitle: {

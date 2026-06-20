@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   title: string;
@@ -15,7 +15,7 @@ export function HomeMealsEmptyState({ title, subtitle, onLogPhoto, onLogText }: 
   return (
     <PremiumCard style={styles.card} noBlur>
       <View style={styles.iconWrap}>
-        <MaterialCommunityIcons name="silverware-fork-knife" size={28} color="#40916C" />
+        <MaterialCommunityIcons name="silverware-fork-knife" size={28} color={semantic.primary} />
       </View>
       <Text variant="titleMedium" style={styles.title}>
         {title}
@@ -46,19 +46,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     paddingVertical: spacing.lg,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   iconWrap: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
     textAlign: "center",
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: 0.15,
   },
   subtitle: {

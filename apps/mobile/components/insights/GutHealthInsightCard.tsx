@@ -4,7 +4,7 @@ import type { GutHealthSummary, TrendStatus } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { FoodChips } from "@/components/nutrition/shared";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   gutHealth: GutHealthSummary;
@@ -90,10 +90,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   titleCol: { flex: 1, gap: 4 },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.55, lineHeight: 18 },
   scoreCol: { alignItems: "center", minWidth: 52 },
-  score: { fontWeight: "700", color: "#40916C", letterSpacing: -0.5 },
+  score: { fontWeight: "700", color: semantic.primary, letterSpacing: -0.5 },
   scoreCaption: { opacity: 0.45 },
   badges: {
     flexDirection: "row",

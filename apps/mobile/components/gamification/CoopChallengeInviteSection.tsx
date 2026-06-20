@@ -4,7 +4,7 @@ import { Button, Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   friends: FriendSummary[];
@@ -19,7 +19,7 @@ export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: 
     <PremiumCard style={styles.card} noBlur>
       <View style={styles.header}>
         <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name="handshake-outline" size={20} color="#40916C" />
+          <MaterialCommunityIcons name="handshake-outline" size={20} color={semantic.primary} />
         </View>
         <View style={styles.headerCopy}>
           <Text variant="titleMedium" style={styles.title}>
@@ -57,7 +57,7 @@ export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: 
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: "#F8FBF9" },
+  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -67,12 +67,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   headerCopy: { flex: 1, gap: 2 },
-  title: { color: "#1B4332" },
+  title: { color: semantic.primary },
   subtitle: { opacity: 0.6, lineHeight: 18 },
   list: { marginTop: spacing.xs },
   row: {
@@ -81,10 +81,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  name: { flex: 1, color: "#1B4332" },
+  name: { flex: 1, color: semantic.primary },
   divider: {
     height: 1,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     marginLeft: 52,
   },
 });

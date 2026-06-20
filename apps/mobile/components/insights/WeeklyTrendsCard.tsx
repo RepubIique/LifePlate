@@ -3,7 +3,7 @@ import { Text } from "react-native-paper";
 import type { WeeklyTrendItem } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   trends: WeeklyTrendItem[];
@@ -36,7 +36,7 @@ export function WeeklyTrendsCard({ trends }: Props) {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.55, lineHeight: 18 },
   list: { gap: spacing.sm, marginTop: spacing.xs },
   row: {
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#EEF2F0",
+    borderBottomColor: ui.trackBackground,
   },
   label: { flex: 1, letterSpacing: 0.1 },
 });

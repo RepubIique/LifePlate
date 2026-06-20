@@ -4,7 +4,7 @@ import { Text } from "react-native-paper";
 import type { GamificationStatsInput } from "@lifeplate/shared";
 import { BADGE_DEFINITIONS, computeUnlockedBadges } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   stats: GamificationStatsInput;
@@ -47,7 +47,7 @@ function BadgeTile({
         <MaterialCommunityIcons
           name={badge.icon as keyof typeof MaterialCommunityIcons.glyphMap}
           size={22}
-          color={unlocked ? "#40916C" : "#B2BEC3"}
+          color={unlocked ? semantic.primary : semantic.textMuted}
         />
       </View>
       <Text variant="labelMedium" style={[styles.badgeTitle, !unlocked && styles.lockedText]}>
@@ -61,8 +61,8 @@ function BadgeTile({
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: "#F8FBF9" },
-  title: { color: "#1B4332", letterSpacing: 0.15 },
+  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
+  title: { color: semantic.primary, letterSpacing: 0.15 },
   subtitle: { opacity: 0.55, lineHeight: 18 },
   grid: {
     flexDirection: "row",
@@ -84,13 +84,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrapUnlocked: { backgroundColor: "#D8F3DC" },
+  iconWrapUnlocked: { backgroundColor: ui.selectedBackground },
   badgeTitle: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
     textAlign: "center",
   },

@@ -4,6 +4,7 @@ import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { ensureFriendAvatarCached } from "@/lib/friendAvatars";
 import { getCachedAvatarUri } from "@/lib/avatarCache";
+import { semantic, ui } from "@/src/theme/lifeplate";
 
 const SIZE = 44;
 
@@ -82,9 +83,9 @@ const styles = StyleSheet.create({
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     alignItems: "center",
     justifyContent: "center",
   },
-  initials: { color: "#1B4332", fontWeight: "600" },
+  initials: { color: semantic.primary, fontWeight: "600" },
 });

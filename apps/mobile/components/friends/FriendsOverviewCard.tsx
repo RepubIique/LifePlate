@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   friendCount: number;
@@ -27,7 +27,7 @@ function StatBlock({
       <MaterialCommunityIcons
         name={icon}
         size={20}
-        color={accent ? "#E67E22" : "#40916C"}
+        color={accent ? ui.iconStreak : semantic.primary}
       />
       <Text variant="headlineSmall" style={styles.statValue}>
         {value}
@@ -88,9 +88,9 @@ export function FriendsOverviewCard({
 const styles = StyleSheet.create({
   card: {
     gap: spacing.sm,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   subtitle: { opacity: 0.6, lineHeight: 18 },
   row: {
     flexDirection: "row",
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: "700",
-    color: "#1B4332",
+    color: semantic.primary,
     letterSpacing: -0.3,
   },
   statLabel: {

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { NutritionDashboardView } from "@/lib/nutritionDashboardView";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 import { DigitalPlate } from "./DigitalPlate";
 
 type Props = {
@@ -36,7 +36,7 @@ export function TodayAtGlanceCard({
             <Text variant="labelLarge" style={styles.linkText}>
               Insights
             </Text>
-            <MaterialCommunityIcons name="chevron-right" size={18} color="#40916C" />
+            <MaterialCommunityIcons name="chevron-right" size={18} color={semantic.primary} />
           </Pressable>
         ) : null}
       </View>
@@ -70,12 +70,12 @@ const styles = StyleSheet.create({
   },
   title: { letterSpacing: 0.15 },
   link: { flexDirection: "row", alignItems: "center", gap: 2 },
-  linkText: { color: "#40916C", letterSpacing: 0.2 },
+  linkText: { color: semantic.primary, letterSpacing: 0.2 },
   coachWrap: {
     width: "100%",
     paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: "#EEF2F0",
+    borderTopColor: ui.trackBackground,
   },
   coach: {
     lineHeight: 21,

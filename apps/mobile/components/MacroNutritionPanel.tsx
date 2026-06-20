@@ -11,7 +11,7 @@ import {
 } from "@/lib/macroMath";
 import { MACRO_NUTRITION_COLORS } from "@/lib/pillarTheme";
 import { premium } from "@/src/theme/premium";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const RING_SIZE = 168;
 const STROKE = 14;
@@ -68,7 +68,7 @@ function MacroRing({
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="#EEF2F0"
+            stroke={ui.trackBackground}
             strokeWidth={STROKE}
             fill="none"
           />
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
     overflow: "hidden",
   },
   barFill: { height: "100%", borderRadius: 5 },
@@ -389,13 +389,13 @@ const styles = StyleSheet.create({
   confidenceTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
     overflow: "hidden",
   },
   confidenceFill: {
     height: "100%",
     borderRadius: 3,
-    backgroundColor: "#40916C",
+    backgroundColor: semantic.primary,
   },
   confidencePct: { alignSelf: "flex-end", opacity: 0.7 },
 });

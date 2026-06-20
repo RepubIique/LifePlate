@@ -17,7 +17,7 @@ import {
   type PlantUnit,
 } from "@/lib/plantSources";
 import { MEAL_SLOTS, mealMatchesSlot, type MealSlotKey } from "@/lib/mealSlots";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 import { DetailBlock } from "./shared";
 
 type Props = {
@@ -338,10 +338,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: "#EEF2F0",
+    backgroundColor: ui.trackBackground,
   },
   chipText: {
-    color: "#1B4332",
+    color: semantic.primary,
   },
   empty: {
     opacity: 0.55,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     marginLeft: -spacing.sm,
   },
   error: {
-    color: "#c0392b",
+    color: semantic.danger,
     marginTop: spacing.xs,
   },
   backdrop: {
@@ -387,16 +387,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 999,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
   },
   optionChipSelected: {
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   optionChipText: {
-    color: "#636E72",
+    color: semantic.textMuted,
   },
   optionChipTextSelected: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
   dialogActions: {
@@ -421,19 +421,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 999,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: ui.trackBackground,
   },
   slotChipSelected: {
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   slotChipMuted: {
     opacity: 0.55,
   },
   slotChipText: {
-    color: "#636E72",
+    color: semantic.textMuted,
   },
   slotChipTextSelected: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "600",
   },
 });

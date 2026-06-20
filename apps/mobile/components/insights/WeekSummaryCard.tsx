@@ -3,7 +3,7 @@ import { Text } from "react-native-paper";
 import type { InsightsResponse } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { capitalize } from "@/lib/mealUtils";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   insights: InsightsResponse;
@@ -63,7 +63,7 @@ export function WeekSummaryCard({ insights }: Props) {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.md },
-  title: { letterSpacing: 0.15, color: "#1B4332" },
+  title: { letterSpacing: 0.15, color: semantic.primary },
   stats: { gap: spacing.sm },
   statRow: {
     flexDirection: "row",
@@ -72,11 +72,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statLabel: { opacity: 0.65, flex: 1 },
-  statValue: { color: "#1B4332", letterSpacing: 0.1 },
+  statValue: { color: semantic.primary, letterSpacing: 0.1 },
   splitRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     borderRadius: 14,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   splitValue: {
     fontWeight: "700",
-    color: "#40916C",
+    color: semantic.primary,
     letterSpacing: -0.3,
   },
   takeaway: { color: "#E07A5F" },

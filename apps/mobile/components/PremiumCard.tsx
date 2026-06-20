@@ -1,6 +1,7 @@
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View, type ViewProps } from "react-native";
 import { premium, premiumStyles } from "@/src/theme/premium";
+import { palette } from "@/src/theme/lifeplate";
 
 type Props = ViewProps & {
   children: React.ReactNode;
@@ -25,6 +26,6 @@ export function PremiumCard({ children, style, noBlur, ...rest }: Props) {
 
 const styles = StyleSheet.create({
   webCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.white,
   },
 });

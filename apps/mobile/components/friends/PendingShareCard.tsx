@@ -11,7 +11,7 @@ import {
 } from "@lifeplate/shared";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type PendingShareCardProps = {
   share: MealShareRequestSummary;
@@ -47,7 +47,7 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
     <PremiumCard style={styles.card} noBlur>
       <View style={styles.header}>
         <View style={styles.badge}>
-          <MaterialCommunityIcons name="food-fork-drink" size={14} color="#40916C" />
+          <MaterialCommunityIcons name="food-fork-drink" size={14} color={semantic.primary} />
           <Text variant="labelSmall" style={styles.badgeText}>
             Meal share
           </Text>
@@ -66,7 +66,7 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
           <Image source={{ uri: share.imageUrl }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#40916C" />
+            <MaterialCommunityIcons name="silverware-fork-knife" size={24} color={semantic.primary} />
           </View>
         )}
         <View style={styles.details}>
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: "#FFFFFF",
     borderLeftWidth: 3,
-    borderLeftColor: "#40916C",
+    borderLeftColor: semantic.primary,
   },
   header: {
     flexDirection: "row",
@@ -138,14 +138,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: 999,
   },
-  badgeText: { color: "#1B4332", fontWeight: "600", letterSpacing: 0.2 },
+  badgeText: { color: semantic.primary, fontWeight: "600", letterSpacing: 0.2 },
   date: { opacity: 0.5 },
-  from: { color: "#1B4332" },
+  from: { color: semantic.primary },
   content: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -160,14 +160,14 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 14,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#EEF2F0",
+    borderColor: ui.trackBackground,
   },
   details: { flex: 1, gap: 4 },
-  mealName: { color: "#1B4332", lineHeight: 22 },
+  mealName: { color: semantic.primary, lineHeight: 22 },
   macros: { opacity: 0.65 },
   actions: {
     flexDirection: "row",

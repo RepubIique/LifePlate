@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   insight: string;
@@ -30,11 +30,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     overflow: "hidden",
     padding: 0,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   accent: {
     width: 4,
-    backgroundColor: "#40916C",
+    backgroundColor: semantic.primary,
   },
   content: {
     flex: 1,

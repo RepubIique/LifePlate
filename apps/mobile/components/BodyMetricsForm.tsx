@@ -7,7 +7,7 @@ import {
   type Gender,
 } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 export function toOptionalNumber(value: string): number | null {
   const trimmed = value.trim();
@@ -166,17 +166,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   genderCardSelected: {
-    borderColor: "#1B4332",
-    backgroundColor: "#F8FBF9",
+    borderColor: semantic.primary,
+    backgroundColor: ui.cardBackground,
   },
-  genderTextSelected: { color: "#1B4332" },
+  genderTextSelected: { color: semantic.primary },
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   metricInput: { flexBasis: "48%", flexGrow: 1 },
   targetsBox: { gap: spacing.xs, marginTop: spacing.xs },
   targetRow: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F3F5",
+    borderBottomColor: ui.trackBackground,
   },
   targetLabel: { opacity: 0.65, marginBottom: 2 },
   hint: { opacity: 0.65, lineHeight: 18 },

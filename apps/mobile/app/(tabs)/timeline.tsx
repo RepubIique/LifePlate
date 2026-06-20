@@ -28,7 +28,7 @@ import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoUpload, uploadStageLabel } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { buildTimelineDayGroups, countMealsThisWeek } from "@/lib/mealUtils";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
 const HYDRATION_TARGET = 8;
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 12,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   uploadText: { opacity: 0.75 },
   shareBanner: {
@@ -337,10 +337,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 12,
-    backgroundColor: "#D8F3DC",
+    backgroundColor: ui.selectedBackground,
   },
   shareBannerText: {
-    color: "#1B4332",
+    color: semantic.primary,
     textAlign: "center",
   },
   list: {

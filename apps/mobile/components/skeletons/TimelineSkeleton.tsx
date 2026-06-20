@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { MealTimelineRail, railPositionForIndex } from "@/components/home/MealTimelineRail";
 import { PremiumCard } from "@/components/PremiumCard";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const THUMB = 88;
 
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingVertical: spacing.md,
-    backgroundColor: "#F8FBF9",
+    backgroundColor: ui.cardBackground,
   },
   dayGroup: {
     marginBottom: spacing.lg,

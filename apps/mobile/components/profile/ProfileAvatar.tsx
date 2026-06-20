@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   ActivityIndicator,
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     ...Platform.select({
       ios: {
-        shadowColor: "#1B4332",
+        shadowColor: semantic.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
         shadowRadius: 12,
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: AVATAR_SIZE / 2,
     position: "relative",
     borderWidth: 2,
-    borderColor: "#D8F3DC",
+    borderColor: ui.selectedBackground,
   },
   image: {
     width: AVATAR_SIZE - 4,
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   initials: {
-    color: "#1B4332",
+    color: semantic.primary,
     fontWeight: "700",
     letterSpacing: -0.5,
   },
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#40916C",
+    backgroundColor: semantic.primary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
