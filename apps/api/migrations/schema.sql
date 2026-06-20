@@ -1,5 +1,6 @@
--- LifePlate canonical schema (starting point).
--- Idempotent: safe on fresh databases and on DBs that ran the old numbered migrations.
+-- LifePlate canonical schema (baseline).
+-- Fresh databases: this file runs once (tracked as version "baseline").
+-- Schema changes after this: add numbered files 001_*.sql, 002_*.sql, …
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -38,7 +39,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT fals
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cloud_image_backup BOOLEAN NOT NULL DEFAULT false;
 
 -- ---------------------------------------------------------------------------
--- Meals & analysis
+-- Meals
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS meals (
@@ -71,11 +72,49 @@ CREATE INDEX IF NOT EXISTS meals_user_log_date_sort_idx
   ON meals (user_id, log_date DESC, sort_index ASC);
 CREATE INDEX IF NOT EXISTS meals_user_log_date_idx ON meals (user_id, log_date);
 
+-- ---------------------------------------------------------------------------
+-- Meal AI audit (macros and foods live on meals)
+-- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS meal_analysis (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   meal_id UUID NOT NULL UNIQUE REFERENCES meals(id) ON DELETE CASCADE,
   raw_ai_response JSONB
 );
+
+-- Legacy cleanup (safe on fresh DBs and after old migrations)
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS calories;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS protein;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS carbs;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS fat;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS fibre;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS sugar;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS sodium;
+ALTER TABLE meal_analysis DROP COLUMN IF EXISTS confidence;
+
+DROP INDEX IF EXISTS meals_user_utc_day_idx;
+
+-- ---------------------------------------------------------------------------
+-- Meal drafts (pre-confirm upload buffer)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS meal_drafts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL DEFAULT '',
+  image_data BYTEA,
+  mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+  analysis JSONB NOT NULL,
+  raw_ai_response JSONB,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS meal_drafts_user_expires_idx
+  ON meal_drafts(user_id, expires_at DESC);
+
+CREATE INDEX IF NOT EXISTS meal_drafts_expires_idx
+  ON meal_drafts(expires_at);
 
 -- ---------------------------------------------------------------------------
 -- Hydration & insights
@@ -136,6 +175,61 @@ CREATE INDEX IF NOT EXISTS idx_alpha_feedback_messages_created_at
 -- ---------------------------------------------------------------------------
 -- Backfills (safe to re-run)
 -- ---------------------------------------------------------------------------
+
+UPDATE meals
+SET log_date = (created_at AT TIME ZONE 'UTC')::date
+WHERE log_date IS NULL;
+
+WITH ranked AS (
+  SELECT id,
+         ROW_NUMBER() OVER (
+           PARTITION BY user_id, log_date
+           ORDER BY created_at DESC
+         ) - 1 AS idx
+  FROM meals
+  WHERE log_date IS NOT NULL
+)
+UPDATE meals m
+SET sort_index = ranked.idx
+FROM ranked
+WHERE m.id = ranked.id;
+
+UPDATE meals m
+SET calories = COALESCE(m.calories, a.calories),
+    protein = COALESCE(m.protein, a.protein),
+    carbs = COALESCE(m.carbs, a.carbs),
+    fat = COALESCE(m.fat, a.fat),
+    fibre = COALESCE(m.fibre, a.fibre),
+    sugar = COALESCE(m.sugar, a.sugar),
+    sodium = COALESCE(m.sodium, a.sodium),
+    confidence = COALESCE(m.confidence, a.confidence)
+FROM meal_analysis a
+WHERE a.meal_id = m.id;
+
+DO $$
+BEGIN
+  IF to_regclass('public.foods') IS NOT NULL THEN
+    UPDATE meals m
+    SET foods = COALESCE(agg.food_names, '{}')
+    FROM (
+      SELECT meal_id, array_agg(food_name ORDER BY food_name) AS food_names
+      FROM foods
+      GROUP BY meal_id
+    ) agg
+    WHERE m.id = agg.meal_id
+      AND cardinality(m.foods) = 0;
+  END IF;
+END $$;
+
+DROP TABLE IF EXISTS foods;
+
+ALTER TABLE meals ALTER COLUMN log_date SET NOT NULL;
+
+UPDATE meals
+SET image_url = ''
+WHERE image_url LIKE 'data:%'
+   OR image_url LIKE '%data:image%'
+   OR image_url LIKE '%data%3Aimage%';
 
 UPDATE users u
 SET meals_logged = stats.meal_count
