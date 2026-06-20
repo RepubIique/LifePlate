@@ -383,6 +383,10 @@ export async function addFriendByCode(friendCode: string): Promise<{ friend: Fri
   });
 }
 
+export async function fetchFriendAvatar(friendId: string): Promise<ProfileAvatarResponse> {
+  return request<ProfileAvatarResponse>(`/api/friends/${friendId}/avatar`);
+}
+
 export async function removeFriend(friendId: string): Promise<void> {
   await request<{ ok: boolean }>(`/api/friends/${friendId}`, { method: "DELETE" });
 }

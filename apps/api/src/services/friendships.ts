@@ -7,6 +7,7 @@ import {
   queryMealLogDaysByUserIds,
   togetherStreakForFriend,
 } from "./togetherStreak.js";
+import { resolveStorageObjectUrl } from "./storage.js";
 
 export class FriendRequestError extends Error {
   constructor(
@@ -106,6 +107,21 @@ export async function addFriendByCode(userId: string, rawCode: string): Promise<
     name: target.name,
     hasAvatar: Boolean(target.avatar_url?.trim()),
   };
+}
+
+export async function getFriendAvatarUrl(
+  userId: string,
+  friendId: string,
+): Promise<string | null> {
+  if (!(await areFriends(userId, friendId))) {
+    throw new FriendRequestError("Not friends", 404, "NOT_FRIENDS");
+  }
+
+  const { rows } = await pool.query<{ avatar_url: string | null }>(
+    `SELECT avatar_url FROM users WHERE id = $1`,
+    [friendId],
+  );
+  return resolveStorageObjectUrl(rows[0]?.avatar_url ?? null);
 }
 
 export async function removeFriend(userId: string, friendId: string): Promise<void> {

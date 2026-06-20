@@ -24,6 +24,8 @@ import {
   inviteCoopChallenge,
   removeFriend,
 } from "@/lib/api";
+import { clearCachedAvatar } from "@/lib/avatarCache";
+import { ensureFriendAvatarCached } from "@/lib/friendAvatars";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { spacing } from "@/src/theme/lifeplate";
@@ -83,6 +85,7 @@ export default function FriendsScreen() {
         nextFriends.sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
       }
       patchFriends({ friends: nextFriends });
+      void ensureFriendAvatarCached(friend);
       setSnackbar(`Added ${friend.name?.trim() || "friend"}`);
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -94,6 +97,7 @@ export default function FriendsScreen() {
   async function handleRemoveFriend(friendId: string) {
     try {
       await removeFriend(friendId);
+      void clearCachedAvatar(friendId);
       patchFriends({ friends: friends.filter((f) => f.id !== friendId) });
       setSnackbar("Friend removed");
     } catch (e) {

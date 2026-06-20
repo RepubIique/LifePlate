@@ -17,6 +17,7 @@ import {
   saveCachedFriends,
   type FriendsCachePayload,
 } from "@/lib/friendsCache";
+import { prefetchMissingFriendAvatars } from "@/lib/friendAvatars";
 
 const STALE_MS = TAB_FOCUS_STALE_MS;
 
@@ -82,6 +83,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         setFriends(cached.friends);
         setPendingShares(cached.pendingShares);
         fetchedAtRef.current = cached.fetchedAt;
+        void prefetchMissingFriendAvatars(cached.friends);
       }
       setHydrated(true);
     })();
@@ -175,6 +177,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
             },
             Date.now(),
           );
+          void prefetchMissingFriendAvatars(data.friends);
         } finally {
           setLoading(false);
           setRefreshing(false);
