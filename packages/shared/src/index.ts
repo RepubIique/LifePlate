@@ -368,10 +368,6 @@ export interface MealPhotoAttachResponse {
   imageUrl: string;
 }
 
-export interface MealConfirmResponse {
-  id: string;
-}
-
 /** Paid users who opted in — meal photos are also stored in cloud storage. */
 export function hasCloudMealImageBackup(profile: {
   isPaid: boolean;
@@ -422,6 +418,61 @@ export interface MealConfirmRequest {
   /** ISO timestamp — log the meal on a prior day. */
   loggedAt?: string;
   portionMeta?: MealPortionMeta;
+  /** Friend user IDs to send a pending meal share to (must be mutual friends). */
+  shareWithFriendIds?: string[];
+}
+
+export interface MealConfirmResponse {
+  id: string;
+  sharesSent: number;
+}
+
+export interface FriendSummary {
+  id: string;
+  name: string | null;
+  hasAvatar: boolean;
+}
+
+export interface FriendsListResponse {
+  friendCode: string;
+  friends: FriendSummary[];
+}
+
+export interface AddFriendRequest {
+  friendCode: string;
+}
+
+export interface MealShareRequestSummary {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  mealType: string | null;
+  mealName: string;
+  imageUrl: string;
+  logDate: string;
+  loggedAt: string;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  fibre: number | null;
+  sugar: number | null;
+  sodium: number | null;
+  confidence: number | null;
+  foods: string[];
+  portionMeta?: MealPortionMeta;
+}
+
+export interface MealShareAcceptRequest {
+  portionMeta?: MealPortionMeta;
+}
+
+export interface MealShareIncomingResponse {
+  shares: MealShareRequestSummary[];
+}
+
+export interface MealShareCountResponse {
+  count: number;
 }
 
 export const MAX_MEAL_NOTES_LENGTH = 500;
@@ -446,6 +497,9 @@ export interface MealListSummary {
   calories?: number | null;
   protein?: number | null;
   notes?: string | null;
+  /** Present when this meal was shared by another user. */
+  sharedByUserId?: string | null;
+  sharedByName?: string | null;
 }
 
 export interface MealListItem extends MealListSummary {

@@ -1,7 +1,10 @@
 import type {
   AlphaFeedbackMessage,
+  FriendSummary,
+  FriendsListResponse,
   InsightsResponse,
   MealConfirmRequest,
+  MealConfirmResponse,
   MealListItem,
   MealListSummary,
   MealDetail,
@@ -9,6 +12,10 @@ import type {
   MealRefineResponse,
   MealReanalyzeRequest,
   MealReanalyzeResponse,
+  MealShareAcceptRequest,
+  MealShareCountResponse,
+  MealShareIncomingResponse,
+  MealShareRequestSummary,
   MealUploadResponse,
   MealUpdateRequest,
   MealReorderRequest,
@@ -347,16 +354,55 @@ export async function attachMealPhoto(
   );
 }
 
-export async function confirmMeal(body: MealConfirmRequest): Promise<{ id: string }> {
+export async function confirmMeal(body: MealConfirmRequest): Promise<MealConfirmResponse> {
   const cloudUrl = body.imageUrl?.trim() ?? "";
   const payload = {
     ...body,
     imageUrl: cloudUrl.startsWith("http") ? cloudUrl : undefined,
   };
-  return request<{ id: string }>("/api/meals/confirm", {
+  return request<MealConfirmResponse>("/api/meals/confirm", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchFriends(): Promise<FriendsListResponse> {
+  return request<FriendsListResponse>("/api/friends");
+}
+
+export async function addFriendByCode(friendCode: string): Promise<{ friend: FriendSummary }> {
+  return request<{ friend: FriendSummary }>("/api/friends/add", {
+    method: "POST",
+    body: JSON.stringify({ friendCode }),
+  });
+}
+
+export async function removeFriend(friendId: string): Promise<void> {
+  await request<{ ok: boolean }>(`/api/friends/${friendId}`, { method: "DELETE" });
+}
+
+export async function fetchIncomingMealShares(): Promise<MealShareRequestSummary[]> {
+  const data = await request<MealShareIncomingResponse>("/api/meal-shares/incoming");
+  return data.shares;
+}
+
+export async function fetchIncomingMealShareCount(): Promise<number> {
+  const data = await request<MealShareCountResponse>("/api/meal-shares/incoming/count");
+  return data.count;
+}
+
+export async function acceptMealShare(
+  shareId: string,
+  body?: MealShareAcceptRequest,
+): Promise<{ mealId: string }> {
+  return request<{ mealId: string }>(`/api/meal-shares/${shareId}/accept`, {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export async function declineMealShare(shareId: string): Promise<void> {
+  await request<{ ok: boolean }>(`/api/meal-shares/${shareId}/decline`, { method: "POST" });
 }
 
 export async function refineMeal(

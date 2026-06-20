@@ -9,6 +9,7 @@ import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 import { NutritionDashboardProvider } from "@/context/NutritionDashboardContext";
+import { WeekInsightsProvider } from "@/context/WeekInsightsContext";
 import { HydrationProvider } from "@/context/HydrationContext";
 import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
@@ -41,6 +42,7 @@ export default function RootLayout() {
           <MealsProvider>
           <PendingLogDateProvider>
           <NutritionDashboardProvider>
+          <WeekInsightsProvider>
           <HydrationProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -49,6 +51,7 @@ export default function RootLayout() {
             <Stack.Screen name="auth/callback" />
             <Stack.Screen name="onboarding/goal" />
             <Stack.Screen name="onboarding/body" />
+            <Stack.Screen name="profile" options={{ headerShown: true, title: "Profile" }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen
               name="meal/result"
@@ -61,6 +64,7 @@ export default function RootLayout() {
           </Stack>
           <AlphaFeedbackBubble />
           </HydrationProvider>
+          </WeekInsightsProvider>
           </NutritionDashboardProvider>
           </PendingLogDateProvider>
           </MealsProvider>

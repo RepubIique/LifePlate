@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionSheetIOS, Alert, Platform, RefreshControl, StyleSheet, View } from "react-native";
 import { Button, Switch, Text, TextInput } from "react-native-paper";
@@ -18,7 +19,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/context/AuthContext";
 import { fetchMealsFull, fetchProfileAvatar, updateProfile, uploadProfileAvatar } from "@/lib/api";
 import { getCachedAvatarUri, saveAvatarFromLocalUri } from "@/lib/avatarCache";
-import { friendlyErrorMessage } from "@/lib/apiErrors";
+import { authFriendlyErrorMessage, friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { prepareProfileImage } from "@/lib/imagePrep";
 import { spacing } from "@/src/theme/lifeplate";
@@ -68,6 +69,7 @@ export default function ProfileScreen() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [linkingProvider, setLinkingProvider] = useState<"apple" | "google" | null>(null);
 
   useEffect(() => {
     setIsDirty(false);
@@ -177,10 +179,7 @@ export default function ProfileScreen() {
   ]);
 
   async function handleSave() {
-    if (!canSave) {
-      setSnackbar("No changes to save");
-      return;
-    }
+    if (!canSave) return;
 
     setSaving(true);
     try {
@@ -235,7 +234,15 @@ export default function ProfileScreen() {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setSnackbar("Permission required to access photos or camera.");
+      const message = mediaPermissionMessage(useCamera ? "camera" : "library", permission.canAskAgain);
+      if (permission.canAskAgain === false) {
+        Alert.alert("Permission needed", message, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => void Linking.openSettings() },
+        ]);
+      } else {
+        setSnackbar(message);
+      }
       return;
     }
 
@@ -297,6 +304,33 @@ export default function ProfileScreen() {
   }
 
   const displayName = name.trim() || profile?.name?.trim() || "Your profile";
+
+  async function handleLinkProvider(provider: "apple" | "google") {
+    setLinkingProvider(provider);
+    try {
+      const linked = await linkProvider(provider);
+      if (linked) {
+        setSnackbar(provider === "apple" ? "Apple account linked" : "Google account linked");
+      }
+    } catch (e) {
+      setSnackbar(authFriendlyErrorMessage(e));
+    } finally {
+      setLinkingProvider(null);
+    }
+  }
+
+  function confirmSignOut() {
+    Alert.alert("Sign out?", "You'll need to sign in again to access your meals.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign out",
+        style: "destructive",
+        onPress: () => {
+          void signOut().then(() => router.replace("/(auth)/welcome"));
+        },
+      },
+    ]);
+  }
 
   return (
     <Screen
@@ -395,6 +429,11 @@ export default function ProfileScreen() {
           >
             Save changes
           </Button>
+          {!canSave ? (
+            <Text variant="bodySmall" style={styles.saveHint}>
+              Change a field above to save.
+            </Text>
+          ) : null}
         </PremiumCard>
 
         <SectionLabel title="LifePlate Plus" />
@@ -419,10 +458,22 @@ export default function ProfileScreen() {
         <SectionLabel title="Account" />
         <PremiumCard style={styles.formCard} noBlur>
           <View style={styles.linkActions}>
-            <Button mode="outlined" icon="apple" onPress={() => linkProvider("apple")}>
+            <Button
+              mode="outlined"
+              icon="apple"
+              onPress={() => void handleLinkProvider("apple")}
+              loading={linkingProvider === "apple"}
+              disabled={linkingProvider !== null}
+            >
               Link Apple
             </Button>
-            <Button mode="outlined" icon="google" onPress={() => linkProvider("google")}>
+            <Button
+              mode="outlined"
+              icon="google"
+              onPress={() => void handleLinkProvider("google")}
+              loading={linkingProvider === "google"}
+              disabled={linkingProvider !== null}
+            >
               Link Google
             </Button>
           </View>
@@ -442,10 +493,7 @@ export default function ProfileScreen() {
             mode="outlined"
             icon="logout"
             textColor="#c0392b"
-            onPress={async () => {
-              await signOut();
-              router.replace("/(auth)/welcome");
-            }}
+            onPress={confirmSignOut}
           >
             Sign out
           </Button>
@@ -462,7 +510,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   body: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
     gap: spacing.md,
   },
@@ -489,6 +537,7 @@ const styles = StyleSheet.create({
   switchHint: { opacity: 0.65 },
   input: { backgroundColor: "#FFFFFF" },
   saveButton: { marginTop: spacing.sm },
+  saveHint: { opacity: 0.5, textAlign: "center" },
   linkActions: { gap: spacing.sm },
   actions: {
     gap: spacing.xs,

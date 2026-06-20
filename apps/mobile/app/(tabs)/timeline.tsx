@@ -1,6 +1,6 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { MealListSummary } from "@lifeplate/shared";
@@ -18,7 +18,7 @@ import { usePendingLogDate } from "@/context/PendingLogDateContext";
 import { useMeals } from "@/context/MealsContext";
 import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
-import { deleteMeal, reorderMeals } from "@/lib/api";
+import { deleteMeal, fetchIncomingMealShareCount, reorderMeals } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
@@ -56,12 +56,21 @@ export default function TimelineScreen() {
   } = useHydration();
   const [pastDayPickerOpen, setPastDayPickerOpen] = useState(false);
   const [hydrationPickerOpen, setHydrationPickerOpen] = useState(false);
+  const [pendingShareCount, setPendingShareCount] = useState(0);
   const pendingRef = useRef<Map<string, { meal: MealListSummary; timer: ReturnType<typeof setTimeout> }>>(
     new Map(),
   );
 
   const hydrationTarget =
     profile?.nutritionTargets?.dailyHydrationGlasses ?? HYDRATION_TARGET;
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchIncomingMealShareCount()
+        .then(setPendingShareCount)
+        .catch(() => setPendingShareCount(0));
+    }, []),
+  );
 
   function confirmDelete(meal: MealListSummary) {
     const label = meal.mealName?.trim() || "this meal";
@@ -158,6 +167,17 @@ export default function TimelineScreen() {
         title="Timeline"
         subtitle="Your health story, chronologically"
       />
+
+      {pendingShareCount > 0 ? (
+        <Pressable
+          style={styles.shareBanner}
+          onPress={() => router.push("/(tabs)/friends")}
+        >
+          <Text variant="bodyMedium" style={styles.shareBannerText}>
+            {pendingShareCount} meal share{pendingShareCount === 1 ? "" : "s"} waiting — review on Friends
+          </Text>
+        </Pressable>
+      ) : null}
 
       {hasAnyEntries ? (
         <TimelineSummaryBar totalMeals={meals.length} weekMeals={weekMeals} />
@@ -295,6 +315,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FBF9",
   },
   uploadText: { opacity: 0.75 },
+  shareBanner: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: "#D8F3DC",
+  },
+  shareBannerText: {
+    color: "#1B4332",
+    textAlign: "center",
+  },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,

@@ -51,11 +51,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="friends"
         options={{
-          title: "Profile",
+          title: "Friends",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-outline" size={size} color={color} />
+            <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
           ),
         }}
       />

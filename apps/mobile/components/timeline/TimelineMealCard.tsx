@@ -145,6 +145,12 @@ export function TimelineMealCard({
                 />
               ) : null}
 
+              {meal.sharedByName ? (
+                <Text variant="bodySmall" style={styles.sharedBy} numberOfLines={1}>
+                  Shared by {meal.sharedByName}
+                </Text>
+              ) : null}
+
               {meal.calories != null || meal.protein != null ? (
                 <View style={styles.chips}>
                   {meal.calories != null ? (
@@ -282,6 +288,11 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     lineHeight: 18,
     fontStyle: "italic",
+  },
+  sharedBy: {
+    opacity: 0.55,
+    color: "#40916C",
+    fontSize: 12,
   },
   chips: {
     flexDirection: "row",

@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, TextInput } from "react-native-paper";
@@ -23,6 +24,7 @@ import { MealLogDateField } from "@/components/meal/MealLogDateField";
 import { MealTypePicker } from "@/components/MealTypePicker";
 import { PremiumCard } from "@/components/PremiumCard";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
+import { ShareWithFriendsPicker } from "@/components/meal/ShareWithFriendsPicker";
 import { useAuth } from "@/context/AuthContext";
 import { attachDraftPhoto, confirmMeal, refineMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
@@ -147,6 +149,13 @@ export default function MealResultScreen() {
   const [refining, setRefining] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+
+  const handleShareTotalPeopleChange = useCallback((count: number) => {
+    const nextTotal = clampMealPortions(Math.max(2, count));
+    setTotalPortions(nextTotal);
+    setPortionsEaten((prev) => Math.min(prev, nextTotal));
+  }, []);
 
   const attachPhoto = useCallback(
     async (prepared: { uri: string; mimeType: string; fileName: string }) => {
@@ -189,6 +198,8 @@ export default function MealResultScreen() {
     [baseMacros.estimatedCalories, estimatedServings, profile?.nutritionTargets?.dailyCalories],
   );
 
+  const showPortionControls = likelySharedMeal || selectedFriendIds.length > 0;
+
   function applyPortionScaling(
     macros: MealMacroTotals,
     total: number,
@@ -205,9 +216,9 @@ export default function MealResultScreen() {
   }
 
   useEffect(() => {
-    if (!likelySharedMeal) return;
+    if (!showPortionControls) return;
     applyPortionScaling(baseMacros, totalPortions, portionsEaten);
-  }, [likelySharedMeal, totalPortions, portionsEaten, baseMacros]);
+  }, [showPortionControls, totalPortions, portionsEaten, baseMacros]);
 
   const lowConfidence = confidence < 0.6;
   const macroCalories = toNumber(calories, 0);
@@ -324,12 +335,15 @@ export default function MealResultScreen() {
           estimatedServings,
         ),
         loggedAt: loggedAtForDateKey(logDate, mealType),
+        shareWithFriendIds:
+          selectedFriendIds.length > 0 ? selectedFriendIds : undefined,
       });
       if (localImageUri || displayImageUri) {
         await saveMealImage(id, localImageUri || displayImageUri);
       }
       clearMealUploadSession(draftId);
       refreshAfterMealChange();
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)/timeline");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
@@ -383,7 +397,7 @@ export default function MealResultScreen() {
         </PremiumCard>
       ) : null}
 
-      {likelySharedMeal ? (
+      {showPortionControls ? (
         <SharedMealPortionsCard
           totalPortions={totalPortions}
           portionsEaten={portionsEaten}
@@ -392,6 +406,12 @@ export default function MealResultScreen() {
           onPortionsEatenChange={setPortionsEaten}
         />
       ) : null}
+
+      <ShareWithFriendsPicker
+        selectedFriendIds={selectedFriendIds}
+        onSelectionChange={setSelectedFriendIds}
+        onTotalPeopleChange={handleShareTotalPeopleChange}
+      />
 
       <PremiumCard>
         {editing ? (

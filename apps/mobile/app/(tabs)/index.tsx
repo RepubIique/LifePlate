@@ -169,7 +169,7 @@ export default function HomeScreen() {
         right={
           <IconButton
             icon="account-circle-outline"
-            onPress={() => router.push("/(tabs)/profile")}
+            onPress={() => router.push("/profile")}
           />
         }
       />

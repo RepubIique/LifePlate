@@ -36,6 +36,11 @@ import {
   ReorderMealsValidationError,
 } from "../services/mealReorder.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "../services/mealPortions.js";
+import {
+  createMealShareRequests,
+  MealShareError,
+  validateShareFriendIds,
+} from "../services/mealShare.js";
 import { uploadMealImage } from "../services/storage.js";
 import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
 import {
@@ -321,6 +326,13 @@ export async function mealRoutes(app: FastifyInstance) {
 
       try {
         await client.query("BEGIN");
+
+        const friendIds = await validateShareFriendIds(
+          userId,
+          body.shareWithFriendIds,
+          client,
+        );
+
         await client.query(
           `UPDATE meals SET sort_index = sort_index + 1
            WHERE user_id = $1 AND log_date = $2::date`,
@@ -355,14 +367,33 @@ export async function mealRoutes(app: FastifyInstance) {
         );
         const mealId = mealResult.rows[0].id;
 
+        const sharesSent = await createMealShareRequests(client, {
+          fromUserId: userId,
+          sourceMealId: mealId,
+          friendIds,
+          body,
+          draftRawAi: draft?.rawAiResponse,
+          mealType,
+          imageUrl,
+          logDate,
+          loggedAt: loggedAtDate,
+        });
+
         await client.query("COMMIT");
         await deleteDraft(body.draftId);
 
         await onMealDataChanged(userId, { mealLogDate: logDate });
 
-        return { id: mealId };
+        return { id: mealId, sharesSent };
       } catch (err) {
         await client.query("ROLLBACK");
+        if (err instanceof MealShareError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
         throw err;
       } finally {
         client.release();
@@ -397,13 +428,17 @@ export async function mealRoutes(app: FastifyInstance) {
           sodium: number | null;
           confidence: string | null;
           foods: string[];
+          shared_by_user_id: string | null;
+          shared_by_name: string | null;
         }>(
-          `SELECT id, meal_type, meal_name, image_url, created_at, log_date::text AS log_date,
-                  sort_index, notes, calories, protein, carbs, fat, fibre, sugar, sodium,
-                  confidence, foods
-           FROM meals
-           WHERE user_id = $1
-           ORDER BY log_date DESC, sort_index ASC
+          `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+                  m.log_date::text AS log_date, m.sort_index, m.notes,
+                  m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
+                  m.confidence, m.foods, m.shared_by_user_id, sharer.name AS shared_by_name
+           FROM meals m
+           LEFT JOIN users sharer ON sharer.id = m.shared_by_user_id
+           WHERE m.user_id = $1
+           ORDER BY m.log_date DESC, m.sort_index ASC
            LIMIT 100`,
           [userId],
         );
@@ -427,6 +462,8 @@ export async function mealRoutes(app: FastifyInstance) {
             sodium: r.sodium,
             confidence: r.confidence ? Number(r.confidence) : null,
             foods: r.foods ?? [],
+            sharedByUserId: r.shared_by_user_id,
+            sharedByName: r.shared_by_name,
           })),
         );
 
@@ -444,12 +481,16 @@ export async function mealRoutes(app: FastifyInstance) {
         notes: string | null;
         calories: number | null;
         protein: number | null;
+        shared_by_user_id: string | null;
+        shared_by_name: string | null;
       }>(
-        `SELECT id, meal_type, meal_name, image_url, created_at, log_date::text AS log_date,
-                sort_index, notes, calories, protein
-         FROM meals
-         WHERE user_id = $1
-         ORDER BY log_date DESC, sort_index ASC
+        `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
+                m.log_date::text AS log_date, m.sort_index, m.notes,
+                m.calories, m.protein, m.shared_by_user_id, sharer.name AS shared_by_name
+         FROM meals m
+         LEFT JOIN users sharer ON sharer.id = m.shared_by_user_id
+         WHERE m.user_id = $1
+         ORDER BY m.log_date DESC, m.sort_index ASC
          LIMIT 100`,
         [userId],
       );
@@ -466,6 +507,8 @@ export async function mealRoutes(app: FastifyInstance) {
           notes: r.notes,
           calories: r.calories,
           protein: r.protein,
+          sharedByUserId: r.shared_by_user_id,
+          sharedByName: r.shared_by_name,
         })),
       );
 

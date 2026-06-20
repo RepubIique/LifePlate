@@ -14,6 +14,8 @@ import { insightRoutes } from "./routes/insights.js";
 import { nutritionRoutes } from "./routes/nutrition.js";
 import { userRoutes } from "./routes/users.js";
 import { feedbackRoutes } from "./routes/feedback.js";
+import { friendRoutes } from "./routes/friends.js";
+import { mealShareRoutes } from "./routes/mealShares.js";
 
 assertRuntimeConfig();
 
@@ -83,6 +85,8 @@ await app.register(insightRoutes);
 await app.register(nutritionRoutes);
 await app.register(userRoutes);
 await app.register(feedbackRoutes);
+await app.register(friendRoutes);
+await app.register(mealShareRoutes);
 
 async function shutdown(signal: string) {
   app.log.info({ signal }, "shutting down");
