@@ -1,4 +1,4 @@
-import type { MealListItem } from "@lifeplate/shared";
+import type { MealListSummary } from "@lifeplate/shared";
 import {
   getFilledSlots,
   getSuggestedSlot,
@@ -11,7 +11,7 @@ import {
 
 export type HomeTimelineMealItem = {
   kind: "meal";
-  meal: MealListItem;
+  meal: MealListSummary;
 };
 
 export type HomeTimelineSuggestedItem = {
@@ -22,7 +22,7 @@ export type HomeTimelineSuggestedItem = {
 export type HomeTimelineItem = HomeTimelineMealItem | HomeTimelineSuggestedItem;
 
 export function buildHomeMealsTimeline(
-  meals: MealListItem[],
+  meals: MealListSummary[],
   options: { highlightNextSlot: boolean; now?: Date },
 ): {
   items: HomeTimelineItem[];
