@@ -1,6 +1,8 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
+import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
 import { spacing } from "@/src/theme/lifeplate";
 
@@ -15,27 +17,38 @@ export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: 
 
   return (
     <PremiumCard style={styles.card} noBlur>
-      <Text variant="titleMedium" style={styles.title}>
-        Weekly co-op challenge
-      </Text>
-      <Text variant="bodySmall" style={styles.subtitle}>
-        Invite a friend — both hit hydration 5 of 7 days this week.
-      </Text>
+      <View style={styles.header}>
+        <View style={styles.iconWrap}>
+          <MaterialCommunityIcons name="handshake-outline" size={20} color="#40916C" />
+        </View>
+        <View style={styles.headerCopy}>
+          <Text variant="titleMedium" style={styles.title}>
+            Weekly co-op challenge
+          </Text>
+          <Text variant="bodySmall" style={styles.subtitle}>
+            Invite a friend — both hit hydration 5 of 7 days this week.
+          </Text>
+        </View>
+      </View>
       <View style={styles.list}>
-        {friends.map((friend) => (
-          <View key={friend.id} style={styles.row}>
-            <Text variant="bodyMedium" style={styles.name}>
-              {friend.name?.trim() || "Friend"}
-            </Text>
-            <Button
-              mode="outlined"
-              compact
-              loading={busyFriendId === friend.id}
-              disabled={busyFriendId != null}
-              onPress={() => onInvite(friend.id)}
-            >
-              Invite
-            </Button>
+        {friends.map((friend, index) => (
+          <View key={friend.id}>
+            <View style={styles.row}>
+              <FriendAvatar id={friend.id} name={friend.name} hasAvatar={friend.hasAvatar} />
+              <Text variant="bodyMedium" style={styles.name}>
+                {friend.name?.trim() || "Friend"}
+              </Text>
+              <Button
+                mode="outlined"
+                compact
+                loading={busyFriendId === friend.id}
+                disabled={busyFriendId != null}
+                onPress={() => onInvite(friend.id)}
+              >
+                Invite
+              </Button>
+            </View>
+            {index < friends.length - 1 ? <View style={styles.divider} /> : null}
           </View>
         ))}
       </View>
@@ -45,14 +58,33 @@ export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: 
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm, backgroundColor: "#F8FBF9" },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#D8F3DC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerCopy: { flex: 1, gap: 2 },
   title: { color: "#1B4332" },
   subtitle: { opacity: 0.6, lineHeight: 18 },
-  list: { gap: spacing.xs, marginTop: spacing.xs },
+  list: { marginTop: spacing.xs },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   name: { flex: 1, color: "#1B4332" },
+  divider: {
+    height: 1,
+    backgroundColor: "#EEF2F0",
+    marginLeft: 52,
+  },
 });

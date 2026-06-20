@@ -1,7 +1,6 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Text } from "react-native-paper";
 import type { MealPortionMeta } from "@lifeplate/shared";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { CoopChallengeCard } from "@/components/gamification/CoopChallengeCard";
@@ -9,8 +8,10 @@ import { CoopChallengeInviteSection } from "@/components/gamification/CoopChalle
 import { TogetherStreakSection } from "@/components/gamification/TogetherStreakSection";
 import { FriendCodeCard } from "@/components/friends/FriendCodeCard";
 import { FriendsList } from "@/components/friends/FriendsList";
+import { FriendsOverviewCard } from "@/components/friends/FriendsOverviewCard";
 import { PendingShareCard } from "@/components/friends/PendingShareCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
+import { FriendsSkeleton } from "@/components/skeletons/FriendsSkeleton";
 import { Screen } from "@/components/Screen";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useFriends } from "@/context/FriendsContext";
@@ -189,6 +190,15 @@ export default function FriendsScreen() {
   );
   const inviteableFriends = friends.filter((f) => !activeChallengeFriendIds.has(f.id));
 
+  const topStreakFriend = useMemo(() => {
+    return friends.reduce<(typeof friends)[number] | null>((best, friend) => {
+      const streak = friend.togetherStreak ?? 0;
+      if (streak <= 0) return best;
+      if (!best || streak > (best.togetherStreak ?? 0)) return friend;
+      return best;
+    }, null);
+  }, [friends]);
+
   return (
     <Screen
       scroll
@@ -199,15 +209,40 @@ export default function FriendsScreen() {
     >
       <PremiumHeader
         title="Friends"
-        subtitle="Share meals without running AI twice"
+        subtitle="Share meals, stay accountable, log together"
       />
 
       {showInitialLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator />
-        </View>
+        <FriendsSkeleton />
       ) : (
         <View style={styles.body}>
+          <FriendsOverviewCard
+            friendCount={friends.length}
+            pendingShareCount={pendingShares.length}
+            topTogetherStreak={topStreakFriend?.togetherStreak ?? 0}
+            topStreakFriendName={topStreakFriend?.name}
+          />
+
+          {pendingShares.length > 0 ? (
+            <>
+              <SectionLabel
+                title="Pending shares"
+                subtitle="Meals friends logged for you — accept to add them"
+              />
+              <View style={styles.shareList}>
+                {pendingShares.map((share) => (
+                  <PendingShareCard
+                    key={share.id}
+                    share={share}
+                    busy={shareBusyId === share.id}
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
+
           <FriendCodeCard
             friendCode={friendCode || "------"}
             addCode={addCode}
@@ -243,27 +278,7 @@ export default function FriendsScreen() {
             />
           ) : null}
 
-          {pendingShares.length > 0 ? (
-            <>
-              <SectionLabel
-                title="Pending shares"
-                subtitle="Meals friends logged for you — accept to add them"
-              />
-              <View style={styles.shareList}>
-                {pendingShares.map((share) => (
-                  <PendingShareCard
-                    key={share.id}
-                    share={share}
-                    busy={shareBusyId === share.id}
-                    onAccept={handleAccept}
-                    onDecline={handleDecline}
-                  />
-                ))}
-              </View>
-            </>
-          ) : null}
-
-          <SectionLabel title="Your friends" subtitle="Long-press to remove" />
+          <SectionLabel title="Your friends" subtitle="Tap for activity · long-press to remove" />
           <FriendsList friends={friends} onRemove={(id) => void handleRemoveFriend(id)} />
         </View>
       )}
@@ -280,10 +295,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.md,
-  },
-  loading: {
-    paddingVertical: spacing.xl,
-    alignItems: "center",
   },
   shareList: { gap: spacing.sm },
 });

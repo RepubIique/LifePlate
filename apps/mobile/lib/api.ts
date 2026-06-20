@@ -1,5 +1,6 @@
 import type {
   AlphaFeedbackMessage,
+  FriendProfileSummary,
   FriendSummary,
   FriendsListResponse,
   InsightsResponse,
@@ -381,6 +382,10 @@ export async function addFriendByCode(friendCode: string): Promise<{ friend: Fri
     method: "POST",
     body: JSON.stringify({ friendCode }),
   });
+}
+
+export async function fetchFriendProfile(friendId: string): Promise<FriendProfileSummary> {
+  return request<FriendProfileSummary>(`/api/friends/${friendId}`);
 }
 
 export async function fetchFriendAvatar(friendId: string): Promise<ProfileAvatarResponse> {

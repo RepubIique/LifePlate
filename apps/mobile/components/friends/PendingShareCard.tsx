@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useMemo, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
@@ -43,20 +44,33 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
   const hasImage = share.imageUrl.startsWith("http");
 
   return (
-    <PremiumCard style={styles.card}>
-      <Text variant="labelLarge" style={styles.from}>
-        Shared by {share.fromUserName}
-      </Text>
-      <Text variant="bodySmall" style={styles.date}>
-        {formatLogDateLabel(share.logDate)}
+    <PremiumCard style={styles.card} noBlur>
+      <View style={styles.header}>
+        <View style={styles.badge}>
+          <MaterialCommunityIcons name="food-fork-drink" size={14} color="#40916C" />
+          <Text variant="labelSmall" style={styles.badgeText}>
+            Meal share
+          </Text>
+        </View>
+        <Text variant="bodySmall" style={styles.date}>
+          {formatLogDateLabel(share.logDate)}
+        </Text>
+      </View>
+
+      <Text variant="titleMedium" style={styles.from}>
+        From {share.fromUserName}
       </Text>
 
       <View style={styles.content}>
         {hasImage ? (
           <Image source={{ uri: share.imageUrl }} style={styles.image} />
-        ) : null}
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#40916C" />
+          </View>
+        )}
         <View style={styles.details}>
-          <Text variant="titleMedium" style={styles.mealName}>
+          <Text variant="titleMedium" style={styles.mealName} numberOfLines={2}>
             {share.mealName}
           </Text>
           <Text variant="bodySmall" style={styles.macros}>
@@ -95,11 +109,16 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
           }
           loading={busy}
           disabled={busy}
-          style={styles.acceptBtn}
+          style={styles.actionBtn}
         >
           Accept
         </Button>
-        <Button mode="outlined" onPress={() => onDecline(share.id)} disabled={busy}>
+        <Button
+          mode="outlined"
+          onPress={() => onDecline(share.id)}
+          disabled={busy}
+          style={styles.actionBtn}
+        >
           Decline
         </Button>
       </View>
@@ -108,9 +127,29 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
+  card: {
+    gap: spacing.sm,
+    backgroundColor: "#FFFFFF",
+    borderLeftWidth: 3,
+    borderLeftColor: "#40916C",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#D8F3DC",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  badgeText: { color: "#1B4332", fontWeight: "600", letterSpacing: 0.2 },
+  date: { opacity: 0.5 },
   from: { color: "#1B4332" },
-  date: { opacity: 0.55 },
   content: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -119,11 +158,25 @@ const styles = StyleSheet.create({
   image: {
     width: 72,
     height: 72,
-    borderRadius: 12,
+    borderRadius: 14,
+  },
+  imagePlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: "#F8FBF9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#EEF2F0",
   },
   details: { flex: 1, gap: 4 },
-  mealName: { color: "#1B4332" },
+  mealName: { color: "#1B4332", lineHeight: 22 },
   macros: { opacity: 0.65 },
-  actions: { gap: spacing.sm, marginTop: spacing.xs },
-  acceptBtn: { marginTop: spacing.xs },
+  actions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  actionBtn: { flex: 1 },
 });

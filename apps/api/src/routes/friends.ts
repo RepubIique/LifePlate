@@ -6,6 +6,7 @@ import {
   FriendRequestError,
   addFriendByCode,
   getFriendAvatarUrl,
+  getFriendProfile,
   getFriendsSocialResponse,
   removeFriend,
 } from "../services/friendships.js";
@@ -26,6 +27,28 @@ export async function friendRoutes(app: FastifyInstance) {
       try {
         const friend = await addFriendByCode(userId, friendCode);
         return { friend };
+      } catch (err) {
+        if (err instanceof FriendRequestError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
+    },
+  );
+
+  app.get<{ Params: { friendId: string } }>(
+    "/api/friends/:friendId",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { friendId } = request.params;
+
+      try {
+        return await getFriendProfile(userId, friendId);
       } catch (err) {
         if (err instanceof FriendRequestError) {
           return reply.code(err.status).send({

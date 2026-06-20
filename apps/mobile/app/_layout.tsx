@@ -57,6 +57,7 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding/goal" />
             <Stack.Screen name="onboarding/body" />
             <Stack.Screen name="profile" />
+            <Stack.Screen name="friend/[id]" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen
               name="meal/result"

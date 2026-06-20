@@ -1,4 +1,5 @@
-import type { FriendSummary, FriendsListResponse } from "@lifeplate/shared";
+import type { FriendProfileSummary, FriendSummary, FriendsListResponse } from "@lifeplate/shared";
+import { currentWeekStartKey, todayDateKey } from "@lifeplate/shared";
 import type { PoolClient } from "pg";
 import { pool } from "../db.js";
 import { ensureUserFriendCode, normalizeFriendCode } from "./friendCodes.js";
@@ -133,6 +134,79 @@ export async function removeFriend(userId: string, friendId: string): Promise<vo
     userA,
     userB,
   ]);
+}
+
+export async function getFriendProfile(
+  userId: string,
+  friendId: string,
+): Promise<FriendProfileSummary> {
+  if (!(await areFriends(userId, friendId))) {
+    throw new FriendRequestError("Not friends", 404, "NOT_FRIENDS");
+  }
+
+  const weekStart = currentWeekStartKey();
+  const today = todayDateKey();
+
+  const [
+    { rows: friendRows },
+    { rows: mealsWeekRows },
+    { rows: loggedTodayRows },
+    { rows: shareRows },
+    logDaysByUser,
+  ] = await Promise.all([
+    pool.query<{
+      name: string | null;
+      avatar_url: string | null;
+      current_streak: number;
+      longest_streak: number;
+    }>(
+      `SELECT name, avatar_url, current_streak, longest_streak
+       FROM users WHERE id = $1`,
+      [friendId],
+    ),
+    pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM meals
+       WHERE user_id = $1 AND log_date >= $2::date`,
+      [friendId, weekStart],
+    ),
+    pool.query<{ logged: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM meals WHERE user_id = $1 AND log_date = $2::date
+       ) AS logged`,
+      [friendId, today],
+    ),
+    pool.query<{ received: string; sent: string }>(
+      `SELECT
+         (SELECT COUNT(*)::text FROM meal_share_requests
+          WHERE from_user_id = $2 AND to_user_id = $1 AND status = 'accepted') AS received,
+         (SELECT COUNT(*)::text FROM meal_share_requests
+          WHERE from_user_id = $1 AND to_user_id = $2 AND status = 'accepted') AS sent`,
+      [userId, friendId],
+    ),
+    queryMealLogDaysByUserIds([userId, friendId]),
+  ]);
+
+  const friend = friendRows[0];
+  if (!friend) {
+    throw new FriendRequestError("Friend not found", 404, "NOT_FOUND");
+  }
+
+  const userDays = logDaysByUser.get(userId) ?? [];
+  const friendDays = logDaysByUser.get(friendId) ?? [];
+
+  return {
+    id: friendId,
+    name: friend.name,
+    hasAvatar: Boolean(friend.avatar_url?.trim()),
+    togetherStreak: togetherStreakForFriend(userDays, friendDays),
+    currentStreak: friend.current_streak,
+    longestStreak: friend.longest_streak,
+    mealsThisWeek: Number(mealsWeekRows[0]?.count ?? 0),
+    loggedToday: Boolean(loggedTodayRows[0]?.logged),
+    sharesReceivedFromFriend: Number(shareRows[0]?.received ?? 0),
+    sharesSentToFriend: Number(shareRows[0]?.sent ?? 0),
+  };
 }
 
 export async function getFriendsSocialResponse(userId: string): Promise<FriendsListResponse> {

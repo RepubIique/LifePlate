@@ -457,6 +457,22 @@ export interface FriendSummary {
   togetherStreak?: number;
 }
 
+/** Privacy-conscious snapshot of a friend's activity (friends only). */
+export interface FriendProfileSummary {
+  id: string;
+  name: string | null;
+  hasAvatar: boolean;
+  togetherStreak: number;
+  currentStreak: number;
+  longestStreak: number;
+  mealsThisWeek: number;
+  loggedToday: boolean;
+  /** Accepted meal shares this friend sent you. */
+  sharesReceivedFromFriend: number;
+  /** Accepted meal shares you sent this friend. */
+  sharesSentToFriend: number;
+}
+
 export interface FriendsListResponse {
   friendCode: string;
   friends: FriendSummary[];

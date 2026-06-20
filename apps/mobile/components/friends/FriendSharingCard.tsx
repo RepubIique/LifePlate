@@ -1,0 +1,117 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { StyleSheet, View } from "react-native";
+import { Text } from "react-native-paper";
+import type { FriendProfileSummary } from "@lifeplate/shared";
+import { PremiumCard } from "@/components/PremiumCard";
+import { spacing } from "@/src/theme/lifeplate";
+
+type Props = {
+  profile: FriendProfileSummary;
+};
+
+function ShareStat({
+  icon,
+  value,
+  label,
+}: {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  value: number;
+  label: string;
+}) {
+  return (
+    <View style={styles.stat}>
+      <View style={styles.iconWrap}>
+        <MaterialCommunityIcons name={icon} size={18} color="#40916C" />
+      </View>
+      <Text variant="headlineSmall" style={styles.value}>
+        {value}
+      </Text>
+      <Text variant="labelSmall" style={styles.label}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+export function FriendSharingCard({ profile }: Props) {
+  const totalShares = profile.sharesReceivedFromFriend + profile.sharesSentToFriend;
+  if (totalShares === 0) {
+    return (
+      <PremiumCard style={styles.card} noBlur>
+        <Text variant="titleMedium" style={styles.title}>
+          Meal sharing
+        </Text>
+        <Text variant="bodySmall" style={styles.empty}>
+          No shared meals yet — log a meal and share it with {profile.name?.trim() || "your friend"}.
+        </Text>
+      </PremiumCard>
+    );
+  }
+
+  return (
+    <PremiumCard style={styles.card} noBlur>
+      <Text variant="titleMedium" style={styles.title}>
+        Meal sharing
+      </Text>
+      <Text variant="bodySmall" style={styles.subtitle}>
+        Accepted shares between you two.
+      </Text>
+      <View style={styles.row}>
+        <ShareStat
+          icon="arrow-down-bold"
+          value={profile.sharesReceivedFromFriend}
+          label={`From ${profile.name?.trim() || "friend"}`}
+        />
+        <View style={styles.divider} />
+        <ShareStat
+          icon="arrow-up-bold"
+          value={profile.sharesSentToFriend}
+          label="From you"
+        />
+      </View>
+    </PremiumCard>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    gap: spacing.sm,
+    backgroundColor: "#F8FBF9",
+  },
+  title: { color: "#1B4332", letterSpacing: 0.1 },
+  subtitle: { opacity: 0.6, lineHeight: 18 },
+  empty: { opacity: 0.65, lineHeight: 20 },
+  row: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    marginTop: spacing.xs,
+  },
+  stat: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: spacing.sm,
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#D8F3DC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  value: {
+    fontWeight: "700",
+    color: "#1B4332",
+    letterSpacing: -0.3,
+  },
+  label: {
+    opacity: 0.55,
+    textAlign: "center",
+  },
+  divider: {
+    width: 1,
+    backgroundColor: "#EEF2F0",
+    marginVertical: spacing.sm,
+  },
+});
