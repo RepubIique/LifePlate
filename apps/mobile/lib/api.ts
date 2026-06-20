@@ -7,6 +7,8 @@ import type {
   MealDetail,
   MealPhotoAttachResponse,
   MealRefineResponse,
+  MealReanalyzeRequest,
+  MealReanalyzeResponse,
   MealUploadResponse,
   MealUpdateRequest,
   MealReorderRequest,
@@ -364,6 +366,16 @@ export async function refineMeal(
   return request<MealRefineResponse>("/api/meals/refine", {
     method: "POST",
     body: JSON.stringify({ draftId, clarification }),
+  });
+}
+
+export async function reanalyzeMeal(
+  id: string,
+  body: MealReanalyzeRequest,
+): Promise<MealReanalyzeResponse> {
+  return request<MealReanalyzeResponse>(`/api/meals/${id}/reanalyze`, {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

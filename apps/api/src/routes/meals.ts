@@ -5,11 +5,12 @@ import type {
   MealListSummary,
   MealPatchResponse,
   MealRefineRequest,
+  MealReanalyzeRequest,
   MealReorderRequest,
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKey, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -27,7 +28,8 @@ import {
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError, assertMealAnalysis } from "../services/mealGuardrails.js";
 import { RateLimitError, pruneStaleRateLimitRows, reserveRefineAttempt, reserveUploadAttempt } from "../services/uploadRateLimit.js";
-import { analyzeMealImage, analyzeMealText, refineMealImage } from "../services/openai.js";
+import { analyzeMealImage, analyzeMealText, reanalyzeMealFromFoods, refineMealImage } from "../services/openai.js";
+import { assertMealReanalyzeAllowed } from "../services/mealReanalyze.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import {
   reorderMealsForDay,
@@ -626,11 +628,12 @@ export async function mealRoutes(app: FastifyInstance) {
         confidence: string | null;
         foods: string[];
         raw_ai_response: unknown;
+        reanalyze_count: number;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
                 m.log_date::text AS log_date, m.sort_index, m.notes,
                 m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
-                m.confidence, m.foods, m.raw_ai_response
+                m.confidence, m.foods, m.raw_ai_response, m.reanalyze_count
          FROM meals m
          WHERE m.user_id = $1 AND m.id = $2`,
         [userId, id],
@@ -661,7 +664,78 @@ export async function mealRoutes(app: FastifyInstance) {
         confidence: r.confidence ? Number(r.confidence) : null,
         foods: r.foods ?? [],
         portionMeta,
+        reanalyzeCount: r.reanalyze_count,
+        reanalyzeRemaining: mealReanalyzeRemaining(r.reanalyze_count),
       };
+    },
+  );
+
+  app.post<{ Body: MealReanalyzeRequest; Params: { id: string } }>(
+    "/api/meals/:id/reanalyze",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { id } = request.params;
+      const body = request.body ?? {};
+      const foods = (body.foods ?? []).map((food) => food.trim()).filter(Boolean);
+
+      if (!foods.length) {
+        return reply.code(400).send({ error: "At least one food is required" });
+      }
+
+      const { rows: ownedRows } = await pool.query<{
+        meal_name: string;
+        meal_type: string | null;
+        reanalyze_count: number;
+      }>(
+        `SELECT meal_name, meal_type, reanalyze_count
+         FROM meals
+         WHERE id = $1 AND user_id = $2`,
+        [id, userId],
+      );
+      const owned = ownedRows[0];
+      if (!owned) {
+        return reply.code(404).send({ error: "Not found" });
+      }
+
+      try {
+        assertMealReanalyzeAllowed(owned.reanalyze_count);
+        await reserveRefineAttempt(userId);
+        const { analysis } = await reanalyzeMealFromFoods({
+          mealName: body.mealName?.trim() || owned.meal_name,
+          mealType: body.mealType ?? owned.meal_type,
+          foods,
+        });
+
+        const { rows: updatedRows } = await pool.query<{ reanalyze_count: number }>(
+          `UPDATE meals
+           SET reanalyze_count = reanalyze_count + 1
+           WHERE id = $1 AND user_id = $2 AND reanalyze_count < $3
+           RETURNING reanalyze_count`,
+          [id, userId, MAX_MEAL_REANALYZES],
+        );
+        if (!updatedRows[0]) {
+          throw new MealGuardrailError(
+            "REANALYZE_LIMIT",
+            `You've used all ${MAX_MEAL_REANALYZES} AI re-analyses for this meal.`,
+            429,
+          );
+        }
+
+        return {
+          ...analysis,
+          reanalyzeRemaining: mealReanalyzeRemaining(updatedRows[0].reanalyze_count),
+        };
+      } catch (err) {
+        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        throw err;
+      }
     },
   );
 

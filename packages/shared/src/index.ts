@@ -168,7 +168,15 @@ export const MEAL_GUARDRAIL_CODES = [
   "NOT_FOOD",
   "UNCLEAR_PHOTO",
   "RATE_LIMITED",
+  "REANALYZE_LIMIT",
 ] as const;
+
+/** Per-meal cap on AI macro re-estimates from the edit screen. */
+export const MAX_MEAL_REANALYZES = 2;
+
+export function mealReanalyzeRemaining(reanalyzeCount: number): number {
+  return Math.max(0, MAX_MEAL_REANALYZES - Math.max(0, reanalyzeCount));
+}
 
 export type MealGuardrailCode = (typeof MEAL_GUARDRAIL_CODES)[number];
 
@@ -386,6 +394,16 @@ export interface MealRefineResponse extends MealAnalysisResult {
   coachNudge: string;
 }
 
+export interface MealReanalyzeRequest {
+  foods: string[];
+  mealName?: string;
+  mealType?: MealType | null;
+}
+
+export interface MealReanalyzeResponse extends MealAnalysisResult {
+  reanalyzeRemaining: number;
+}
+
 export interface MealConfirmRequest {
   draftId: string;
   /** Cloud URL only — omit or leave empty for device-only photos. */
@@ -445,6 +463,8 @@ export interface MealListItem extends MealListSummary {
 export interface MealDetail extends MealListItem {
   rawAiResponse?: unknown;
   portionMeta?: MealPortionMeta;
+  reanalyzeCount: number;
+  reanalyzeRemaining: number;
 }
 
 export interface MealUpdateRequest {

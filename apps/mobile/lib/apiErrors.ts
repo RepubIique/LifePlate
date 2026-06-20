@@ -31,6 +31,9 @@ export function friendlyErrorMessage(err: unknown): string {
     if (err.status >= 500) {
       return "Couldn't upload your meal right now. Check your connection and try again.";
     }
+    if (err.code === "REANALYZE_LIMIT") {
+      return err.message || "You've used all AI re-analyses for this meal.";
+    }
     if (err.status === 429 || err.code === "RATE_LIMITED") {
       return err.message || "You've reached the limit for this hour. Try again in a bit.";
     }

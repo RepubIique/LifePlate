@@ -390,3 +390,73 @@ Keep isMealPhoto true. Return JSON only with keys: isMealPhoto, rejectReason, me
   const analysis = parseVisionResponse(parsed);
   return { analysis, raw: { refined: true, clarification: note, ...parsed } };
 }
+
+const REANALYZE_SYSTEM_PROMPT = `You are a nutrition assistant for LifePlate.
+The user edited a logged meal and provided an authoritative list of foods they ate.
+Re-estimate the full meal nutrition from that list only — do not invent extra foods.
+Return JSON only with keys:
+- mealName (string; keep or lightly improve the provided name)
+- foods (non-empty array; normalize spelling but include every user item)
+- estimatedCalories
+- protein (grams)
+- carbs (grams)
+- fat (grams)
+- fibre (grams)
+- sugar (grams)
+- sodium (milligrams)
+- confidence (0 to 1; lower when portions are unclear)
+- estimatedServings (number ≥ 1; default 1 unless sharing is implied)
+
+Do not return markdown.`;
+
+export async function reanalyzeMealFromFoods(input: {
+  mealName: string;
+  mealType?: string | null;
+  foods: string[];
+}): Promise<{ analysis: MealAnalysisResult; raw: unknown }> {
+  const foods = input.foods.map((food) => food.trim()).filter(Boolean);
+  if (foods.length === 0) {
+    rejectNonMealDescription("empty food list");
+  }
+
+  const mealName = input.mealName.trim() || "Meal";
+  const userPrompt = [
+    `Meal name: ${mealName}`,
+    input.mealType ? `Meal type: ${input.mealType}` : null,
+    `Foods eaten: ${foods.join(", ")}`,
+    "Re-estimate total macros for everything listed.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  if (!config.openaiApiKey || isPlaceholderKey(config.openaiApiKey)) {
+    if (isProduction) assertOpenAiConfigured();
+    return {
+      analysis: {
+        ...MOCK,
+        mealName,
+        foods,
+        confidence: Math.min(0.9, MOCK.confidence + 0.05),
+      },
+      raw: { reanalyzed: true, textOnly: true, mock: true, foods },
+    };
+  }
+
+  const client = new OpenAI({ apiKey: config.openaiApiKey });
+  const response = await client.chat.completions.create({
+    model: config.openaiModel,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: REANALYZE_SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: 500,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error("Empty OpenAI response");
+  const parsed = JSON.parse(content);
+  const analysis = analysisFieldsSchema.parse(parsed);
+  assertMealAnalysis(analysis, "text");
+  return { analysis, raw: { reanalyzed: true, ...parsed } };
+}

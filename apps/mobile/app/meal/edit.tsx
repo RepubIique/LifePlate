@@ -13,6 +13,7 @@ import {
   buildMealPortionMeta,
   isMealType,
   MAX_MEAL_NOTES_LENGTH,
+  MAX_MEAL_REANALYZES,
   mealListItemToMacros,
   resolveMealPortionState,
   scaleMealForPortions,
@@ -31,7 +32,7 @@ import { MealImage } from "@/components/MealImage";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { attachMealPhoto, deleteMeal, updateMeal } from "@/lib/api";
+import { attachMealPhoto, deleteMeal, reanalyzeMeal, updateMeal } from "@/lib/api";
 import { deleteMealImage, getLocalMealImageUri, saveMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { loadMealDetail } from "@/lib/loadMealDetail";
@@ -109,6 +110,8 @@ export default function EditMealScreen() {
   const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeRemaining, setReanalyzeRemaining] = useState(MAX_MEAL_REANALYZES);
   const [deleting, setDeleting] = useState(false);
   const [meal, setMeal] = useState<MealDetail | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -230,6 +233,9 @@ export default function EditMealScreen() {
     });
     setLoggedAt(m.createdAt);
     setNotes(m.notes ?? "");
+    setReanalyzeRemaining(
+      m.reanalyzeRemaining ?? Math.max(0, MAX_MEAL_REANALYZES - (m.reanalyzeCount ?? 0)),
+    );
   }, []);
 
   useEffect(() => {
@@ -277,6 +283,40 @@ export default function EditMealScreen() {
 
   function removeFood(name: string) {
     setFoods((prev) => prev.filter((f) => f !== name));
+  }
+
+  async function handleReanalyze() {
+    if (!id || foods.length === 0 || reanalyzeRemaining <= 0) return;
+    setReanalyzing(true);
+    try {
+      const result = await reanalyzeMeal(id, {
+        foods,
+        mealName,
+        mealType,
+      });
+      const nextMacros: MealMacroTotals = {
+        estimatedCalories: result.estimatedCalories,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        fibre: result.fibre,
+        sugar: result.sugar,
+        sodium: result.sodium,
+      };
+      setMealName(result.mealName);
+      setFoods(result.foods);
+      setBaseMacros(nextMacros);
+      setEstimatedServings(result.estimatedServings);
+      setReanalyzeRemaining(result.reanalyzeRemaining);
+      if (meal) {
+        setMeal({ ...meal, confidence: result.confidence });
+      }
+      setSnackbar("Macros updated from your food list — review and save when ready.");
+    } catch (e) {
+      setSnackbar(friendlyErrorMessage(e));
+    } finally {
+      setReanalyzing(false);
+    }
   }
 
   async function handleSave() {
@@ -496,6 +536,28 @@ export default function EditMealScreen() {
           right={<TextInput.Icon icon="plus" onPress={addFood} />}
         />
 
+        <View style={styles.reanalyzeBlock}>
+          <Text variant="bodySmall" style={styles.reanalyzeHint}>
+            {reanalyzeRemaining > 0
+              ? `Updated your food list? Re-estimate macros with AI. ${reanalyzeRemaining} of ${MAX_MEAL_REANALYZES} left for this meal.`
+              : `No AI re-analyses left for this meal (limit is ${MAX_MEAL_REANALYZES}). Adjust macros manually below.`}
+          </Text>
+          <Button
+            mode="outlined"
+            icon="auto-fix"
+            onPress={handleReanalyze}
+            loading={reanalyzing}
+            disabled={
+              reanalyzing ||
+              saving ||
+              foods.length === 0 ||
+              reanalyzeRemaining <= 0
+            }
+          >
+            Re-analyse macros
+          </Button>
+        </View>
+
         <MacroNutritionPanel
           calories={toNumber(calories, 0)}
           protein={toNumber(protein, 0)}
@@ -614,6 +676,8 @@ const styles = StyleSheet.create({
   notesInput: { minHeight: 112 },
   notesCount: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  reanalyzeBlock: { gap: spacing.sm, marginTop: spacing.sm },
+  reanalyzeHint: { opacity: 0.7, lineHeight: 18 },
   macroGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   macroInput: { flexBasis: "48%" },
   actions: { gap: spacing.sm, paddingHorizontal: spacing.lg },
