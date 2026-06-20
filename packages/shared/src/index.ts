@@ -653,6 +653,7 @@ export {
   buildGutHealthSummary,
   buildFoodRecommendations,
   buildCoachSummary,
+  buildPlateMessage,
   buildLifeplateInsightTemplate,
   buildWeeklyTrends,
   weeklyGutScore,

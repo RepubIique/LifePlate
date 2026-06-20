@@ -198,11 +198,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   const refreshFriends = useCallback(() => loadFriends({ force: true }), [loadFriends]);
 
-  useEffect(() => {
-    if (!session || !hydrated) return;
-    void loadFriends();
-  }, [session, hydrated, loadFriends]);
-
   const value = useMemo(
     () => ({
       friendCode,

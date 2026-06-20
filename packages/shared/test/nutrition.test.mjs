@@ -112,8 +112,83 @@ test("buildCoachSummary mentions gaps when score is moderate", () => {
     3,
   );
 
-  const summary = buildCoachSummary(gaps, 72);
+  const summary = buildCoachSummary(gaps, 72, {
+    protein: 0.5,
+    fibre: 0.4,
+    plants: 0.2,
+    hydration: 0.3,
+  });
   assert.ok(summary.length > 10);
+});
+
+test("buildCoachSummary does not ask for protein when protein pillar is on track", () => {
+  const gaps = computeNutritionGaps(
+    {
+      calories: 1500,
+      protein: 120,
+      carbs: 150,
+      fat: 50,
+      fibre: 12,
+      mealsCount: 2,
+    },
+    targets,
+    classifyFoods(["rice"], ["Lunch"]),
+    3,
+  );
+
+  const summary = buildCoachSummary(gaps, 72, {
+    protein: 1,
+    fibre: 0.4,
+    plants: 0.2,
+    hydration: 0.3,
+  });
+  assert.doesNotMatch(summary, /protein/i);
+});
+
+test("buildCoachSummary is gentle in the morning with no meals logged", () => {
+  const gaps = computeNutritionGaps(
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fibre: 0, mealsCount: 0 },
+    targets,
+    classifyFoods([], []),
+    0,
+  );
+  const summary = buildCoachSummary(
+    gaps,
+    0,
+    { protein: 0, fibre: 0, plants: 0, hydration: 0 },
+    { hour: 8, logDate: "2026-06-20", mealTypes: [], mealsCount: 0 },
+  );
+  assert.match(summary, /morning|breakfast|across the day/i);
+  assert.doesNotMatch(summary, /excellent/i);
+});
+
+test("buildCoachSummary switches to tomorrow after dinner is logged", () => {
+  const gaps = computeNutritionGaps(
+    {
+      calories: 1400,
+      protein: 40,
+      carbs: 120,
+      fat: 45,
+      fibre: 10,
+      mealsCount: 3,
+    },
+    targets,
+    classifyFoods(["rice", "chicken"], ["Dinner"]),
+    4,
+  );
+  const summary = buildCoachSummary(
+    gaps,
+    55,
+    { protein: 0.5, fibre: 0.35, plants: 0.2, hydration: 0.5 },
+    {
+      hour: 20,
+      logDate: "2026-06-20",
+      mealTypes: ["breakfast", "lunch", "dinner"],
+      mealsCount: 3,
+    },
+  );
+  assert.match(summary, /tomorrow|wrapped up|wind down|call it a win/i);
+  assert.doesNotMatch(summary, /would make today excellent/i);
 });
 
 test("classifyFoods detects omega-3 foods", () => {

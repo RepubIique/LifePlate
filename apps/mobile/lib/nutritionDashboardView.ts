@@ -1,13 +1,19 @@
 import {
+  buildCoachSummary,
   buildDayComparison,
   buildEnergyMetrics,
+  buildFoodRecommendations,
   buildGutHealthSummary,
+  buildPlateMessage,
   buildCarbsPillar,
   buildFibrePillar,
   buildHydrationPillarFromGlasses,
   buildPlantsPillar,
   buildProteinPillar,
+  computeNutritionGaps,
+  computeNutritionScore,
   defaultExtendedNutritionTargets,
+  scoreStatus,
   type ExtendedNutritionTargets,
   type FoodClassification,
   type NutritionDashboardApiResponse,
@@ -23,6 +29,12 @@ export type NutritionDashboardView = Omit<NutritionDashboardResponse, "essential
     carbs: PillarProgress;
     hydration: PillarProgress;
   };
+  plateMessage: string | null;
+};
+
+export type ExpandDashboardOptions = {
+  /** Local hour (0–23) for time-aware coaching. Defaults to device time. */
+  hour?: number;
 };
 
 function toExtendedTargets(nutritionTargets: NutritionTargets | null): ExtendedNutritionTargets {
@@ -76,6 +88,7 @@ function resolveComparison(
 export function expandDashboard(
   api: NutritionDashboardApiResponse,
   nutritionTargets: NutritionTargets | null,
+  options?: ExpandDashboardOptions,
 ): NutritionDashboardView {
   const targets = toExtendedTargets(nutritionTargets);
   const classification: FoodClassification = {
@@ -98,11 +111,41 @@ export function expandDashboard(
     api.hydration.glasses,
     targets.dailyHydrationGlasses,
   );
+  const gaps = computeNutritionGaps(totals, targets, classification, api.hydration.glasses);
+  const score = computeNutritionScore(
+    totals,
+    targets,
+    classification,
+    api.hydration.glasses,
+  );
+  const pillarProgress = {
+    protein: protein.progress,
+    fibre: fibre.progress,
+    plants: plants.progress,
+    hydration: hydration.progress,
+  };
+  const coachContext = {
+    hour: options?.hour ?? new Date().getHours(),
+    logDate: api.date,
+    mealTypes: api.today.mealTypes ?? [],
+    mealsCount: totals.mealsCount,
+  };
+  const hasActivity =
+    totals.mealsCount > 0 ||
+    totals.protein > 0 ||
+    totals.fibre > 0 ||
+    api.hydration.glasses > 0;
+  const coachSummary = buildCoachSummary(gaps, score, pillarProgress, coachContext);
+  const plateMessage = buildPlateMessage(
+    [protein, fibre, plants, carbs],
+    hasActivity,
+    coachContext,
+  );
   const comparison = resolveComparison(
     api,
-    api.score,
+    score,
     totals.mealsCount,
-    totals.mealsCount > 0 || api.hydration.glasses > 0,
+    hasActivity,
     {
       protein: Math.round(protein.progress * 100),
       fibre: Math.round(fibre.progress * 100),
@@ -113,9 +156,10 @@ export function expandDashboard(
 
   return {
     date: api.date,
-    score: api.score,
-    scoreStatus: api.scoreStatus,
-    coachSummary: api.coachSummary,
+    score,
+    scoreStatus: scoreStatus(score),
+    coachSummary,
+    plateMessage,
     essentials: {
       protein,
       fibre,
@@ -125,7 +169,7 @@ export function expandDashboard(
     },
     energyBalance: buildEnergyMetrics(totals),
     gutHealth: buildGutHealthSummary(classification),
-    recommendations: api.recommendations,
+    recommendations: buildFoodRecommendations(gaps, coachContext),
     weeklyTrends: api.weeklyTrends,
     lifeplateInsight: api.lifeplateInsight,
     comparison,

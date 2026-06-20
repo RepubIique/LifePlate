@@ -5,7 +5,10 @@ import type { PillarProgress } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { HydrationLevelFill } from "@/components/home/HydrationLevelFill";
 import { PillarIcon } from "@/components/icons/PillarIcon";
+import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
+import { pillarColor } from "@/components/ui/pillarColors";
 import { pillarColorForLabel } from "@/lib/pillarTheme";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   pillar: PillarProgress;
@@ -21,6 +24,7 @@ export function HydrationQuickAdd({
   const total = Math.max(pillar.target, 1);
   const filled = Math.min(pillar.consumed, total);
   const progress = filled / total;
+  const statusColor = pillarColor(pillar.status);
 
   return (
     <PremiumCard style={styles.card}>
@@ -30,10 +34,10 @@ export function HydrationQuickAdd({
             <PillarIcon
               pillar="hydration"
               color={pillarColorForLabel("Hydration")}
-              size={32}
+              size={28}
               variant="badge"
             />
-            <View>
+            <View style={styles.titleCol}>
               <Text variant="titleMedium" style={styles.title}>
                 Hydration
               </Text>
@@ -42,30 +46,36 @@ export function HydrationQuickAdd({
               </Text>
             </View>
           </View>
-          <View style={styles.controls}>
-            <IconButton
-              icon="minus"
-              size={18}
-              mode="contained-tonal"
-              containerColor="rgba(255, 255, 255, 0.9)"
-              onPress={() => {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onDecrement();
-              }}
-              disabled={pillar.consumed <= 0}
-            />
-            <IconButton
-              icon="plus"
-              size={18}
-              mode="contained"
-              containerColor="#1B4332"
-              iconColor="#FFFFFF"
-              onPress={() => {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onIncrement();
-              }}
-              disabled={pillar.consumed >= pillar.target}
-            />
+
+          <View style={styles.rightCol}>
+            <Text variant="labelMedium" style={[styles.status, { color: statusColor }]}>
+              {pillarStatusHeadline(pillar.status)}
+            </Text>
+            <View style={styles.controls}>
+              <IconButton
+                icon="minus"
+                size={18}
+                mode="contained-tonal"
+                containerColor="rgba(255, 255, 255, 0.92)"
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onDecrement();
+                }}
+                disabled={pillar.consumed <= 0}
+              />
+              <IconButton
+                icon="plus"
+                size={18}
+                mode="contained"
+                containerColor="#1B4332"
+                iconColor="#FFFFFF"
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onIncrement();
+                }}
+                disabled={pillar.consumed >= pillar.target}
+              />
+            </View>
           </View>
         </View>
       </HydrationLevelFill>
@@ -82,15 +92,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: spacing.sm,
     flex: 1,
   },
-  title: { letterSpacing: 0.15 },
-  subtitle: { opacity: 0.55, marginTop: 1 },
+  titleCol: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    letterSpacing: 0.15,
+    color: "#1B4332",
+  },
+  subtitle: {
+    opacity: 0.55,
+  },
+  rightCol: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  status: {
+    fontWeight: "600",
+    letterSpacing: 0.15,
+    marginRight: spacing.xs,
+  },
   controls: {
     flexDirection: "row",
     alignItems: "center",

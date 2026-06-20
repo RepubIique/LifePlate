@@ -34,14 +34,21 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
   const [pendingSelection, setPendingSelection] = useState<NotesSelection | null>(null);
   const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
 
-  useEffect(() => {
+  const ensureFriendsLoaded = useCallback(() => {
+    if (hydrated) return;
     void loadFriends();
-  }, [loadFriends]);
+  }, [hydrated, loadFriends]);
 
   const mentionQuery = useMemo(
     () => getActiveMentionQuery(value, selection.start),
     [selection.start, value],
   );
+
+  useEffect(() => {
+    if (mentionQuery || mentionPickerOpen) {
+      ensureFriendsLoaded();
+    }
+  }, [mentionQuery, mentionPickerOpen, ensureFriendsLoaded]);
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionQuery && !mentionPickerOpen) return [];
@@ -95,6 +102,7 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
   );
 
   const handleMentionPress = useCallback(() => {
+    ensureFriendsLoaded();
     if (friends.length === 0) {
       setMentionPickerOpen(true);
       return;
@@ -108,7 +116,7 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
     onChange(nextText);
     applySelection({ start: pos, end: pos });
     setMentionPickerOpen(true);
-  }, [applySelection, friends.length, onChange, value]);
+  }, [applySelection, ensureFriendsLoaded, friends.length, onChange, value]);
 
   return (
     <View>

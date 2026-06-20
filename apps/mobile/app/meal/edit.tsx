@@ -48,7 +48,7 @@ import {
 } from "@/lib/mealDetailCache";
 import {
   useRefreshAfterMealChange,
-  useRefreshMealsAndDashboard,
+  useRefreshDashboardOnly,
 } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoAttach } from "@/lib/useMealPhotoAttach";
 import { premium } from "@/src/theme/premium";
@@ -109,7 +109,7 @@ function applyMealToForm(
 export default function EditMealScreen() {
   const { profile } = useAuth();
   const { patchMealLocally, removeMealLocally } = useMeals();
-  const refreshMealsAndDashboard = useRefreshMealsAndDashboard();
+  const refreshDashboardOnly = useRefreshDashboardOnly();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const { id, returnTo } = useLocalSearchParams<{ id: string; returnTo?: string }>();
   const [loading, setLoading] = useState(true);
@@ -414,7 +414,7 @@ export default function EditMealScreen() {
           createdAt: loggedAt,
           logDate: nextLogDate,
         });
-        refreshMealsAndDashboard();
+        refreshDashboardOnly();
       }
 
       if (sharesSent > 0) {

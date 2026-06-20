@@ -19,6 +19,7 @@ import { useMeals } from "@/context/MealsContext";
 import { useHydration } from "@/context/HydrationContext";
 import { useAuth } from "@/context/AuthContext";
 import { useFriends } from "@/context/FriendsContext";
+import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { deleteMeal, reorderMeals } from "@/lib/api";
 import { deleteMealImage } from "@/lib/mealImages";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
@@ -50,6 +51,7 @@ export default function TimelineScreen() {
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
   refreshAfterMealChangeRef.current = refreshAfterMealChange;
   const { pendingShareCount, loadFriends } = useFriends();
+  const { patchHydration } = useNutritionDashboard();
   const {
     hydrationByDate,
     syncingDate,
@@ -129,10 +131,24 @@ export default function TimelineScreen() {
     startMealLogForDay(dateKey);
   }
 
-  function handlePastHydrationSelected(dateKey: string) {
-    setHydrationPickerOpen(false);
-    adjustHydration(dateKey, 1);
-  }
+  const adjustTimelineHydration = useCallback(
+    (dateKey: string, delta: number) => {
+      const current = hydrationByDate[dateKey] ?? 0;
+      adjustHydration(dateKey, delta);
+      if (dateKey === todayDateKey()) {
+        patchHydration(Math.max(0, Math.min(24, current + delta)));
+      }
+    },
+    [adjustHydration, hydrationByDate, patchHydration],
+  );
+
+  const handlePastHydrationSelected = useCallback(
+    (dateKey: string) => {
+      setHydrationPickerOpen(false);
+      adjustTimelineHydration(dateKey, 1);
+    },
+    [adjustTimelineHydration],
+  );
 
   const handleDayMealsReorder = useCallback(
     (dateKey: string, orderedMeals: MealListSummary[]) => {
@@ -221,8 +237,8 @@ export default function TimelineScreen() {
               glasses={group.hydrationGlasses}
               target={hydrationTarget}
               syncing={syncingDate === group.dateKey}
-              onIncrement={() => adjustHydration(group.dateKey, 1)}
-              onDecrement={() => adjustHydration(group.dateKey, -1)}
+              onIncrement={() => adjustTimelineHydration(group.dateKey, 1)}
+              onDecrement={() => adjustTimelineHydration(group.dateKey, -1)}
             />
             <TimelineDayMeals
               dateKey={group.dateKey}

@@ -5,6 +5,11 @@ import {
   buildFoodRecommendations,
   buildPeriodSnapshot,
   buildWeeklyTrends,
+  buildCarbsPillar,
+  buildFibrePillar,
+  buildHydrationPillarFromGlasses,
+  buildPlantsPillar,
+  buildProteinPillar,
   classifyFoods,
   computeNutritionGaps,
   computeNutritionScore,
@@ -32,6 +37,7 @@ import { pool } from "../db.js";
 type MealRow = {
   meal_id: string;
   meal_name: string;
+  meal_type: string | null;
   calories: number | null;
   protein: number | null;
   carbs: number | null;
@@ -126,9 +132,19 @@ function collectMealNames(rows: MealRow[]): string[] {
   return [...new Set(rows.map((row) => row.meal_name))];
 }
 
+function collectMealTypes(rows: MealRow[]): string[] {
+  return [
+    ...new Set(
+      rows
+        .map((row) => row.meal_type?.trim().toLowerCase())
+        .filter((type): type is string => !!type),
+    ),
+  ];
+}
+
 async function fetchMealRowsSince(userId: string, sinceDateKey: string): Promise<MealRow[]> {
   const { rows } = await pool.query<MealRow>(
-    `SELECT m.id AS meal_id, m.meal_name, m.created_at, m.log_date::text AS log_date,
+    `SELECT m.id AS meal_id, m.meal_name, m.meal_type, m.created_at, m.log_date::text AS log_date,
             m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
      WHERE m.user_id = $1 AND m.log_date >= $2::date`,
@@ -144,7 +160,7 @@ async function fetchMealRowsBetween(
   endDateKey: string,
 ): Promise<MealRow[]> {
   const { rows } = await pool.query<MealRow>(
-    `SELECT m.id AS meal_id, m.meal_name, m.created_at, m.log_date::text AS log_date,
+    `SELECT m.id AS meal_id, m.meal_name, m.meal_type, m.created_at, m.log_date::text AS log_date,
             m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
      WHERE m.user_id = $1 AND m.log_date >= $2::date AND m.log_date <= $3::date`,
@@ -288,8 +304,26 @@ export async function buildNutritionDashboard(
     hydrationGlasses,
   );
   const status = scoreStatus(score);
-  const coachSummary = buildCoachSummary(gaps, score);
-  const recommendations = buildFoodRecommendations(gaps);
+  const proteinPillar = buildProteinPillar(totals, targets, classification);
+  const fibrePillar = buildFibrePillar(totals, targets, classification);
+  const plantsPillar = buildPlantsPillar(classification, targets);
+  const hydrationPillar = buildHydrationPillarFromGlasses(
+    hydrationGlasses,
+    targets.dailyHydrationGlasses,
+  );
+  const mealTypes = collectMealTypes(todayRows);
+  const coachContext = {
+    logDate: dateKey,
+    mealTypes,
+    mealsCount: totals.mealsCount,
+  };
+  const coachSummary = buildCoachSummary(gaps, score, {
+    protein: proteinPillar.progress,
+    fibre: fibrePillar.progress,
+    plants: plantsPillar.progress,
+    hydration: hydrationPillar.progress,
+  }, coachContext);
+  const recommendations = buildFoodRecommendations(gaps, coachContext);
   const weeklyMetrics = computeWeeklyMetricsFromRows(weekRows);
 
   const currentSnapshot = buildPeriodSnapshot(
@@ -337,6 +371,7 @@ export async function buildNutritionDashboard(
       carbs: classification.carbs,
       fermented: classification.fermented,
       prebiotic: classification.prebiotic,
+      mealTypes,
     },
     hydration: { glasses: hydrationGlasses },
     recommendations,

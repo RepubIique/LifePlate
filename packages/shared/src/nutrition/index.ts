@@ -7,3 +7,4 @@ export * from "./scoring.js";
 export * from "./recommendations.js";
 export * from "./weeklyTrends.js";
 export * from "./comparison.js";
+export * from "./coachingContext.js";

@@ -183,11 +183,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     [loadGamification],
   );
 
-  useEffect(() => {
-    if (!session || !hydrated) return;
-    void loadGamification();
-  }, [session, hydrated, loadGamification]);
-
   const value = useMemo(
     () => ({
       serverStats,

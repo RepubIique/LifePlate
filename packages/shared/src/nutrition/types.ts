@@ -119,6 +119,8 @@ export interface DashboardTodaySummary {
   carbs: string[];
   fermented: string[];
   prebiotic: string[];
+  /** Distinct meal types logged for this day (breakfast, lunch, dinner, snack, …). */
+  mealTypes: string[];
 }
 
 /** Wire format for GET /api/nutrition/dashboard — client expands to full view. */

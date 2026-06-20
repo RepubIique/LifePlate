@@ -21,6 +21,7 @@ import { TextLogModal } from "@/components/meal/TextLogModal";
 import { HomeDashboardSkeleton, HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
+import { useGamification } from "@/context/GamificationContext";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
@@ -38,14 +39,16 @@ import { spacing } from "@/src/theme/lifeplate";
 export default function HomeScreen() {
   const { profile } = useAuth();
   const { celebration, dismissCelebration, checkCelebrations } = useGamificationCelebrations();
-  const { meals, loading: mealsLoading, refreshing: mealsRefreshing, refreshMeals } = useMeals();
+  const { meals, loading: mealsLoading, refreshing: mealsRefreshing, loadMeals, refreshMeals } = useMeals();
   const {
     dashboard,
     loading: dashboardLoading,
     refreshing: dashboardRefreshing,
+    loadDashboard,
     refreshDashboard,
     patchHydration,
   } = useNutritionDashboard();
+  const { loadGamification } = useGamification();
   const { adjustHydration, syncDate } = useHydration();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
@@ -137,7 +140,18 @@ export default function HomeScreen() {
         setLogDate(pendingLogDate);
         setPendingLogDate(null);
       }
-    }, [pendingLogDate, setPendingLogDate, setLogDate]),
+      void loadMeals();
+      if (isViewingToday) void loadDashboard();
+      void loadGamification();
+    }, [
+      pendingLogDate,
+      setPendingLogDate,
+      setLogDate,
+      loadMeals,
+      loadDashboard,
+      loadGamification,
+      isViewingToday,
+    ]),
   );
 
   const handleRefresh = useCallback(() => {

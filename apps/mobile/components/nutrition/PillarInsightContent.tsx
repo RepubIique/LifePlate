@@ -5,6 +5,7 @@ import type { PillarProgress } from "@lifeplate/shared";
 import { PillarIcon } from "@/components/icons/PillarIcon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { pillarColorForLabel, pillarKeyFromLabel } from "@/lib/pillarTheme";
+import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
 import { buildMacroSources } from "@/lib/macroSources";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { spacing } from "@/src/theme/lifeplate";
@@ -67,13 +68,15 @@ export function PillarInsightContent({
       </View>
 
       <View style={styles.metricRow}>
-        <Text variant="headlineSmall" style={[styles.consumed, { color: fillColor }]}>
-          {pct}%
+        <Text variant="titleLarge" style={[styles.statusHeadline, { color: fillColor }]}>
+          {pillarStatusHeadline(pillar.status)}
         </Text>
         <Text variant="bodyMedium" style={styles.metricDetail}>
           {pillar.consumed}
           {pillar.unit === "g" ? "g" : ` ${pillar.unit}`} of {pillar.target}
           {pillar.unit === "g" ? "g" : ` ${pillar.unit}`}
+          {" · "}
+          {pct}%
         </Text>
       </View>
 
@@ -141,12 +144,10 @@ const styles = StyleSheet.create({
   title: { letterSpacing: 0.15 },
   serves: { opacity: 0.55, marginTop: 2 },
   metricRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: spacing.sm,
+    gap: 4,
   },
-  consumed: { fontWeight: "700", letterSpacing: -0.5 },
-  metricDetail: { opacity: 0.55, flex: 1 },
+  statusHeadline: { fontWeight: "700", letterSpacing: -0.3 },
+  metricDetail: { opacity: 0.55 },
   tipBox: {
     backgroundColor: "#F8FBF9",
     borderRadius: 12,

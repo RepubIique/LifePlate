@@ -110,7 +110,7 @@ export default function FriendsScreen() {
     try {
       await acceptMealShare(shareId, portionMeta ? { portionMeta } : undefined);
       patchFriends({ pendingShares: pendingShares.filter((s) => s.id !== shareId) });
-      refreshAfterMealChange();
+      refreshAfterMealChange({ refreshGamification: true });
       setSnackbar("Meal added to your log — thanks for sharing the table");
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));

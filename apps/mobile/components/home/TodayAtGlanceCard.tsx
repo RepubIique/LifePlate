@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function TodayAtGlanceCard({ dashboard, title = "Today at a glance", onPressInsights }: Props) {
-  const { score, coachSummary, essentials } = dashboard;
+  const { score, scoreStatus, coachSummary, plateMessage, essentials } = dashboard;
   const hasActivity =
     essentials.protein.consumed > 0 ||
     essentials.fibre.consumed > 0 ||
@@ -42,14 +42,18 @@ export function TodayAtGlanceCard({ dashboard, title = "Today at a glance", onPr
           fibre={essentials.fibre}
           plants={essentials.plants}
           carbs={essentials.carbs}
+          scoreStatus={scoreStatus}
           nutritionScore={score}
           hasMeals={hasActivity}
+          plateMessage={plateMessage}
         />
 
-        {hasActivity ? (
-          <Text variant="bodyMedium" style={styles.coach} numberOfLines={3}>
-            &ldquo;{coachSummary}&rdquo;
-          </Text>
+        {hasActivity && coachSummary ? (
+          <View style={styles.coachWrap}>
+            <Text variant="bodyMedium" style={styles.coach} numberOfLines={3}>
+              {coachSummary}
+            </Text>
+          </View>
         ) : null}
     </PremiumCard>
   );
@@ -65,10 +69,15 @@ const styles = StyleSheet.create({
   title: { letterSpacing: 0.15 },
   link: { flexDirection: "row", alignItems: "center", gap: 2 },
   linkText: { color: "#40916C", letterSpacing: 0.2 },
+  coachWrap: {
+    width: "100%",
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: "#EEF2F0",
+  },
   coach: {
     lineHeight: 21,
-    opacity: 0.85,
-    fontStyle: "italic",
+    opacity: 0.72,
     textAlign: "center",
   },
 });

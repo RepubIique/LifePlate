@@ -3,6 +3,7 @@ import type { NutritionTargets } from "@lifeplate/shared";
 import { buildHydrationPillarFromGlasses } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { fetchNutritionDashboard } from "@/lib/api";
+import { TAB_FOCUS_STALE_MS } from "@/lib/focusStale";
 import {
   loadCachedDayDashboards,
   removeCachedDayDashboard,
@@ -147,6 +148,10 @@ export function useDayDashboard({
     if (cached && cached.mealsRevision === mealsRevision) {
       applyCachedEntry(cached);
       setLoading(false);
+      const isFresh = Date.now() - cached.fetchedAt < TAB_FOCUS_STALE_MS;
+      if (!isFresh) {
+        void fetchAndStore(dateKey, mealsRevision, false);
+      }
       return;
     }
 
@@ -178,28 +183,25 @@ export function useDayDashboard({
 
   const patchHydration = useCallback(
     (glasses: number) => {
-      setDashboard((prev) => {
-        if (!prev) return prev;
-        const hydration = buildHydrationPillarFromGlasses(glasses, hydrationTarget);
-        return {
-          ...prev,
-          essentials: { ...prev.essentials, hydration },
-        };
-      });
-
       const cached = memoryRef.current.get(dateKey);
-      if (!cached) return;
+      if (!cached) {
+        setDashboard((prev) => {
+          if (!prev) return prev;
+          const hydration = buildHydrationPillarFromGlasses(glasses, hydrationTarget);
+          return { ...prev, essentials: { ...prev.essentials, hydration } };
+        });
+        return;
+      }
 
+      const raw = { ...cached.dashboard, hydration: { glasses } };
       const nextEntry: DayDashboardCacheEntry = {
         ...cached,
-        dashboard: {
-          ...cached.dashboard,
-          hydration: { glasses },
-        },
+        dashboard: raw,
       };
       persistEntry(dateKey, nextEntry);
+      setDashboard(expandDashboard(raw, nutritionTargets ?? null));
     },
-    [dateKey, hydrationTarget, persistEntry],
+    [dateKey, expand, hydrationTarget, nutritionTargets, persistEntry],
   );
 
   return {
