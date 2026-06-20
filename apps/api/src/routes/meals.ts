@@ -41,6 +41,7 @@ import {
   createMealShareRequests,
   MealShareError,
   shareExistingMealWithFriends,
+  fetchPendingShareFriendIdsForMeal,
   validateShareFriendIds,
 } from "../services/mealShare.js";
 import { deleteStoredMealImage, uploadMealImage } from "../services/storage.js";
@@ -696,6 +697,7 @@ export async function mealRoutes(app: FastifyInstance) {
 
       const portionMeta = extractMealPortionMeta(r.raw_ai_response);
       const imageUrl = (await resolveMealImageUrl(r.image_url)) ?? r.image_url?.trim() ?? "";
+      const pendingShareFriendIds = await fetchPendingShareFriendIdsForMeal(userId, id);
 
       return {
         id: r.id,
@@ -720,6 +722,7 @@ export async function mealRoutes(app: FastifyInstance) {
         reanalyzeRemaining: mealReanalyzeRemaining(r.reanalyze_count),
         sharedByUserId: r.shared_by_user_id,
         mealSource: r.meal_source,
+        pendingShareFriendIds,
       };
     },
   );

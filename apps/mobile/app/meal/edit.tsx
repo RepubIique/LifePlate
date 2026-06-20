@@ -151,7 +151,8 @@ export default function EditMealScreen() {
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 
   const handleShareTotalPeopleChange = useCallback((count: number) => {
-    const nextTotal = clampMealPortions(Math.max(2, count));
+    if (count < 2) return;
+    const nextTotal = clampMealPortions(count);
     setTotalPortions(nextTotal);
     setPortionsEaten((prev) => Math.min(prev, nextTotal));
   }, []);
@@ -252,6 +253,7 @@ export default function EditMealScreen() {
     setReanalyzeRemaining(
       m.reanalyzeRemaining ?? Math.max(0, MAX_MEAL_REANALYZES - (m.reanalyzeCount ?? 0)),
     );
+    setSelectedFriendIds(m.pendingShareFriendIds ?? []);
   }, []);
 
   useEffect(() => {
@@ -262,21 +264,22 @@ export default function EditMealScreen() {
     if (cached) {
       applyMealDetail(cached);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
+      setMeal(null);
     }
 
-    setLoading(true);
-    setMeal(null);
-
-    loadMealDetail(id)
+    loadMealDetail(id, { force: true })
       .then((m) => {
         if (cancelled) return;
         applyMealDetail(m);
       })
       .catch((e) => {
         if (cancelled) return;
-        setMeal(null);
-        setSnackbar(friendlyErrorMessage(e));
+        if (!cached) {
+          setMeal(null);
+          setSnackbar(friendlyErrorMessage(e));
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -375,11 +378,13 @@ export default function EditMealScreen() {
       });
 
       let sharesSent = 0;
+      let pendingShareFriendIds = meal.pendingShareFriendIds ?? [];
       if (canShareMeal && selectedFriendIds.length > 0) {
         const shareResult = await shareMealWithFriends(id, {
           shareWithFriendIds: selectedFriendIds,
         });
         sharesSent = shareResult.sharesSent;
+        pendingShareFriendIds = [...new Set(selectedFriendIds)];
       }
 
       if (logDateChanged) {
@@ -403,6 +408,7 @@ export default function EditMealScreen() {
           notes: notes || null,
           portionMeta: portionMeta ?? undefined,
           mealSource,
+          pendingShareFriendIds,
         });
         patchMealLocally(id, {
           mealName,
@@ -678,6 +684,7 @@ export default function EditMealScreen() {
       {canShareMeal ? (
         <View style={styles.cardWrap}>
           <CollapsibleSection
+            key={`share-${selectedFriendIds.join(",")}`}
             title="Share with friends"
             subtitle={
               selectedFriendIds.length > 0

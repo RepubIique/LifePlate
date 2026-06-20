@@ -549,6 +549,8 @@ export interface MealDetail extends MealListItem {
   portionMeta?: MealPortionMeta;
   reanalyzeCount: number;
   reanalyzeRemaining: number;
+  /** Friends with a pending share request for this meal (outgoing). */
+  pendingShareFriendIds?: string[];
 }
 
 export interface MealUpdateRequest {

@@ -219,6 +219,21 @@ type ExistingMealShareRow = {
   shared_by_user_id: string | null;
 };
 
+export async function fetchPendingShareFriendIdsForMeal(
+  userId: string,
+  mealId: string,
+): Promise<string[]> {
+  const { rows } = await pool.query<{ to_user_id: string }>(
+    `SELECT to_user_id
+     FROM meal_share_requests
+     WHERE source_meal_id = $1
+       AND from_user_id = $2
+       AND status = 'pending'`,
+    [mealId, userId],
+  );
+  return rows.map((row) => row.to_user_id);
+}
+
 export async function shareExistingMealWithFriends(
   userId: string,
   mealId: string,

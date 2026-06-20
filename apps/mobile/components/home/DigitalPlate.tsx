@@ -2,24 +2,18 @@ import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
-import Svg, { Circle } from "react-native-svg";
-import type { MealListItem, PillarProgress, ScoreStatus } from "@lifeplate/shared";
+import Svg, { Circle, Ellipse } from "react-native-svg";
+import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
-import { PlateEmptyHeader, PlateStatusHeader } from "@/components/home/PlateStatusHeader";
-import {
-  pillarStatusHeadline,
-  scoreStatusFromCompleteness,
-} from "@/lib/dayStatusLabels";
 import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
 import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
-import { pillarColor } from "@/components/ui/pillarColors";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
 import { spacing } from "@/src/theme/lifeplate";
 
-const PLATE_SIZE = 220;
-const STROKE = 14;
-const OUTLINE_STROKE = 2;
+const PLATE_SIZE = 196;
+const STROKE = 16;
+const OUTLINE_STROKE = 3;
 const PLATE_SECTION_COLORS = PILLAR_COLORS;
 const QUARTER = PLATE_SIZE / 2;
 
@@ -38,11 +32,8 @@ type Props = {
   fibre: PillarProgress;
   plants: PillarProgress;
   carbs: PillarProgress;
-  scoreStatus?: ScoreStatus;
   nutritionScore?: number;
   hasMeals?: boolean;
-  plateMessage?: string | null;
-  afterDinner?: boolean;
 };
 
 function clampProgress(value: number) {
@@ -57,15 +48,48 @@ function plateCompleteness(sections: PillarProgress[]) {
   return Math.round(avg * 100);
 }
 
-function PlateCenterWell({ size }: { size: number }) {
+function PlateCenterGraphic({ size }: { size: number }) {
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 1;
+  const rimR = outerR * 0.9;
+  const wellR = outerR * 0.74;
 
   return (
     <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-      <Circle cx={cx} cy={cy} r={outerR} fill="#FAFCFB" stroke="#E2E8E4" strokeWidth={1} />
-      <Circle cx={cx} cy={cy} r={outerR * 0.72} fill="#FFFFFF" stroke="#EEF2F0" strokeWidth={1} />
+      <Circle cx={cx} cy={cy + 1.5} r={outerR} fill="rgba(0,0,0,0.04)" />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={outerR}
+        fill="#FFFFFF"
+        stroke="#C5D0D8"
+        strokeWidth={2.5}
+      />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={rimR}
+        fill="none"
+        stroke="#DDE5EA"
+        strokeWidth={1.5}
+      />
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={wellR}
+        fill="#F3F7F5"
+        stroke="#E2E8E4"
+        strokeWidth={1}
+      />
+      <Ellipse
+        cx={cx}
+        cy={cy - wellR * 0.28}
+        rx={wellR * 0.42}
+        ry={wellR * 0.16}
+        fill="#FFFFFF"
+        opacity={0.5}
+      />
     </Svg>
   );
 }
@@ -80,15 +104,15 @@ function PlateCenterLabels({
   nutritionScore?: number;
 }) {
   return (
-    <View style={styles.centerLabels} pointerEvents="none">
-      <Text variant="headlineMedium" style={styles.centerValue}>
+    <View style={styles.center} pointerEvents="none">
+      <Text variant="headlineMedium" style={styles.completeness}>
         {hasMeals ? `${completeness}%` : "—"}
       </Text>
-      <Text variant="labelMedium" style={styles.centerCaption}>
+      <Text variant="labelMedium" style={styles.centerLabel}>
         Today&apos;s plate
       </Text>
       {hasMeals && nutritionScore != null ? (
-        <Text variant="labelSmall" style={styles.centerScore}>
+        <Text variant="labelSmall" style={styles.scoreHint}>
           Score {nutritionScore}
         </Text>
       ) : null}
@@ -177,33 +201,31 @@ function QuadrantArc({
   );
 }
 
-function LegendCard({
+function LegendItem({
   pillar,
   color,
   onPress,
-  afterDinner = false,
 }: {
   pillar: PillarProgress;
   color: string;
   onPress: () => void;
-  afterDinner?: boolean;
 }) {
-  const statusColor = pillarColor(pillar.status);
+  const pct = Math.round(clampProgress(pillar.progress) * 100);
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.legendCard, pressed && styles.legendCardPressed]}
+      style={({ pressed }) => [styles.legendItem, pressed && styles.legendItemPressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${pillar.label}, ${pillar.status}. Tap for details.`}
+      accessibilityLabel={`${pillar.label}, ${pct} percent. Tap for details.`}
     >
-      <View style={[styles.legendAccent, { backgroundColor: color }]} />
-      <View style={styles.legendBody}>
-        <Text variant="labelLarge" style={styles.legendName}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <View style={styles.legendText}>
+        <Text variant="labelMedium" style={styles.legendLabel} numberOfLines={1}>
           {pillar.label}
         </Text>
-        <Text variant="labelSmall" style={[styles.legendStatus, { color: statusColor }]}>
-          {pillarStatusHeadline(pillar.status, afterDinner)}
+        <Text variant="labelLarge" style={[styles.legendPct, { color }]}>
+          {pct}%
         </Text>
       </View>
     </Pressable>
@@ -215,11 +237,8 @@ export function DigitalPlate({
   fibre,
   plants,
   carbs,
-  scoreStatus,
   nutritionScore,
   hasMeals = true,
-  plateMessage = null,
-  afterDinner = false,
 }: Props) {
   const [activeKey, setActiveKey] = useState<PlatePillarKey | null>(null);
   const [todayMeals, setTodayMeals] = useState<MealListItem[]>([]);
@@ -279,8 +298,6 @@ export function DigitalPlate({
     [protein, fibre, plants, carbs],
   );
   const completeness = plateCompleteness(pillars);
-  const displayScoreStatus =
-    scoreStatus ?? (hasMeals ? scoreStatusFromCompleteness(completeness) : undefined);
 
   const activeSection = sections.find((s) => s.key === activeKey) ?? null;
 
@@ -290,7 +307,7 @@ export function DigitalPlate({
   const quarter = circumference / 4;
   const cx = PLATE_SIZE / 2;
   const cy = PLATE_SIZE / 2;
-  const innerRadius = radius - strokeWidth / 2 - 8;
+  const innerRadius = radius - strokeWidth / 2 - 6;
   const innerDiameter = innerRadius * 2;
 
   function openPillar(key: PlatePillarKey) {
@@ -305,12 +322,6 @@ export function DigitalPlate({
   return (
     <>
       <View style={styles.wrap}>
-        {hasMeals && displayScoreStatus ? (
-          <PlateStatusHeader status={displayScoreStatus} afterDinner={afterDinner} />
-        ) : (
-          <PlateEmptyHeader />
-        )}
-
         <View style={[styles.plateWrap, { width: PLATE_SIZE, height: PLATE_SIZE }]}>
           <Svg width={PLATE_SIZE} height={PLATE_SIZE} pointerEvents="none">
             {sections.map(({ key, pillar, rotation, color }) => (
@@ -351,7 +362,7 @@ export function DigitalPlate({
             ]}
             pointerEvents="none"
           >
-            <PlateCenterWell size={innerDiameter} />
+            <PlateCenterGraphic size={innerDiameter} />
             <PlateCenterLabels
               completeness={completeness}
               hasMeals={hasMeals}
@@ -360,20 +371,17 @@ export function DigitalPlate({
           </View>
         </View>
 
-        {plateMessage ? (
-          <Text variant="bodySmall" style={styles.message}>
-            {plateMessage}
-          </Text>
-        ) : null}
+        <Text variant="labelMedium" style={styles.tapHint}>
+          Tap a section for details
+        </Text>
 
         <View style={styles.legend}>
           {sections.map(({ key, pillar, color }) => (
-            <LegendCard
+            <LegendItem
               key={key}
               pillar={pillar}
               color={color}
               onPress={() => openPillar(key)}
-              afterDinner={afterDinner}
             />
           ))}
         </View>
@@ -400,7 +408,7 @@ export function DigitalPlate({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.sm,
     width: "100%",
   },
   plateWrap: {
@@ -435,35 +443,33 @@ const styles = StyleSheet.create({
   },
   centerPlate: {
     position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
+  },
+  center: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: spacing.md,
   },
-  centerLabels: {
-    ...StyleSheet.absoluteFill,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  centerValue: {
+  completeness: {
     fontWeight: "700",
     letterSpacing: -0.5,
     color: "#1B4332",
   },
-  centerCaption: {
-    opacity: 0.6,
-    letterSpacing: 0.3,
+  centerLabel: {
+    opacity: 0.65,
+    letterSpacing: 0.4,
     marginTop: 2,
   },
-  centerScore: {
+  scoreHint: {
     opacity: 0.45,
     marginTop: 4,
-    letterSpacing: 0.2,
   },
-  message: {
-    textAlign: "center",
-    opacity: 0.55,
-    lineHeight: 18,
+  tapHint: {
+    opacity: 0.4,
+    letterSpacing: 0.3,
     marginTop: -4,
   },
   legend: {
@@ -471,38 +477,39 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     width: "100%",
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  legendCard: {
+  legendItem: {
     flexDirection: "row",
-    alignItems: "stretch",
-    width: "48%",
-    flexGrow: 1,
-    minWidth: 148,
+    alignItems: "center",
+    gap: spacing.sm,
+    width: "47%",
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+  },
+  legendItemPressed: {
     backgroundColor: "#F8FBF9",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#EEF2F0",
-    overflow: "hidden",
   },
-  legendCardPressed: {
-    backgroundColor: "#F1F7F3",
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  legendAccent: {
-    width: 4,
-  },
-  legendBody: {
+  legendText: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.sm,
-    gap: 2,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: spacing.xs,
   },
-  legendName: {
-    color: "#1B4332",
-    fontWeight: "600",
-    letterSpacing: 0.1,
+  legendLabel: {
+    flex: 1,
+    opacity: 0.7,
   },
-  legendStatus: {
+  legendPct: {
     fontWeight: "600",
-    letterSpacing: 0.15,
+    minWidth: 36,
+    textAlign: "right",
   },
 });

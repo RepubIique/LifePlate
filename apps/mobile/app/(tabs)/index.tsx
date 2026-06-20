@@ -99,7 +99,6 @@ export default function HomeScreen() {
   );
 
   const activeDashboard = isViewingToday ? dashboard : dayDashboard;
-  const afterDinner = isViewingToday && dayMealTypes.includes("dinner");
   const glanceDashboard = useMemo(() => {
     if (!activeDashboard) return null;
     if (!isViewingToday || dayMealTypes.length === 0) return activeDashboard;
@@ -321,7 +320,6 @@ export default function HomeScreen() {
               dashboard={glanceDashboard}
               title={glanceTitle}
               onPressInsights={() => router.push("/(tabs)/insights")}
-              afterDinner={afterDinner}
             />
             <HydrationQuickAdd
               pillar={glanceDashboard.essentials.hydration}

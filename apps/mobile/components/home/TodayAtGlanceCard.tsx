@@ -10,16 +10,14 @@ type Props = {
   dashboard: NutritionDashboardView;
   title?: string;
   onPressInsights?: () => void;
-  afterDinner?: boolean;
 };
 
 export function TodayAtGlanceCard({
   dashboard,
   title = "Today at a glance",
   onPressInsights,
-  afterDinner = false,
 }: Props) {
-  const { score, scoreStatus, coachSummary, plateMessage, essentials } = dashboard;
+  const { score, coachSummary, essentials } = dashboard;
   const hasActivity =
     essentials.protein.consumed > 0 ||
     essentials.fibre.consumed > 0 ||
@@ -48,11 +46,8 @@ export function TodayAtGlanceCard({
           fibre={essentials.fibre}
           plants={essentials.plants}
           carbs={essentials.carbs}
-          scoreStatus={scoreStatus}
           nutritionScore={score}
           hasMeals={hasActivity}
-          plateMessage={plateMessage}
-          afterDinner={afterDinner}
         />
 
         {hasActivity && coachSummary ? (
