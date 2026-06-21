@@ -13,8 +13,12 @@
       "icon": "./assets/images/icon.png",
       "requireFullScreen": true,
       "infoPlist": {
-        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
-        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"]
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait"
+        ]
       }
     },
     "android": {
@@ -65,7 +69,24 @@
           "initialOrientation": "PORTRAIT_UP"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-widgets",
+        {
+          "groupIdentifier": "group.com.lifeplate.app",
+          "widgets": [
+            {
+              "name": "DigitalPlateWidget",
+              "displayName": "Digital Plate",
+              "description": "Today's nutrition plate — protein, fibre, plants, and carbs at a glance.",
+              "supportedFamilies": ["systemMedium"]
+            }
+          ]
+        }
+      ],
+      "./plugins/withDisableSwiftUICoreAutolink",
+      "expo-font",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

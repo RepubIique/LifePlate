@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionSheetIOS, Alert, Platform, RefreshControl, Share, StyleSheet, View } from "react-native";
-import { Button, IconButton, Switch } from "react-native-paper";
+import { Button, IconButton } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { Gender, UserProfile } from "@lifeplate/shared";
 import {
@@ -13,20 +13,20 @@ import {
 } from "@/components/BodyMetricsForm";
 import { ProfileHeroCard } from "@/components/profile/ProfileHeroCard";
 import { ProfileSaveBar } from "@/components/profile/ProfileSaveBar";
-import { ProfileSettingRow } from "@/components/profile/ProfileSettingRow";
 import { ProfileStatsRow } from "@/components/profile/ProfileStatsRow";
 import { BadgeShelf } from "@/components/gamification/BadgeShelf";
-import { StreakFreezeCard } from "@/components/gamification/StreakFreezeCard";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { Screen } from "@/components/Screen";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { PlusMembershipSection } from "@/components/plus/PlusMembershipSection";
+import { PdfExportPreviewModal } from "@/components/pdf/PdfExportPreviewModal";
+import { WidgetSetupSection } from "@/components/plus/WidgetSetupSection";
 import { useAuth } from "@/context/AuthContext";
 import { useFriends } from "@/context/FriendsContext";
 import { useGamification } from "@/context/GamificationContext";
 import {
-  applyStreakFreeze,
   fetchMealsFull,
   fetchProfileAvatar,
   updateProfile,
@@ -69,7 +69,6 @@ export default function ProfileScreen() {
   const { friendCode, loadFriends, refreshFriends } = useFriends();
   const { refreshGamification } = useGamification();
   const badgeStats = useGamificationStatsInput();
-  const [freezeLoading, setFreezeLoading] = useState(false);
   const [name, setName] = useState(profile?.name ?? "");
   const [goal, setGoal] = useState(profile?.goal ?? "");
   const [weightKg, setWeightKg] = useState(
@@ -85,6 +84,7 @@ export default function ProfileScreen() {
   const [avatarCacheRevision, setAvatarCacheRevision] = useState(0);
   const [remoteAvatarUrl, setRemoteAvatarUrl] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -228,20 +228,6 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handleCloudBackupToggle(enabled: boolean) {
-    if (!profile?.isPaid) {
-      setSnackbar("Cloud photo backup requires LifePlate Plus.");
-      return;
-    }
-    try {
-      const updated = await updateProfile({ cloudImageBackup: enabled });
-      patchProfile(updated);
-      setSnackbar(enabled ? "Cloud backup enabled" : "Cloud backup disabled");
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    }
-  }
-
   async function handleExport() {
     if (!profile) return;
     setExporting(true);
@@ -254,6 +240,10 @@ export default function ProfileScreen() {
     } finally {
       setExporting(false);
     }
+  }
+
+  async function handleExportPdf() {
+    setPdfModalVisible(true);
   }
 
   async function pickAvatarFromSource(useCamera: boolean) {
@@ -345,20 +335,6 @@ export default function ProfileScreen() {
     router.replace("/(tabs)");
   }
 
-  async function handleStreakFreeze() {
-    setFreezeLoading(true);
-    try {
-      await applyStreakFreeze();
-      await refreshProfile();
-      await refreshGamification();
-      setSnackbar("Streak freeze applied for yesterday");
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setFreezeLoading(false);
-    }
-  }
-
   async function handleLinkProvider(provider: "apple" | "google") {
     setLinkingProvider(provider);
     try {
@@ -445,13 +421,11 @@ export default function ProfileScreen() {
 
         {badgeStats ? <BadgeShelf stats={badgeStats} /> : null}
 
-        <SectionLabel title="Streak" />
-        <StreakFreezeCard
-          available={profile?.streakFreezeAvailable ?? false}
-          isPaid={profile?.isPaid ?? false}
-          loading={freezeLoading}
-          onUse={() => void handleStreakFreeze()}
-        />
+        <SectionLabel title="Membership" />
+        <PlusMembershipSection isPaid={profile?.isPaid ?? false} />
+
+        <SectionLabel title="Widget" />
+        <WidgetSetupSection isPaid={profile?.isPaid ?? false} />
 
         <SectionLabel title="Body" />
         <CollapsibleSection
@@ -482,26 +456,6 @@ export default function ProfileScreen() {
             }}
           />
         </CollapsibleSection>
-
-        <SectionLabel title="Preferences" />
-        <PremiumCard style={styles.settingsCard} noBlur>
-          <ProfileSettingRow
-            icon="cloud-upload-outline"
-            title="Cloud photo backup"
-            subtitle={
-              profile?.isPaid
-                ? "Store meal photos in the cloud for multi-device access."
-                : "Upgrade to Plus to back up meal photos across devices."
-            }
-            trailing={
-              <Switch
-                value={profile?.cloudImageBackup ?? false}
-                onValueChange={handleCloudBackupToggle}
-                disabled={!profile?.isPaid}
-              />
-            }
-          />
-        </PremiumCard>
 
         <CollapsibleSection
           title="Linked accounts"
@@ -544,6 +498,16 @@ export default function ProfileScreen() {
           <View style={styles.footerDivider} />
           <Button
             mode="text"
+            icon="file-pdf-box"
+            onPress={() => void handleExportPdf()}
+            disabled={exporting}
+            contentStyle={styles.footerButtonContent}
+          >
+            Export PDF report
+          </Button>
+          <View style={styles.footerDivider} />
+          <Button
+            mode="text"
             icon="logout"
             textColor={semantic.danger}
             onPress={confirmSignOut}
@@ -557,6 +521,12 @@ export default function ProfileScreen() {
       <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
       </BottomSnackbar>
+
+      <PdfExportPreviewModal
+        visible={pdfModalVisible}
+        onClose={() => setPdfModalVisible(false)}
+        onExported={(message) => setSnackbar(message)}
+      />
     </Screen>
   );
 }
@@ -566,9 +536,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.md,
-  },
-  settingsCard: {
-    gap: 0,
   },
   linkActions: { gap: spacing.sm },
   footerCard: {

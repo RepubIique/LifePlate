@@ -13,5 +13,10 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @lifeplate/shared test && pnpm --filter @lifeplate/api test && pnpm --filter @lifeplate/mobile test",
     "build:api": "pnpm --filter @lifeplate/shared build && pnpm --filter @lifeplate/api build"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@react-native/gradle-plugin@0.85.3": "patches/@react-native__gradle-plugin@0.85.3.patch"
+    }
   }
 }

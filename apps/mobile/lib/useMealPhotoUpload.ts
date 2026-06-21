@@ -7,15 +7,15 @@ import { useCallback, useRef, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { Alert } from "react-native";
 import { uploadMealImage, analyzeMealText } from "@/lib/api";
-import {
-  isRetryableError,
-  mealFlowErrorMessage,
-  mediaPermissionMessage,
-} from "@/lib/apiErrors";
+import { isRetryableError, mealFlowErrorMessage, mediaPermissionMessage, isLoggingLockedError } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
 import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
+
+type UseMealPhotoUploadOptions = {
+  guardLogging?: () => boolean;
+};
 
 export type UploadStage = "idle" | "preparing" | "analyzing" | "analyzing-text";
 
@@ -31,7 +31,7 @@ export function uploadStageLabel(
   return "";
 }
 
-export function useMealPhotoUpload() {
+export function useMealPhotoUpload(options?: UseMealPhotoUploadOptions) {
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
   const [pickingSource, setPickingSource] = useState<PhotoSource | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +90,9 @@ export function useMealPhotoUpload() {
         const analysis = await uploadMealImage(prepared);
         navigateToResult(analysis, { localImageUri: prepared.uri });
       } catch (e) {
+        if (isLoggingLockedError(e)) {
+          options?.guardLogging?.();
+        }
         const retryable = isRetryableError(e);
         setCanRetry(retryable);
         setError(mealFlowErrorMessage(e, "upload"));
@@ -98,7 +101,7 @@ export function useMealPhotoUpload() {
         setUploadStage("idle");
       }
     },
-    [navigateToResult],
+    [navigateToResult, options?.guardLogging],
   );
 
   const logWithText = useCallback(
@@ -114,6 +117,10 @@ export function useMealPhotoUpload() {
         logDateRef.current = logDate;
       }
 
+      if (options?.guardLogging && !options.guardLogging()) {
+        return;
+      }
+
       const logDateKey = logDateRef.current ?? todayDateKey();
       setError(null);
       setCanRetry(false);
@@ -123,6 +130,9 @@ export function useMealPhotoUpload() {
         const analysis = await analyzeMealText(trimmed);
         navigateToResult(analysis, { isTextLog: true });
       } catch (e) {
+        if (isLoggingLockedError(e)) {
+          options?.guardLogging?.();
+        }
         const retryable = isRetryableError(e);
         setCanRetry(retryable);
         setError(mealFlowErrorMessage(e, "analyze-text"));
@@ -131,13 +141,17 @@ export function useMealPhotoUpload() {
         setUploadStage("idle");
       }
     },
-    [navigateToResult],
+    [navigateToResult, options?.guardLogging],
   );
 
   const pickAndAnalyze = useCallback(
     async (useCamera: boolean, logDate?: string | null) => {
       if (logDate !== undefined) {
         logDateRef.current = logDate;
+      }
+
+      if (options?.guardLogging && !options.guardLogging()) {
+        return;
       }
 
       const source: PhotoSource = useCamera ? "camera" : "library";
@@ -191,7 +205,7 @@ export function useMealPhotoUpload() {
         setPickingSource(null);
       }
     },
-    [processAsset],
+    [processAsset, options?.guardLogging],
   );
 
   const retryLastAsset = useCallback(async () => {

@@ -1,11 +1,13 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper";
+import { ActivityIndicator, Button, Text } from "react-native-paper";
+import { ProfileNavButton } from "@/components/profile/ProfileNavButton";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   dateKeyFromIso,
   formatLogDateLabel,
+  FREE_LOGGING_DAYS,
   mealLogDateKey,
   todayDateKey,
 } from "@lifeplate/shared";
@@ -25,6 +27,7 @@ import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useHydration } from "@/context/HydrationContext";
 import { usePendingLogDate } from "@/context/PendingLogDateContext";
+import { useWidgetQuickAction } from "@/context/WidgetQuickActionContext";
 import { friendlyErrorMessage, hydrationSyncErrorMessage } from "@/lib/apiErrors";
 import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
@@ -32,10 +35,12 @@ import { useDayDashboard } from "@/lib/useDayDashboard";
 import { refreshDashboardCoaching } from "@/lib/nutritionDashboardView";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
+import { useLoggingAccess } from "@/lib/useLoggingAccess";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function HomeScreen() {
   const { profile } = useAuth();
+  const { requireLoggingAccess, loggingLocked, daysRemaining } = useLoggingAccess();
   const { celebration, dismissCelebration, checkCelebrations } = useGamificationCelebrations();
   const { meals, loading: mealsLoading, refreshing: mealsRefreshing, loadMeals, refreshMeals } = useMeals();
   const {
@@ -49,6 +54,7 @@ export default function HomeScreen() {
   const { loadGamification } = useGamification();
   const { adjustHydration, syncDate, syncFailedDate, retryHydrationSync, dismissSyncFailure } =
     useHydration();
+  const { consumeCameraLog } = useWidgetQuickAction();
   const patchHydrationRef = useRef(patchHydration);
   patchHydrationRef.current = patchHydration;
 
@@ -159,7 +165,7 @@ export default function HomeScreen() {
     retryLastAsset,
     lastAssetRef,
     hasRetryTarget,
-  } = useMealPhotoUpload();
+  } = useMealPhotoUpload({ guardLogging: requireLoggingAccess });
 
   useEffect(() => {
     getLastPhotoSource().then(setPreferredSource);
@@ -177,12 +183,22 @@ export default function HomeScreen() {
         setLogDate(pendingLogDate);
         setPendingLogDate(null);
       }
+      if (consumeCameraLog()) {
+        const today = todayDateKey();
+        setLogDateKey(today);
+        setLogDate(today);
+        setPreferredSource("camera");
+        void pickAndAnalyze(true, today);
+      }
       void loadMeals();
       if (isViewingToday) void loadDashboard();
       void loadGamification();
     }, [
       pendingLogDate,
       setPendingLogDate,
+      setLogDate,
+      consumeCameraLog,
+      pickAndAnalyze,
       setLogDate,
       loadMeals,
       loadDashboard,
@@ -226,15 +242,31 @@ export default function HomeScreen() {
         title="LifePlate"
         subtitle={`${profile?.currentStreak ?? 0} day streak`}
         right={
-          <IconButton
-            icon="account-circle-outline"
-            onPress={() => router.push("/profile")}
-          />
+          <ProfileNavButton onPress={() => router.push("/profile")} />
         }
       />
 
       <View style={styles.hero}>
         <PremiumCard>
+        {loggingLocked ? (
+          <>
+            <Text variant="titleLarge" style={styles.ctaText}>
+              Your free week has ended
+            </Text>
+            <Text variant="bodyMedium" style={styles.ctaSub}>
+              Upgrade to LifePlate Plus to keep logging meals and building your health story.
+            </Text>
+            <Button
+              mode="contained"
+              icon="star-circle-outline"
+              onPress={() => requireLoggingAccess()}
+              style={styles.upgradeButton}
+            >
+              See LifePlate Plus
+            </Button>
+          </>
+        ) : (
+          <>
         <MealLogDateField
           loggedAt={loggedAtFromDateKey(logDateKey)}
           showTime={false}
@@ -248,6 +280,9 @@ export default function HomeScreen() {
             What are you eating?
           </Text>
           <Text variant="bodyMedium" style={styles.ctaSub}>
+            {daysRemaining > 0 && daysRemaining <= FREE_LOGGING_DAYS && !profile?.isPaid
+              ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in your free trial. `
+              : ""}
             {preferredSource === "camera"
               ? "Last used: camera"
               : preferredSource === "library"
@@ -304,6 +339,8 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : null}
+          </>
+        )}
         </PremiumCard>
       </View>
 
@@ -311,7 +348,9 @@ export default function HomeScreen() {
         <MealSlotsTracker
           meals={dayMeals}
           title={slotsTitle}
-          onLogSuggested={() => pickAndAnalyze(preferredSource !== "library", logDateKey)}
+          onLogSuggested={
+            loggingLocked ? undefined : () => pickAndAnalyze(preferredSource !== "library", logDateKey)
+          }
         />
 
         {!isViewingToday && dayDashboardLoadFailed && !dayDashboard && !dayDashboardLoading ? (
@@ -352,16 +391,16 @@ export default function HomeScreen() {
         dateLabel={formatLogDateLabel(logDateKey)}
         onMealPress={(mealId) => openMealEdit(mealId, "home")}
         onLogSuggested={
-          isViewingToday
+          isViewingToday && !loggingLocked
             ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
             : undefined
         }
         onLogPhoto={
-          isViewingToday
+          isViewingToday && !loggingLocked
             ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)
             : undefined
         }
-        onLogText={isViewingToday ? () => setTextLogOpen(true) : undefined}
+        onLogText={isViewingToday && !loggingLocked ? () => setTextLogOpen(true) : undefined}
       />
 
       <TextLogModal
@@ -425,6 +464,7 @@ const styles = StyleSheet.create({
   },
   heroActionBtn: { flex: 1 },
   heroActionBtnContent: { height: 44 },
+  upgradeButton: { marginTop: spacing.lg, alignSelf: "flex-start" },
   textLogBtn: { alignSelf: "center", marginTop: spacing.xs },
   uploading: {
     flexDirection: "row",

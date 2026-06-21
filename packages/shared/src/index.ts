@@ -374,12 +374,9 @@ export interface MealPhotoAttachResponse {
   imageUrl: string;
 }
 
-/** Paid users who opted in — meal photos are also stored in cloud storage. */
-export function hasCloudMealImageBackup(profile: {
-  isPaid: boolean;
-  cloudImageBackup: boolean;
-}): boolean {
-  return profile.isPaid && profile.cloudImageBackup;
+/** Paid users — meal photos are stored in cloud storage. */
+export function hasCloudMealImageBackup(profile: { isPaid: boolean }): boolean {
+  return profile.isPaid;
 }
 
 export interface MealTextLogRequest {
@@ -717,7 +714,6 @@ export interface ProfilePatchResponse {
   hasAvatar?: boolean;
   nutritionTargets?: NutritionTargets | null;
   isPaid?: boolean;
-  cloudImageBackup?: boolean;
 }
 
 export interface AlphaFeedbackMessage {
@@ -750,12 +746,14 @@ export interface UserProfile {
   mealsLogged: number;
   currentStreak: number;
   longestStreak: number;
-  /** Subscription entitlement — unlocks cloud photo backup. */
+  /** LifePlate Plus — unlimited logging and cloud meal photo backup. */
   isPaid: boolean;
-  /** When true (and isPaid), new meal photos are copied to cloud storage. */
-  cloudImageBackup: boolean;
-  /** Whether a streak freeze can be used this calendar month (Plus only). */
-  streakFreezeAvailable?: boolean;
+  /** Account creation time — used for free-tier logging window. */
+  createdAt: string;
+  /** Free users cannot log new meals after the 7-day window. */
+  loggingLocked: boolean;
+  /** Days left in the free logging window (0 when locked or Plus). */
+  freeLoggingDaysRemaining: number;
 }
 
 export {
@@ -785,3 +783,29 @@ export {
 } from "./gamification.js";
 
 export { computeStreaksFromDayKeys } from "./streaks.js";
+
+export {
+  FREE_LOGGING_DAYS,
+  computeLoggingAccess,
+  freeLoggingLastDateKey,
+  type LoggingAccess,
+} from "./freeTier.js";
+
+export {
+  PLUS_FEATURES,
+  PLUS_FREE_TIER_NOTE,
+  PLUS_PLAN,
+  plusFeatureById,
+  type PlusFeatureDefinition,
+  type PlusFeatureId,
+} from "./plus.js";
+
+export {
+  DIGITAL_PLATE_WIDGET_LOCKED,
+  WIDGET_LOG_CAMERA_TARGET,
+  WIDGET_LOG_CAMERA_URL,
+  buildDigitalPlateWidgetProps,
+  clampPlateProgress,
+  plateCompletenessPercent,
+  type DigitalPlateWidgetProps,
+} from "./widgetPlate.js";
