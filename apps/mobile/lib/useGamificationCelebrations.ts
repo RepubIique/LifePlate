@@ -4,8 +4,11 @@ import type { MilestoneId } from "@lifeplate/shared";
 import { computeEligibleMilestones, milestoneMessage } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
 import { milestoneEligibilityKey } from "@/lib/computeLocalGamificationStats";
-import { loadSeenMilestones, markMilestoneSeen } from "@/lib/milestonePrefs";
+import { loadSeenMilestones, saveSeenMilestones } from "@/lib/milestonePrefs";
+import { pickMilestoneToCelebrate } from "@/lib/pickMilestoneToCelebrate";
 import { useGamificationStatsInput } from "@/lib/useGamificationStatsInput";
+
+const STATS_SETTLE_MS = 2000;
 
 export function useGamificationCelebrations(enabled = true) {
   const { session } = useAuth();
@@ -15,7 +18,9 @@ export function useGamificationCelebrations(enabled = true) {
     null,
   );
   const checkingRef = useRef(false);
-  const shownThisSessionRef = useRef<Set<MilestoneId>>(new Set());
+  const hasCheckedThisSessionRef = useRef(false);
+  const seenMilestonesRef = useRef<Set<MilestoneId>>(new Set());
+  const seenLoadedRef = useRef(false);
 
   const eligibilityKey = useMemo(
     () => (statsInput ? milestoneEligibilityKey(statsInput) : null),
@@ -23,24 +28,58 @@ export function useGamificationCelebrations(enabled = true) {
   );
 
   useEffect(() => {
-    shownThisSessionRef.current = new Set();
+    hasCheckedThisSessionRef.current = false;
+    seenLoadedRef.current = false;
+    seenMilestonesRef.current = new Set();
+
+    if (!userId) return;
+
+    let cancelled = false;
+    void (async () => {
+      const seen = await loadSeenMilestones(userId);
+      if (cancelled) return;
+      seenMilestonesRef.current = seen;
+      seenLoadedRef.current = true;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   const checkCelebrations = useCallback(async () => {
-    if (!enabled || !userId || !statsInput || checkingRef.current) return;
-    checkingRef.current = true;
-    try {
-      const seen = await loadSeenMilestones(userId);
-      const eligible = computeEligibleMilestones(statsInput);
-      const next = eligible.find(
-        (id) => !seen.has(id) && !shownThisSessionRef.current.has(id),
-      );
-      if (!next) return;
+    if (
+      !enabled ||
+      !userId ||
+      !statsInput ||
+      checkingRef.current ||
+      hasCheckedThisSessionRef.current
+    ) {
+      return;
+    }
 
-      shownThisSessionRef.current.add(next);
-      await markMilestoneSeen(userId, next);
+    checkingRef.current = true;
+    hasCheckedThisSessionRef.current = true;
+
+    try {
+      if (!seenLoadedRef.current) {
+        seenMilestonesRef.current = await loadSeenMilestones(userId);
+        seenLoadedRef.current = true;
+      }
+
+      const pick = pickMilestoneToCelebrate(
+        computeEligibleMilestones(statsInput),
+        seenMilestonesRef.current,
+      );
+      if (!pick) return;
+
+      for (const id of pick.markSeen) {
+        seenMilestonesRef.current.add(id);
+      }
+      await saveSeenMilestones(userId, seenMilestonesRef.current);
+
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setCelebration({ id: next, message: milestoneMessage(next) });
+      setCelebration({ id: pick.celebrate, message: milestoneMessage(pick.celebrate) });
     } finally {
       checkingRef.current = false;
     }
@@ -49,9 +88,14 @@ export function useGamificationCelebrations(enabled = true) {
   const dismissCelebration = useCallback(() => setCelebration(null), []);
 
   useEffect(() => {
-    if (!eligibilityKey) return;
-    void checkCelebrations();
-  }, [eligibilityKey, checkCelebrations]);
+    if (!eligibilityKey || !userId || hasCheckedThisSessionRef.current) return;
+
+    const timer = setTimeout(() => {
+      void checkCelebrations();
+    }, STATS_SETTLE_MS);
+
+    return () => clearTimeout(timer);
+  }, [eligibilityKey, userId, checkCelebrations]);
 
   return { celebration, dismissCelebration, checkCelebrations };
 }

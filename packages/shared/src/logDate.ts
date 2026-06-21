@@ -24,22 +24,59 @@ export function isValidLogDateKey(dateKey: string, now = new Date()): boolean {
   return dateKey >= todayDateKey(min);
 }
 
+export function defaultMealHour(mealType?: string | null): number {
+  if (mealType === "breakfast") return 8;
+  if (mealType === "lunch") return 12;
+  if (mealType === "dinner") return 18;
+  if (mealType === "snack" || mealType === "beverage" || mealType === "dessert") return 15;
+  return 12;
+}
+
 export function loggedAtForDateKey(
   dateKey: string,
   mealType?: string | null,
 ): string {
   const [year, month, day] = dateKey.split("-").map(Number);
-  const hour =
-    mealType === "breakfast"
-      ? 8
-      : mealType === "lunch"
-        ? 12
-        : mealType === "dinner"
-          ? 18
-          : mealType === "snack" || mealType === "beverage" || mealType === "dessert"
-            ? 15
-            : 12;
-  return new Date(year, month - 1, day, hour, 0, 0, 0).toISOString();
+  return new Date(year, month - 1, day, defaultMealHour(mealType), 0, 0, 0).toISOString();
+}
+
+/** Keep the clock time from `loggedAt` but move it to `dateKey`. */
+export function mergeLoggedAtDateKey(dateKey: string, loggedAt: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const existing = new Date(loggedAt);
+  return new Date(
+    year,
+    month - 1,
+    day,
+    existing.getHours(),
+    existing.getMinutes(),
+    0,
+    0,
+  ).toISOString();
+}
+
+/** Replace the clock time on an existing loggedAt while keeping its calendar date. */
+export function setLoggedAtTime(loggedAt: string, hours: number, minutes: number): string {
+  const existing = new Date(loggedAt);
+  return new Date(
+    existing.getFullYear(),
+    existing.getMonth(),
+    existing.getDate(),
+    hours,
+    minutes,
+    0,
+    0,
+  ).toISOString();
+}
+
+/** Prevent future timestamps when logging for today. */
+export function clampLoggedAtToNow(loggedAt: string, now = new Date()): string {
+  const d = new Date(loggedAt);
+  if (Number.isNaN(d.getTime())) return loggedAt;
+  if (dateKeyFromIso(loggedAt) === todayDateKey(now) && d.getTime() > now.getTime()) {
+    return now.toISOString();
+  }
+  return loggedAt;
 }
 
 export type MealTimelineFields = {

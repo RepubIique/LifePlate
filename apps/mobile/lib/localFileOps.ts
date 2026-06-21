@@ -10,6 +10,7 @@ export function ensureDirectory(dir: Directory): void {
 /** Copy a source URI into an existing parent directory, overwriting any prior file. */
 export async function copyUriToFile(sourceUri: string, dest: File): Promise<void> {
   ensureDirectory(dest.parentDirectory);
+  if (dest.uri === sourceUri) return;
   if (dest.exists) {
     dest.delete();
   }

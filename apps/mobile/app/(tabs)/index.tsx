@@ -13,7 +13,7 @@ import { HomeDayMealsSection } from "@/components/home/HomeDayMealsSection";
 import { HydrationQuickAdd } from "@/components/home/HydrationQuickAdd";
 import { MealSlotsTracker } from "@/components/home/MealSlotsTracker";
 import { TodayAtGlanceCard } from "@/components/home/TodayAtGlanceCard";
-import { MealLogDateField } from "@/components/meal/MealLogDateField";
+import { MealLogDateField, loggedAtFromDateKey } from "@/components/meal/MealLogDateField";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PremiumHeader } from "@/components/PremiumHeader";
 import { TextLogModal } from "@/components/meal/TextLogModal";
@@ -32,7 +32,6 @@ import { useDayDashboard } from "@/lib/useDayDashboard";
 import { refreshDashboardCoaching } from "@/lib/nutritionDashboardView";
 import { openMealEdit } from "@/lib/mealNavigation";
 import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
-import { MilestoneCelebrationModal } from "@/components/gamification/MilestoneCelebrationModal";
 import { spacing } from "@/src/theme/lifeplate";
 
 export default function HomeScreen() {
@@ -149,6 +148,7 @@ export default function HomeScreen() {
   const { pendingLogDate, setPendingLogDate } = usePendingLogDate();
   const {
     uploadStage,
+    pickingSource,
     error,
     canRetry,
     uploading,
@@ -235,14 +235,15 @@ export default function HomeScreen() {
 
       <View style={styles.hero}>
         <PremiumCard>
-          <MealLogDateField
-            dateKey={logDateKey}
-            onChange={(loggedAt) => {
-              const dateKey = dateKeyFromIso(loggedAt);
-              setLogDateKey(dateKey);
-              setLogDate(dateKey);
-            }}
-          />
+        <MealLogDateField
+          loggedAt={loggedAtFromDateKey(logDateKey)}
+          showTime={false}
+          onChange={(loggedAt) => {
+            const dateKey = dateKeyFromIso(loggedAt);
+            setLogDateKey(dateKey);
+            setLogDate(dateKey);
+          }}
+        />
           <Text variant="titleLarge" style={styles.ctaText}>
             What are you eating?
           </Text>
@@ -258,6 +259,9 @@ export default function HomeScreen() {
             <Button
               mode="contained"
               icon="camera"
+              style={styles.heroActionBtn}
+              contentStyle={styles.heroActionBtnContent}
+              loading={pickingSource === "camera"}
               onPress={() => {
                 setPreferredSource("camera");
                 void pickAndAnalyze(true, logDateKey);
@@ -269,6 +273,9 @@ export default function HomeScreen() {
             <Button
               mode="outlined"
               icon="image"
+              style={styles.heroActionBtn}
+              contentStyle={styles.heroActionBtnContent}
+              loading={pickingSource === "library"}
               onPress={() => {
                 setPreferredSource("library");
                 void pickAndAnalyze(false, logDateKey);
@@ -293,7 +300,7 @@ export default function HomeScreen() {
             <View style={styles.uploading}>
               <ActivityIndicator />
               <Text variant="bodySmall" style={styles.stageText}>
-                {uploadStageLabel(uploadStage)}
+                {uploadStageLabel(uploadStage, pickingSource)}
               </Text>
             </View>
           ) : null}
@@ -381,13 +388,14 @@ export default function HomeScreen() {
       />
 
       <BottomSnackbar
-        visible={!!snackbar || !!error}
+        visible={!!snackbar || !!error || !!celebration}
         onDismiss={() => {
           setSnackbar(null);
           setError(null);
+          dismissCelebration();
           dismissSyncFailure();
         }}
-        duration={error || syncFailedDate ? 6000 : 4000}
+        duration={error || syncFailedDate ? 6000 : celebration ? 5000 : 4000}
         action={
           error && canRetry && hasRetryTarget
             ? { label: "Retry", onPress: () => void retryLastAsset() }
@@ -399,14 +407,8 @@ export default function HomeScreen() {
               : undefined
         }
       >
-        {error ?? snackbar}
+        {error ?? snackbar ?? celebration?.message}
       </BottomSnackbar>
-
-      <MilestoneCelebrationModal
-        visible={!!celebration}
-        message={celebration?.message ?? ""}
-        onDismiss={dismissCelebration}
-      />
     </Screen>
   );
 }
@@ -415,9 +417,22 @@ const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   ctaText: { letterSpacing: 0.2, marginTop: spacing.sm },
   ctaSub: { opacity: 0.75, marginTop: spacing.xs },
-  heroActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  heroActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    justifyContent: "center",
+  },
+  heroActionBtn: { flex: 1 },
+  heroActionBtnContent: { height: 44 },
   textLogBtn: { alignSelf: "center", marginTop: spacing.xs },
-  uploading: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md, alignItems: "center" },
+  uploading: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   stageText: { opacity: 0.7 },
   dashboard: {
     paddingHorizontal: spacing.lg,

@@ -1,17 +1,17 @@
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Chip, Text, TextInput } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
   buildMealPortionMeta,
+  dateKeyFromIso,
   inferMealType,
   loggedAtForDateKey,
   scaleMealForPortions,
   todayDateKey,
-  dateKeyFromIso,
   type MealMacroTotals,
   type MealType,
 } from "@lifeplate/shared";
@@ -73,6 +73,7 @@ export default function MealResultScreen() {
     confidence: string;
     coachNudge: string;
     logDate?: string;
+    loggedAt?: string;
     isTextLog?: string;
   }>();
 
@@ -96,7 +97,11 @@ export default function MealResultScreen() {
     uploadSession?.imageUrl ||
     "";
   const initialLogDateKey = routeParam(params.logDate) || todayDateKey();
-  const [logDate, setLogDate] = useState(initialLogDateKey);
+  const [loggedAt, setLoggedAt] = useState(() => {
+    const fromParams = routeParam(params.loggedAt);
+    if (fromParams) return fromParams;
+    return loggedAtForDateKey(initialLogDateKey, inferMealType());
+  });
 
   const initialFoods = useMemo(() => {
     try {
@@ -119,6 +124,7 @@ export default function MealResultScreen() {
   const [baseMacros, setBaseMacros] = useState<MealMacroTotals>(initialBaseMacros);
   const [editing, setEditing] = useState(false);
   const [mealType, setMealType] = useState<MealType>(() => inferMealType());
+  const prevMealTypeRef = useRef(mealType);
   const [mealName, setMealName] = useState(params.mealName ?? "");
   const [foods, setFoods] = useState<string[]>(initialFoods);
   const [newFood, setNewFood] = useState("");
@@ -142,6 +148,12 @@ export default function MealResultScreen() {
   const [confirmRetryable, setConfirmRetryable] = useState(false);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (prevMealTypeRef.current === mealType) return;
+    prevMealTypeRef.current = mealType;
+    setLoggedAt((prev) => loggedAtForDateKey(dateKeyFromIso(prev), mealType));
+  }, [mealType]);
+
   function buildPendingConfirmForm(): PendingMealConfirmForm {
     return {
       draftId,
@@ -156,7 +168,8 @@ export default function MealResultScreen() {
       sugar: toNumber(sugar, 0),
       sodium: toNumber(sodium, 0),
       confidence,
-      logDate,
+      logDate: dateKeyFromIso(loggedAt),
+      loggedAt,
       totalPortions,
       portionsEaten,
       cloudImageUrl,
@@ -191,7 +204,7 @@ export default function MealResultScreen() {
           totalPortions,
           portionsEaten,
         ),
-        loggedAt: loggedAtForDateKey(logDate, mealType),
+        loggedAt,
         shareWithFriendIds:
           selectedFriendIds.length > 0 ? selectedFriendIds : undefined,
       });
@@ -330,9 +343,8 @@ export default function MealResultScreen() {
     >
       <PremiumCard>
         <MealLogDateField
-          dateKey={logDate}
-          mealType={mealType}
-          onChange={(loggedAt) => setLogDate(dateKeyFromIso(loggedAt))}
+          loggedAt={loggedAt}
+          onChange={setLoggedAt}
         />
         <MealTypePicker value={mealType} onChange={setMealType} />
       </PremiumCard>

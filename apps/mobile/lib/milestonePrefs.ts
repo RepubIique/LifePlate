@@ -22,6 +22,10 @@ export async function markMilestoneSeen(userId: string, id: MilestoneId): Promis
   const seen = await loadSeenMilestones(userId);
   if (seen.has(id)) return;
   seen.add(id);
+  await saveSeenMilestones(userId, seen);
+}
+
+export async function saveSeenMilestones(userId: string, seen: ReadonlySet<MilestoneId>): Promise<void> {
   await writeSecureStoreJson(cacheKey(userId), { seen: [...seen] });
 }
 

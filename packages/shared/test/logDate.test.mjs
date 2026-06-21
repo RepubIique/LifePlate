@@ -7,6 +7,9 @@ import {
   formatLogDateLabel,
   isValidLogDateKey,
   loggedAtForDateKey,
+  mergeLoggedAtDateKey,
+  setLoggedAtTime,
+  clampLoggedAtToNow,
   offsetLogDateKey,
   recentLogDateKeys,
   todayDateKey,
@@ -59,6 +62,32 @@ test("formatLogDateLabel returns Today, Yesterday, or formatted date", () => {
 test("offsetLogDateKey shifts calendar dates", () => {
   assert.equal(offsetLogDateKey("2026-06-14", -1), "2026-06-13");
   assert.equal(offsetLogDateKey("2026-06-01", -1), "2026-05-31");
+});
+
+test("mergeLoggedAtDateKey keeps time when changing calendar date", () => {
+  const source = new Date(2026, 5, 10, 17, 30, 0, 0).toISOString();
+  const merged = mergeLoggedAtDateKey("2026-06-12", source);
+  assert.equal(dateKeyFromIso(merged), "2026-06-12");
+  const d = new Date(merged);
+  assert.equal(d.getHours(), 17);
+  assert.equal(d.getMinutes(), 30);
+});
+
+test("setLoggedAtTime updates clock without changing date", () => {
+  const source = new Date(2026, 5, 10, 8, 0, 0, 0).toISOString();
+  const next = setLoggedAtTime(source, 13, 45);
+  assert.equal(dateKeyFromIso(next), "2026-06-10");
+  const d = new Date(next);
+  assert.equal(d.getHours(), 13);
+  assert.equal(d.getMinutes(), 45);
+});
+
+test("clampLoggedAtToNow caps future times on today", () => {
+  const now = new Date(2026, 5, 14, 15, 0, 0, 0);
+  const future = clampLoggedAtToNow(new Date(2026, 5, 14, 20, 0, 0, 0).toISOString(), now);
+  assert.equal(future, now.toISOString());
+  const past = clampLoggedAtToNow(new Date(2026, 5, 14, 10, 0, 0, 0).toISOString(), now);
+  assert.equal(past, new Date(2026, 5, 14, 10, 0, 0, 0).toISOString());
 });
 
 test("loggedAtForDateKey preserves local calendar date for early-morning meals", () => {

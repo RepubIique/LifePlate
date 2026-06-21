@@ -176,7 +176,8 @@ export function AlphaFeedbackBubble() {
         <MaterialCommunityIcons name="message-text-outline" size={24} color={theme.colors.onPrimary} />
       </Pressable>
 
-      <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
+      {open ? (
+      <Modal visible animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={[styles.modalRoot, { backgroundColor: theme.colors.background }]}>
           <View
             style={[
@@ -263,6 +264,7 @@ export function AlphaFeedbackBubble() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+      ) : null}
 
       <BottomSnackbar visible={!!error} onDismiss={() => setError(null)} duration={4000}>
         {error}

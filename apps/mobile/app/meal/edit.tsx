@@ -23,6 +23,7 @@ import {
 import { MealNotesField } from "@/components/meal/MealNotesField";
 import { MealPhotoAttachSection } from "@/components/meal/MealPhotoAttachSection";
 import { MealLogDateField } from "@/components/meal/MealLogDateField";
+import { MealLogTimeButton } from "@/components/meal/MealLogTimeButton";
 import { dateKeyFromIso } from "@lifeplate/shared";
 import { EditMealSkeleton } from "@/components/skeletons/EditMealSkeleton";
 import { KeyboardAvoidingScrollView } from "@/components/Screen";
@@ -504,6 +505,12 @@ export default function EditMealScreen() {
         imageUri={displayImageUri}
         attaching={attachingPhoto}
         variant="compact"
+        timeEditButton={
+          <MealLogTimeButton
+            loggedAt={loggedAt || meal.createdAt}
+            onChange={setLoggedAt}
+          />
+        }
         onPickCamera={() => {
           setAttachPhotoError(null);
           void pickPhoto(true);
@@ -517,9 +524,9 @@ export default function EditMealScreen() {
       <View style={styles.cardWrap}>
         <PremiumCard style={styles.sectionCard}>
           <MealLogDateField
-            dateKey={dateKeyFromIso(loggedAt || meal.createdAt)}
-            mealType={mealType}
+            loggedAt={loggedAt || meal.createdAt}
             label="Logged on"
+            variant="compact"
             onChange={setLoggedAt}
           />
           <TextInput

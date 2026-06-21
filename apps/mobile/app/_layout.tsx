@@ -16,18 +16,17 @@ import { HydrationProvider } from "@/context/HydrationContext";
 import { PendingLogDateProvider } from "@/context/PendingLogDateContext";
 import { AlphaFeedbackBubble } from "@/components/AlphaFeedbackBubble";
 import { AlphaWelcomeModal } from "@/components/AlphaWelcomeModal";
-import {
-  MealPendingSync,
-  PendingMealRecoveryModal,
-} from "@/components/meal/PendingMealRecoveryModal";
+import { MealPendingSync } from "@/components/meal/PendingMealRecoveryModal";
 import { lifeplateTheme } from "@/src/theme/lifeplate";
 import { assertMobileEnv } from "@/lib/env";
+import { usePortraitOrientationLock } from "@/lib/usePortraitOrientationLock";
 
 assertMobileEnv();
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  usePortraitOrientationLock();
   const [fontsLoaded] = useFonts({
     ...MaterialCommunityIcons.font,
   });
@@ -74,7 +73,6 @@ export default function RootLayout() {
           </Stack>
           <AlphaFeedbackBubble />
           <AlphaWelcomeModal />
-          <PendingMealRecoveryModal />
           <MealPendingSync />
           </HydrationProvider>
           </WeekInsightsProvider>

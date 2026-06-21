@@ -43,6 +43,7 @@ export type PendingMealConfirmForm = {
   sodium: number;
   confidence: number;
   logDate: string;
+  loggedAt?: string;
   totalPortions: number;
   portionsEaten: number;
   cloudImageUrl: string;
@@ -72,6 +73,11 @@ function pendingMealsDir(): Directory {
 
 function pendingPhotoFile(): File {
   return new File(pendingMealsDir(), "upload.jpg");
+}
+
+export function isPendingPhotoUri(uri: string | null | undefined): boolean {
+  if (!uri?.trim() || Platform.OS === "web") return false;
+  return uri === pendingPhotoFile().uri;
 }
 
 function pendingConfirmImageFile(): File {
@@ -170,8 +176,12 @@ export async function loadPendingUpload(userId: string): Promise<PendingUpload |
   return payload;
 }
 
-export async function clearPendingUpload(userId: string): Promise<void> {
+export async function clearPendingUploadMeta(userId: string): Promise<void> {
   await removeSecureStoreEntry(uploadKey(userId));
+}
+
+export async function clearPendingUpload(userId: string): Promise<void> {
+  await clearPendingUploadMeta(userId);
   await deletePendingPhotoFile();
 }
 

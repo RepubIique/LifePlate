@@ -1,4 +1,5 @@
 import { Image, StyleSheet, View } from "react-native";
+import type { ReactNode } from "react";
 import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper";
 import { MealImagePlaceholder } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
@@ -10,6 +11,7 @@ type Props = {
   imageUri?: string;
   attaching?: boolean;
   variant?: "default" | "compact";
+  timeEditButton?: ReactNode;
   onPickCamera: () => void;
   onPickLibrary: () => void;
 };
@@ -19,6 +21,7 @@ export function MealPhotoAttachSection({
   imageUri,
   attaching = false,
   variant = "default",
+  timeEditButton,
   onPickCamera,
   onPickLibrary,
 }: Props) {
@@ -40,6 +43,7 @@ export function MealPhotoAttachSection({
             </View>
           ) : null}
           <View style={styles.compactActions}>
+            {timeEditButton}
             <IconButton
               icon="camera"
               mode="contained"

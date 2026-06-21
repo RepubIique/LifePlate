@@ -10,7 +10,7 @@ import {
 import { Button, Text, TextInput } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { dateKeyFromIso } from "@lifeplate/shared";
-import { MealLogDateField } from "@/components/meal/MealLogDateField";
+import { MealLogDateField, loggedAtFromDateKey } from "@/components/meal/MealLogDateField";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -68,7 +68,8 @@ export function TextLogModal({
                 Describe what you ate. We&apos;ll estimate nutrition and you can edit before saving.
               </Text>
               <MealLogDateField
-                dateKey={logDateKey}
+                loggedAt={loggedAtFromDateKey(logDateKey)}
+                showTime={false}
                 onChange={(loggedAt) => onChangeLogDateKey(dateKeyFromIso(loggedAt))}
               />
               <TextInput

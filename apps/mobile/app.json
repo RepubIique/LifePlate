@@ -10,7 +10,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lifeplate.app",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "requireFullScreen": true,
+      "infoPlist": {
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +25,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.lifeplate.app"
+      "package": "com.lifeplate.app",
+      "screenOrientation": "portrait"
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +58,14 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,26 +1,49 @@
-import { dateKeyFromIso, formatLogDateLabel, loggedAtForDateKey } from "@lifeplate/shared";
+import {
+  clampLoggedAtToNow,
+  dateKeyFromIso,
+  formatLogDateLabel,
+  loggedAtForDateKey,
+  mergeLoggedAtDateKey,
+  type MealType,
+} from "@lifeplate/shared";
 import { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
-import type { MealType } from "@lifeplate/shared";
+import { Button, IconButton, Text } from "react-native-paper";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
-import { spacing } from "@/src/theme/lifeplate";
+import { LogTimePickerModal } from "@/components/meal/LogTimePickerModal";
+import { formatMealTime } from "@/lib/mealUtils";
+import { semantic, spacing } from "@/src/theme/lifeplate";
 
 type Props = {
-  dateKey: string;
-  mealType?: MealType;
+  loggedAt: string;
   label?: string;
+  variant?: "default" | "compact";
+  showTime?: boolean;
   onChange: (loggedAt: string) => void;
 };
 
 export function MealLogDateField({
-  dateKey,
-  mealType,
+  loggedAt,
   label: fieldLabel = "Logging for",
+  variant = "default",
+  showTime = true,
   onChange,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const compact = variant === "compact";
+  const dateKey = useMemo(() => dateKeyFromIso(loggedAt), [loggedAt]);
   const dateLabel = useMemo(() => formatLogDateLabel(dateKey), [dateKey]);
+  const timeLabel = useMemo(() => formatMealTime(loggedAt), [loggedAt]);
+  const valueLabel = compact && showTime ? `${dateLabel} · ${timeLabel}` : dateLabel;
+
+  function handleDateSelect(nextKey: string) {
+    onChange(clampLoggedAtToNow(mergeLoggedAtDateKey(nextKey, loggedAt)));
+  }
+
+  function handleTimeChange(nextLoggedAt: string) {
+    onChange(clampLoggedAtToNow(nextLoggedAt));
+  }
 
   return (
     <>
@@ -30,22 +53,61 @@ export function MealLogDateField({
             {fieldLabel}
           </Text>
           <Text variant="bodyLarge" style={styles.value}>
-            {dateLabel}
+            {valueLabel}
           </Text>
         </View>
-        <Button mode="outlined" compact onPress={() => setOpen(true)}>
-          Change
-        </Button>
+        {compact ? (
+          <IconButton
+            icon="calendar"
+            size={20}
+            iconColor={semantic.primary}
+            onPress={() => setDateOpen(true)}
+            accessibilityLabel="Change meal date"
+          />
+        ) : (
+          <Button mode="outlined" compact onPress={() => setDateOpen(true)}>
+            Change
+          </Button>
+        )}
       </View>
 
+      {showTime && !compact ? (
+        <View style={styles.wrap}>
+          <View style={styles.copy}>
+            <Text variant="labelLarge" style={styles.label}>
+              Time
+            </Text>
+            <Text variant="bodyLarge" style={styles.value}>
+              {timeLabel}
+            </Text>
+          </View>
+          <Button mode="outlined" compact onPress={() => setTimeOpen(true)}>
+            Change
+          </Button>
+        </View>
+      ) : null}
+
       <LogDatePickerModal
-        visible={open}
+        visible={dateOpen}
         selectedDateKey={dateKey}
-        onSelect={(nextKey) => onChange(loggedAtForDateKey(nextKey, mealType))}
-        onClose={() => setOpen(false)}
+        onSelect={handleDateSelect}
+        onClose={() => setDateOpen(false)}
       />
+      {showTime && !compact ? (
+        <LogTimePickerModal
+          visible={timeOpen}
+          loggedAt={loggedAt}
+          onChange={handleTimeChange}
+          onClose={() => setTimeOpen(false)}
+        />
+      ) : null}
     </>
   );
+}
+
+/** Resolve loggedAt when only a calendar date is known (e.g. home upload picker). */
+export function loggedAtFromDateKey(dateKey: string, mealType?: MealType): string {
+  return loggedAtForDateKey(dateKey, mealType);
 }
 
 const styles = StyleSheet.create({

@@ -6,7 +6,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useCallback, useRef, useState } from "react";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { Alert } from "react-native";
-import { useAuth } from "@/context/AuthContext";
 import { uploadMealImage, analyzeMealText } from "@/lib/api";
 import {
   isRetryableError,
@@ -14,18 +13,18 @@ import {
   mediaPermissionMessage,
 } from "@/lib/apiErrors";
 import { prepareMealImage } from "@/lib/imagePrep";
-import {
-  clearPendingUpload,
-  savePendingPhotoUpload,
-  savePendingTextLog,
-} from "@/lib/mealPendingStorage";
 import { saveMealUploadSession } from "@/lib/mealUploadSession";
 import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { setLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 
 export type UploadStage = "idle" | "preparing" | "analyzing" | "analyzing-text";
 
-export function uploadStageLabel(stage: UploadStage): string {
+export function uploadStageLabel(
+  stage: UploadStage,
+  pickingSource?: PhotoSource | null,
+): string {
+  if (pickingSource === "camera") return "Opening camera…";
+  if (pickingSource === "library") return "Opening photo library…";
   if (stage === "preparing") return "Preparing photo…";
   if (stage === "analyzing") return "Analyzing your meal…";
   if (stage === "analyzing-text") return "Estimating nutrition…";
@@ -33,9 +32,8 @@ export function uploadStageLabel(stage: UploadStage): string {
 }
 
 export function useMealPhotoUpload() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
+  const [pickingSource, setPickingSource] = useState<PhotoSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(false);
   const logDateRef = useRef<string | null>(null);
@@ -51,9 +49,6 @@ export function useMealPhotoUpload() {
       analysis: Awaited<ReturnType<typeof uploadMealImage>>,
       options?: { isTextLog?: boolean; localImageUri?: string },
     ) => {
-      if (userId) {
-        void clearPendingUpload(userId);
-      }
       lastTextLogRef.current = null;
       saveMealUploadSession(analysis.draftId, {
         ...analysis,
@@ -81,7 +76,7 @@ export function useMealPhotoUpload() {
         },
       });
     },
-    [userId],
+    [],
   );
 
   const processAsset = useCallback(
@@ -89,10 +84,8 @@ export function useMealPhotoUpload() {
       setError(null);
       setCanRetry(false);
       setUploadStage("preparing");
-      let prepared: Awaited<ReturnType<typeof prepareMealImage>> | null = null;
-      const logDateKey = logDateRef.current ?? todayDateKey();
       try {
-        prepared = await prepareMealImage(asset.uri);
+        const prepared = await prepareMealImage(asset.uri);
         setUploadStage("analyzing");
         const analysis = await uploadMealImage(prepared);
         navigateToResult(analysis, { localImageUri: prepared.uri });
@@ -100,21 +93,12 @@ export function useMealPhotoUpload() {
         const retryable = isRetryableError(e);
         setCanRetry(retryable);
         setError(mealFlowErrorMessage(e, "upload"));
-        if (retryable && userId) {
-          const photoUri = prepared?.uri ?? asset.uri;
-          void savePendingPhotoUpload(userId, {
-            photoUri,
-            mimeType: prepared?.mimeType ?? "image/jpeg",
-            fileName: prepared?.fileName ?? "meal.jpg",
-            logDateKey,
-          });
-        }
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setUploadStage("idle");
       }
     },
-    [navigateToResult, userId],
+    [navigateToResult],
   );
 
   const logWithText = useCallback(
@@ -142,15 +126,12 @@ export function useMealPhotoUpload() {
         const retryable = isRetryableError(e);
         setCanRetry(retryable);
         setError(mealFlowErrorMessage(e, "analyze-text"));
-        if (retryable && userId) {
-          void savePendingTextLog(userId, trimmed, logDateKey);
-        }
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } finally {
         setUploadStage("idle");
       }
     },
-    [navigateToResult, userId],
+    [navigateToResult],
   );
 
   const pickAndAnalyze = useCallback(
@@ -160,48 +141,55 @@ export function useMealPhotoUpload() {
       }
 
       const source: PhotoSource = useCamera ? "camera" : "library";
-      const permission = useCamera
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        const message = mediaPermissionMessage(
-          useCamera ? "camera" : "library",
-          permission.canAskAgain,
-        );
-        if (permission.canAskAgain === false) {
-          Alert.alert("Permission needed", message, [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => void Linking.openSettings() },
-          ]);
-        } else {
-          setError(message);
-          setCanRetry(false);
+      setPickingSource(source);
+
+      try {
+        const permission = useCamera
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          const message = mediaPermissionMessage(
+            useCamera ? "camera" : "library",
+            permission.canAskAgain,
+          );
+          if (permission.canAskAgain === false) {
+            Alert.alert("Permission needed", message, [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => void Linking.openSettings() },
+            ]);
+          } else {
+            setError(message);
+            setCanRetry(false);
+          }
+          return;
         }
-        return;
+
+        await setLastPhotoSource(source);
+
+        const result = useCamera
+          ? await ImagePicker.launchCameraAsync({
+              quality: 0.85,
+              allowsEditing: true,
+              aspect: [4, 3],
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              quality: 0.85,
+              allowsEditing: true,
+              aspect: [4, 3],
+            });
+
+        if (result.canceled || !result.assets[0]) return;
+
+        const asset = result.assets[0];
+        lastAssetRef.current = asset;
+        setPickingSource(null);
+        if (useCamera) {
+          await saveToCameraRoll(asset.uri);
+        }
+        await processAsset(asset);
+      } finally {
+        setPickingSource(null);
       }
-
-      await setLastPhotoSource(source);
-
-      const result = useCamera
-        ? await ImagePicker.launchCameraAsync({
-            quality: 0.85,
-            allowsEditing: true,
-            aspect: [4, 3],
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            quality: 0.85,
-            allowsEditing: true,
-            aspect: [4, 3],
-          });
-
-      if (result.canceled || !result.assets[0]) return;
-
-      const asset = result.assets[0];
-      lastAssetRef.current = asset;
-      if (useCamera) {
-        await saveToCameraRoll(asset.uri);
-      }
-      await processAsset(asset);
     },
     [processAsset],
   );
@@ -222,10 +210,11 @@ export function useMealPhotoUpload() {
 
   return {
     uploadStage,
+    pickingSource,
     error,
     canRetry,
     hasRetryTarget,
-    uploading: uploadStage !== "idle",
+    uploading: uploadStage !== "idle" || pickingSource !== null,
     logDateRef,
     setLogDate,
     pickAndAnalyze,

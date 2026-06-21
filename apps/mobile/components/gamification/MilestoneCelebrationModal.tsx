@@ -11,6 +11,8 @@ type Props = {
 };
 
 export function MilestoneCelebrationModal({ visible, message, onDismiss }: Props) {
+  if (!visible) return null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onDismiss}>

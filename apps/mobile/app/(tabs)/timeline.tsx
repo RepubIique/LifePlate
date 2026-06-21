@@ -47,7 +47,7 @@ export default function TimelineScreen() {
     reorderDayMealsLocally,
   } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
-  const { uploading, uploadStage, error, canRetry, hasRetryTarget, setError, retryLastAsset, lastAssetRef } =
+  const { uploading, uploadStage, pickingSource, error, canRetry, hasRetryTarget, setError, retryLastAsset, lastAssetRef } =
     useMealPhotoUpload();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const refreshAfterMealChangeRef = useRef(refreshAfterMealChange);
@@ -227,7 +227,7 @@ export default function TimelineScreen() {
         <View style={styles.uploadBanner}>
           <ActivityIndicator size="small" />
           <Text variant="bodySmall" style={styles.uploadText}>
-            {uploadStageLabel(uploadStage)}
+            {uploadStageLabel(uploadStage, pickingSource)}
           </Text>
         </View>
       ) : null}

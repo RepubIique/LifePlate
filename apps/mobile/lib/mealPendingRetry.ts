@@ -10,6 +10,7 @@ import { saveMealImage } from "@/lib/mealImages";
 import {
   clearPendingConfirm,
   clearPendingUpload,
+  clearPendingUploadMeta,
   loadPendingConfirm,
   loadPendingUpload,
   type PendingMealConfirmForm,
@@ -36,12 +37,16 @@ export function pendingUploadToAsset(upload: PendingUpload): ImagePickerAsset | 
 export function navigateToMealResult(
   analysis: MealUploadResponse,
   options: { logDateKey: string; localImageUri?: string; isTextLog?: boolean },
+  userId?: string | null,
 ): void {
   saveMealUploadSession(analysis.draftId, {
     ...analysis,
     localImageUri: options.localImageUri,
     isTextLog: options.isTextLog,
   });
+  if (userId) {
+    void clearPendingUploadMeta(userId);
+  }
   router.push({
     pathname: "/meal/result",
     params: {
@@ -97,6 +102,7 @@ export function navigateToPendingConfirm(form: PendingMealConfirmForm): void {
       confidence: String(form.confidence),
       coachNudge: form.coachNudge,
       logDate: form.logDate,
+      loggedAt: form.loggedAt ?? loggedAtForDateKey(form.logDate, form.mealType),
       isTextLog: form.isTextLog ? "true" : undefined,
     },
   });
@@ -110,7 +116,7 @@ export async function retryPendingUpload(
 
   if (pending.kind === "text") {
     const analysis = await analyzeMealText(pending.description);
-    await clearPendingUpload(userId);
+    await clearPendingUploadMeta(userId);
     return {
       analysis,
       logDateKey: pending.logDateKey,
@@ -118,16 +124,17 @@ export async function retryPendingUpload(
     };
   }
 
+  const localImageUri = pending.photoUri;
   const analysis = await uploadMealImage({
     uri: pending.photoUri,
     mimeType: pending.mimeType,
     fileName: pending.fileName,
   });
-  await clearPendingUpload(userId);
+  await clearPendingUploadMeta(userId);
   return {
     analysis,
     logDateKey: pending.logDateKey,
-    localImageUri: pending.photoUri,
+    localImageUri,
   };
 }
 
@@ -160,7 +167,7 @@ export async function retryPendingConfirm(
         form.totalPortions,
         form.portionsEaten,
       ),
-      loggedAt: loggedAtForDateKey(form.logDate, form.mealType),
+      loggedAt: form.loggedAt ?? loggedAtForDateKey(form.logDate, form.mealType),
       shareWithFriendIds:
         form.selectedFriendIds.length > 0 ? form.selectedFriendIds : undefined,
     });
