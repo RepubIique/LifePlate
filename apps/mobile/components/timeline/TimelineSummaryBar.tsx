@@ -2,59 +2,86 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import type { TimelineSummaryStats } from "@/lib/mealUtils";
+import { semantic, ui, spacing } from "@/src/theme/lifeplate";
 
-type Props = {
-  totalMeals: number;
-  weekMeals: number;
+type Props = TimelineSummaryStats;
+
+type StatItem = {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  value: string;
+  label: string;
 };
 
-export function TimelineSummaryBar({ totalMeals, weekMeals }: Props) {
+function StatChip({ icon, value, label }: StatItem) {
   return (
-    <View style={styles.row}>
-      <PremiumCard style={styles.card} noBlur>
-        <MaterialCommunityIcons name="book-open-page-variant" size={20} color={semantic.primary} />
-        <Text variant="headlineSmall" style={styles.value}>
-          {totalMeals}
-        </Text>
-        <Text variant="labelMedium" style={styles.label}>
-          Total logged
-        </Text>
-      </PremiumCard>
-      <PremiumCard style={styles.card} noBlur>
-        <MaterialCommunityIcons name="calendar-week" size={20} color={semantic.primary} />
-        <Text variant="headlineSmall" style={styles.value}>
-          {weekMeals}
-        </Text>
-        <Text variant="labelMedium" style={styles.label}>
-          This week
-        </Text>
-      </PremiumCard>
+    <View style={styles.chip}>
+      <MaterialCommunityIcons name={icon} size={14} color={semantic.primary} />
+      <Text variant="labelLarge" style={styles.value}>
+        {value}
+      </Text>
+      <Text variant="labelSmall" style={styles.label} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
 
+export function TimelineSummaryBar({
+  totalMeals,
+  weekMeals,
+  loggedDays,
+  hydrationGlasses,
+  homeCookedPercent,
+}: Props) {
+  const stats: StatItem[] = [
+    { icon: "book-open-page-variant", value: String(totalMeals), label: "Total" },
+    { icon: "calendar-week", value: String(weekMeals), label: "Week" },
+    { icon: "calendar-check", value: String(loggedDays), label: "Days" },
+    { icon: "cup-water", value: String(hydrationGlasses), label: "Water" },
+    {
+      icon: "home-outline",
+      value: homeCookedPercent == null ? "—" : `${homeCookedPercent}%`,
+      label: "Home",
+    },
+  ];
+
+  return (
+    <PremiumCard style={styles.card} noBlur>
+      <View style={styles.row}>
+        {stats.map((stat) => (
+          <StatChip key={stat.label} {...stat} />
+        ))}
+      </View>
+    </PremiumCard>
+  );
+}
+
 const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: ui.cardBackground,
+  },
   row: {
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    alignItems: "flex-start",
   },
-  card: {
+  chip: {
     flex: 1,
     alignItems: "center",
-    gap: 4,
-    paddingVertical: spacing.md,
-    backgroundColor: ui.cardBackground,
+    gap: 2,
+    minWidth: 0,
   },
   value: {
     fontWeight: "700",
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     color: semantic.primary,
   },
   label: {
     opacity: 0.55,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
+    textAlign: "center",
   },
 });

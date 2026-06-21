@@ -28,7 +28,12 @@ import { friendlyErrorMessage, hydrationSyncErrorMessage } from "@/lib/apiErrors
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { useMealPhotoUpload, uploadStageLabel } from "@/lib/useMealPhotoUpload";
 import { openMealEdit } from "@/lib/mealNavigation";
-import { buildTimelineDayGroups, countMealsThisWeek, mealMatchesTimelineSearch, timelineDayMatchesSearch } from "@/lib/mealUtils";
+import {
+  buildTimelineDayGroups,
+  computeTimelineSummaryStats,
+  mealMatchesTimelineSearch,
+  timelineDayMatchesSearch,
+} from "@/lib/mealUtils";
 import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
@@ -193,7 +198,10 @@ export default function TimelineScreen() {
         group.meals.some((meal) => mealMatchesTimelineSearch(meal, normalizedSearch)),
     );
   }, [groups, isSearching, normalizedSearch]);
-  const weekMeals = countMealsThisWeek(meals);
+  const summaryStats = useMemo(
+    () => computeTimelineSummaryStats(meals, hydrationByDate),
+    [meals, hydrationByDate],
+  );
   const hasAnyEntries = groups.length > 0;
   const showSkeleton = loading && !refreshing && meals.length === 0;
 
@@ -217,10 +225,6 @@ export default function TimelineScreen() {
 
       {hasAnyEntries ? (
         <TimelineSearchBar value={searchQuery} onChangeText={setSearchQuery} />
-      ) : null}
-
-      {hasAnyEntries ? (
-        <TimelineSummaryBar totalMeals={meals.length} weekMeals={weekMeals} />
       ) : null}
 
       {uploading ? (
@@ -248,6 +252,8 @@ export default function TimelineScreen() {
         }
       >
         {showSkeleton ? <TimelineSkeleton /> : null}
+
+        {!showSkeleton && hasAnyEntries ? <TimelineSummaryBar {...summaryStats} /> : null}
 
         {!showSkeleton
           ? visibleGroups.map((group) => {

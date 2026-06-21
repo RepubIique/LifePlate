@@ -5,6 +5,7 @@ import { dateKeyFromIso } from "@lifeplate/shared";
 import {
   buildTimelineDayGroups,
   capitalize,
+  computeTimelineSummaryStats,
   countMealsThisWeek,
   mealMatchesTimelineSearch,
   mealTypeIcon,
@@ -90,6 +91,28 @@ test("countMealsThisWeek includes recent meals only", () => {
     meal("old", eightDaysAgo.toISOString()),
   ]);
   assert.equal(count, 1);
+});
+
+test("computeTimelineSummaryStats aggregates meals and hydration", () => {
+  const now = new Date();
+  const today = now.toISOString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const stats = computeTimelineSummaryStats(
+    [
+      { ...meal("1", today), mealSource: "home_cooked" },
+      { ...meal("2", today), mealSource: "takeaway" },
+      { ...meal("3", yesterday.toISOString()), mealSource: "home_cooked" },
+    ],
+    { [dateKeyFromIso(today)]: 3, [dateKeyFromIso(yesterday.toISOString())]: 2 },
+  );
+
+  assert.equal(stats.totalMeals, 3);
+  assert.equal(stats.weekMeals, 3);
+  assert.equal(stats.loggedDays, 2);
+  assert.equal(stats.hydrationGlasses, 5);
+  assert.equal(stats.homeCookedPercent, 67);
 });
 
 test("mealTypeIcon maps known meal types", () => {

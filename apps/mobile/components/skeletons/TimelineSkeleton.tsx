@@ -38,15 +38,17 @@ function TimelineMealRowSkeleton({ index, total }: { index: number; total: numbe
 export function TimelineSkeleton() {
   return (
     <View>
-      <View style={styles.summaryRow}>
-        {[0, 1].map((index) => (
-          <PremiumCard key={index} noBlur style={styles.summaryCard}>
-            <Skeleton width={20} height={20} borderRadius={10} />
-            <Skeleton width={36} height={28} style={styles.gap} />
-            <Skeleton width={72} height={14} />
-          </PremiumCard>
-        ))}
-      </View>
+      <PremiumCard noBlur style={styles.summaryCard}>
+        <View style={styles.summaryRow}>
+          {[0, 1, 2, 3, 4].map((index) => (
+            <View key={index} style={styles.summaryChip}>
+              <Skeleton width={14} height={14} borderRadius={7} />
+              <Skeleton width={24} height={16} style={styles.gap} />
+              <Skeleton width={32} height={12} />
+            </View>
+          ))}
+        </View>
+      </PremiumCard>
 
       <View style={styles.dayGroup}>
         <View style={styles.dayHeader}>
@@ -65,17 +67,19 @@ export function TimelineSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  summaryCard: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: ui.cardBackground,
+  },
   summaryRow: {
     flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
   },
-  summaryCard: {
+  summaryChip: {
     flex: 1,
     alignItems: "center",
     gap: 4,
-    paddingVertical: spacing.md,
-    backgroundColor: ui.cardBackground,
   },
   dayGroup: {
     marginBottom: spacing.lg,

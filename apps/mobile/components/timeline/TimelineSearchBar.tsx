@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import { TextInput } from "react-native-paper";
-import { spacing, ui } from "@/src/theme/lifeplate";
+import { semantic, spacing, ui } from "@/src/theme/lifeplate";
 
 type Props = {
   value: string;
@@ -36,7 +36,9 @@ export function TimelineSearchBar({ value, onChangeText }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: semantic.background,
+    zIndex: 1,
   },
   input: {
     backgroundColor: ui.cardBackground,

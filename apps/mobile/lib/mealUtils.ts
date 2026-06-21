@@ -113,6 +113,36 @@ export function countMealsThisWeek(meals: MealListSummary[]): number {
   return meals.filter((meal) => mealLogDateKey(meal) >= cutoffKey).length;
 }
 
+export type TimelineSummaryStats = {
+  totalMeals: number;
+  weekMeals: number;
+  loggedDays: number;
+  hydrationGlasses: number;
+  homeCookedPercent: number | null;
+};
+
+export function computeTimelineSummaryStats(
+  meals: MealListSummary[],
+  hydrationByDate: Record<string, number>,
+): TimelineSummaryStats {
+  const withSource = meals.filter((meal) => meal.mealSource);
+  const homeCooked = withSource.filter((meal) => meal.mealSource === "home_cooked").length;
+
+  let hydrationGlasses = 0;
+  for (const count of Object.values(hydrationByDate)) {
+    hydrationGlasses += count;
+  }
+
+  return {
+    totalMeals: meals.length,
+    weekMeals: countMealsThisWeek(meals),
+    loggedDays: new Set(meals.map((meal) => mealLogDateKey(meal))).size,
+    hydrationGlasses,
+    homeCookedPercent:
+      withSource.length > 0 ? Math.round((homeCooked / withSource.length) * 100) : null,
+  };
+}
+
 export function mealTypeIcon(
   mealType: string | null | undefined,
 ):
