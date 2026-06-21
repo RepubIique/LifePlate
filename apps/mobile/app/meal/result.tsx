@@ -26,7 +26,8 @@ import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { ShareWithFriendsPicker } from "@/components/meal/ShareWithFriendsPicker";
 import { useAuth } from "@/context/AuthContext";
 import { attachDraftPhoto, confirmMeal, refineMeal } from "@/lib/api";
-import { friendlyErrorMessage, isRetryableError, mealFlowErrorMessage } from "@/lib/apiErrors";
+import { friendlyErrorMessage, isLoggingLockedError, isRetryableError, mealFlowErrorMessage } from "@/lib/apiErrors";
+import { useLoggingAccess } from "@/lib/useLoggingAccess";
 import {
   clearPendingConfirm,
   savePendingConfirm,
@@ -56,6 +57,7 @@ function normalizeFood(value: string) {
 export default function MealResultScreen() {
   const insets = useSafeAreaInsets();
   const { profile, session } = useAuth();
+  const { requireLoggingAccess } = useLoggingAccess();
   const userId = session?.user.id;
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const params = useLocalSearchParams<{
@@ -182,6 +184,8 @@ export default function MealResultScreen() {
   }
 
   async function handleConfirm() {
+    if (!requireLoggingAccess()) return;
+
     setSaving(true);
     setConfirmRetryable(false);
     try {
@@ -219,6 +223,9 @@ export default function MealResultScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)/timeline");
     } catch (e) {
+      if (isLoggingLockedError(e)) {
+        requireLoggingAccess();
+      }
       const retryable = isRetryableError(e);
       setConfirmRetryable(retryable);
       setSnackbar(mealFlowErrorMessage(e, "confirm"));

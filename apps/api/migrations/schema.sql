@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS users (
   current_streak INTEGER NOT NULL DEFAULT 0,
   longest_streak INTEGER NOT NULL DEFAULT 0,
   is_paid BOOLEAN NOT NULL DEFAULT false,
-  cloud_image_backup BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -36,7 +35,6 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS current_streak INTEGER NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS longest_streak INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS cloud_image_backup BOOLEAN NOT NULL DEFAULT false;
 
 -- ---------------------------------------------------------------------------
 -- Meals

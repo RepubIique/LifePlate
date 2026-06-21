@@ -9,6 +9,7 @@ import { pruneStaleRateLimitRows } from "./services/uploadRateLimit.js";
 import { fastifyServerOptions, registerRequestLogging } from "./logger.js";
 import { MealGuardrailError } from "./services/mealGuardrails.js";
 import { RateLimitError } from "./services/uploadRateLimit.js";
+import { FreeTierError } from "./services/freeTier.js";
 import { mealRoutes } from "./routes/meals.js";
 import { insightRoutes } from "./routes/insights.js";
 import { nutritionRoutes } from "./routes/nutrition.js";
@@ -17,6 +18,7 @@ import { feedbackRoutes } from "./routes/feedback.js";
 import { friendRoutes } from "./routes/friends.js";
 import { gamificationRoutes } from "./routes/gamification.js";
 import { mealShareRoutes } from "./routes/mealShares.js";
+import { subscriptionRoutes } from "./routes/subscription.js";
 
 assertRuntimeConfig();
 
@@ -28,7 +30,7 @@ const app = Fastify({
 registerRequestLogging(app);
 
 app.setErrorHandler((err, request, reply) => {
-  if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+  if (err instanceof MealGuardrailError || err instanceof RateLimitError || err instanceof FreeTierError) {
     request.log.warn({ err, code: err.code }, "request rejected");
     return reply.status(err.status).send({ error: err.message, code: err.code });
   }
@@ -89,6 +91,7 @@ await app.register(feedbackRoutes);
 await app.register(friendRoutes);
 await app.register(gamificationRoutes);
 await app.register(mealShareRoutes);
+await app.register(subscriptionRoutes);
 
 async function shutdown(signal: string) {
   app.log.info({ signal }, "shutting down");

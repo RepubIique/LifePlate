@@ -3,11 +3,13 @@ import { useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput as RNTextInput, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import type { UserGoal } from "@lifeplate/shared";
+import { GoalPickerModal } from "@/components/profile/GoalPickerModal";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
 import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
-type EditField = "name" | "goal" | null;
+type EditField = "name" | null;
 
 type Props = {
   userId: string | null;
@@ -21,7 +23,7 @@ type Props = {
   avatarUploading: boolean;
   avatarCacheRevision: number;
   onNameChange: (value: string) => void;
-  onGoalChange: (value: string) => void;
+  onGoalChange: (value: UserGoal) => void;
   onAvatarPress: () => void;
   onShareFriendCode: () => void;
 };
@@ -43,8 +45,8 @@ export function ProfileHeroCard({
   onShareFriendCode,
 }: Props) {
   const [editing, setEditing] = useState<EditField>(null);
+  const [goalPickerOpen, setGoalPickerOpen] = useState(false);
   const nameInputRef = useRef<RNTextInput>(null);
-  const goalInputRef = useRef<RNTextInput>(null);
 
   const displayName = name.trim() || "Your name";
   const displayGoal = goal.trim();
@@ -53,7 +55,6 @@ export function ProfileHeroCard({
     setEditing(field);
     requestAnimationFrame(() => {
       if (field === "name") nameInputRef.current?.focus();
-      if (field === "goal") goalInputRef.current?.focus();
     });
   }
 
@@ -119,44 +120,27 @@ export function ProfileHeroCard({
             </Text>
 
             <View style={styles.chipRow}>
-              {editing === "goal" ? (
-                <View style={styles.goalChipEditing}>
-                  <RNTextInput
-                    ref={goalInputRef}
-                    value={goal}
-                    onChangeText={onGoalChange}
-                    onBlur={finishEditing}
-                    onSubmitEditing={finishEditing}
-                    returnKeyType="done"
-                    placeholder="e.g. Increase protein"
-                    placeholderTextColor={palette.sage}
-                    style={styles.goalInput}
-                    accessibilityLabel="Edit goal"
-                  />
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() => startEditing("goal")}
-                  style={({ pressed }) => [
-                    displayGoal ? styles.goalChip : styles.goalChipEmpty,
-                    pressed && styles.pressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={displayGoal ? "Edit goal" : "Add a goal"}
+              <Pressable
+                onPress={() => setGoalPickerOpen(true)}
+                style={({ pressed }) => [
+                  displayGoal ? styles.goalChip : styles.goalChipEmpty,
+                  pressed && styles.pressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={displayGoal ? "Edit goal" : "Add a goal"}
+              >
+                <Text
+                  variant="labelMedium"
+                  style={displayGoal ? styles.goalChipText : styles.goalChipEmptyText}
                 >
-                  <Text
-                    variant="labelMedium"
-                    style={displayGoal ? styles.goalChipText : styles.goalChipEmptyText}
-                  >
-                    {displayGoal || "Add a goal"}
-                  </Text>
-                  <MaterialCommunityIcons
-                    name={displayGoal ? "pencil-outline" : "plus"}
-                    size={14}
-                    color={displayGoal ? semantic.primary : palette.sage}
-                  />
-                </Pressable>
-              )}
+                  {displayGoal || "Add a goal"}
+                </Text>
+                <MaterialCommunityIcons
+                  name={displayGoal ? "pencil-outline" : "plus"}
+                  size={14}
+                  color={displayGoal ? semantic.primary : palette.sage}
+                />
+              </Pressable>
 
               {isPaid ? (
                 <View style={styles.plusChip}>
@@ -195,6 +179,12 @@ export function ProfileHeroCard({
           </Pressable>
         </View>
       </View>
+      <GoalPickerModal
+        visible={goalPickerOpen}
+        selected={goal}
+        onSelect={onGoalChange}
+        onClose={() => setGoalPickerOpen(false)}
+      />
     </PremiumCard>
   );
 }
@@ -280,22 +270,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.sage,
     borderStyle: "dashed",
-  },
-  goalChipEditing: {
-    minWidth: 180,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderWidth: 1,
-    borderColor: semantic.primary,
-  },
-  goalInput: {
-    color: semantic.primary,
-    fontWeight: "600",
-    fontSize: 13,
-    textAlign: "center",
-    padding: 0,
   },
   goalChipText: {
     color: semantic.primary,

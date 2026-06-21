@@ -14,6 +14,7 @@ import { pool } from "../db.js";
 import { onMealDataChanged } from "./mealSideEffects.js";
 import { extractMealPortionMeta, mergeRawAiPortionMeta } from "./mealPortions.js";
 import { areFriends } from "./friendships.js";
+import { assertCanLogMeals } from "./freeTier.js";
 
 export class MealShareError extends Error {
   constructor(
@@ -396,7 +397,10 @@ export async function acceptMealShare(
   userId: string,
   shareId: string,
   portionMetaOverride?: MealPortionMeta,
+  userEmail?: string,
 ): Promise<{ mealId: string }> {
+  await assertCanLogMeals(userId, userEmail);
+
   const client = await pool.connect();
 
   try {

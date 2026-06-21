@@ -3,6 +3,10 @@ import type { MealShareAcceptRequest } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import {
+  FreeTierError,
+  UserProfileNotReadyError,
+} from "../services/freeTier.js";
+import {
   MealShareError,
   acceptMealShare,
   countIncomingMealShares,
@@ -27,14 +31,26 @@ export async function mealShareRoutes(app: FastifyInstance) {
     "/api/meal-shares/:id/accept",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const { id } = request.params;
 
       try {
-        const result = await acceptMealShare(userId, id, request.body?.portionMeta);
+        const result = await acceptMealShare(
+          userId,
+          id,
+          request.body?.portionMeta,
+          userEmail,
+        );
         return result;
       } catch (err) {
         if (err instanceof MealShareError) {
+          return reply.code(err.status).send({
+            error: err.message,
+            code: err.code,
+            message: err.message,
+          });
+        }
+        if (err instanceof FreeTierError || err instanceof UserProfileNotReadyError) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,

@@ -5,14 +5,13 @@ import {
   type ProfilePatchResponse,
   type UserProfile,
 } from "@lifeplate/shared";
+import { computeLoggingAccess } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 import { validateUploadImage } from "../services/imageValidation.js";
 import { MealGuardrailError } from "../services/mealGuardrails.js";
 import { resolveStorageObjectUrl, uploadProfileAvatar } from "../services/storage.js";
-import { invalidateUserImageStorageFlags } from "../services/userFeatures.js";
-import { streakFreezeUsedThisMonth } from "../services/gamificationStats.js";
 
 type UserRow = {
   email: string;
@@ -27,7 +26,7 @@ type UserRow = {
   current_streak: number;
   longest_streak: number;
   is_paid: boolean;
-  cloud_image_backup: boolean;
+  created_at: Date;
 };
 
 function parseGender(value: string | null): Gender | null {
@@ -37,16 +36,17 @@ function parseGender(value: string | null): Gender | null {
   return null;
 }
 
-function toProfile(
-  userId: string,
-  userEmail: string,
-  row: UserRow,
-  streakFreezeAvailable = false,
-): UserProfile {
+function toProfile(userId: string, userEmail: string, row: UserRow): UserProfile {
   const weightKg = row.weight_kg != null ? Number(row.weight_kg) : null;
   const heightCm = row.height_cm != null ? Number(row.height_cm) : null;
   const age = row.age;
   const gender = parseGender(row.gender);
+  const createdAt = row.created_at.toISOString();
+  const loggingAccess = computeLoggingAccess({
+    isPaid: row.is_paid,
+    createdAt,
+    utcCalendar: true,
+  });
 
   return {
     id: userId,
@@ -66,8 +66,9 @@ function toProfile(
     currentStreak: row.current_streak,
     longestStreak: row.longest_streak,
     isPaid: row.is_paid,
-    cloudImageBackup: row.cloud_image_backup,
-    streakFreezeAvailable,
+    createdAt,
+    loggingLocked: loggingAccess.loggingLocked,
+    freeLoggingDaysRemaining: loggingAccess.freeLoggingDaysRemaining,
   };
 }
 
@@ -83,7 +84,7 @@ async function ensureUser(userId: string, userEmail: string) {
 async function loadUserRow(userId: string): Promise<UserRow | null> {
   const { rows } = await pool.query<UserRow>(
     `SELECT email, name, goal, avatar_url, weight_kg, height_cm, age, gender,
-            meals_logged, current_streak, longest_streak, is_paid, cloud_image_backup
+            meals_logged, current_streak, longest_streak, is_paid, created_at
      FROM users WHERE id = $1`,
     [userId],
   );
@@ -92,8 +93,6 @@ async function loadUserRow(userId: string): Promise<UserRow | null> {
 
 async function buildProfile(userId: string, userEmail: string): Promise<UserProfile> {
   const row = await loadUserRow(userId);
-  const streakFreezeAvailable =
-    Boolean(row?.is_paid) && !(await streakFreezeUsedThisMonth(userId));
 
   const profile = toProfile(
     userId,
@@ -111,9 +110,8 @@ async function buildProfile(userId: string, userEmail: string): Promise<UserProf
       current_streak: 0,
       longest_streak: 0,
       is_paid: false,
-      cloud_image_backup: false,
+      created_at: new Date(),
     },
-    streakFreezeAvailable,
   );
 
   return profile;
@@ -137,7 +135,6 @@ async function buildProfilePatchResponse(
     heightCm?: number | null;
     age?: number | null;
     gender?: Gender | null;
-    cloudImageBackup?: boolean;
   },
 ): Promise<ProfilePatchResponse> {
   const patch: ProfilePatchResponse = {};
@@ -148,9 +145,6 @@ async function buildProfilePatchResponse(
   if (body.heightCm !== undefined) patch.heightCm = body.heightCm;
   if (body.age !== undefined) patch.age = body.age;
   if (body.gender !== undefined) patch.gender = body.gender;
-  if (body.cloudImageBackup !== undefined) {
-    patch.cloudImageBackup = body.cloudImageBackup;
-  }
 
   const needsTargets = Object.keys(body).some((key) =>
     TARGET_AFFECTING_FIELDS.has(key),
@@ -268,27 +262,15 @@ export async function userRoutes(app: FastifyInstance) {
       heightCm?: number | null;
       age?: number | null;
       gender?: Gender | null;
-      cloudImageBackup?: boolean;
     };
   }>(
     "/api/users/me",
     { preHandler: requireAuth },
     async (request, reply) => {
       const { userId, userEmail } = request as AuthedRequest;
-      const { goal, name, weightKg, heightCm, age, gender, cloudImageBackup } =
-        request.body ?? {};
+      const { goal, name, weightKg, heightCm, age, gender } = request.body ?? {};
 
       await ensureUser(userId, userEmail);
-
-      if (cloudImageBackup === true) {
-        const row = await loadUserRow(userId);
-        if (!row?.is_paid) {
-          return reply.code(403).send({
-            error: "Cloud photo backup requires LifePlate Plus.",
-            code: "PLUS_REQUIRED",
-          });
-        }
-      }
 
       const sets: string[] = [];
       const values: unknown[] = [];
@@ -318,10 +300,6 @@ export async function userRoutes(app: FastifyInstance) {
         sets.push(`gender = $${idx++}`);
         values.push(gender);
       }
-      if (cloudImageBackup !== undefined) {
-        sets.push(`cloud_image_backup = $${idx++}`);
-        values.push(cloudImageBackup);
-      }
 
       if (sets.length > 0) {
         values.push(userId);
@@ -332,9 +310,6 @@ export async function userRoutes(app: FastifyInstance) {
         if (!rowCount) {
           request.log.error({ userId }, "Profile update matched no rows");
           return reply.code(500).send({ error: "Failed to save profile" });
-        }
-        if (cloudImageBackup !== undefined) {
-          invalidateUserImageStorageFlags(userId);
         }
       }
 

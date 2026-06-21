@@ -50,7 +50,7 @@ export function WeekSummaryCard({ insights }: Props) {
         <View style={styles.divider} />
         <View style={styles.splitCol}>
           <Text variant="labelLarge" style={styles.splitLabel}>
-            Takeaway
+            Eat out
           </Text>
           <Text variant="headlineSmall" style={[styles.splitValue, styles.takeaway]}>
             {insights.takeawayPercent}%

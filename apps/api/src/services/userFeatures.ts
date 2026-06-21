@@ -2,7 +2,6 @@ import { pool } from "../db.js";
 
 export type UserImageStorageFlags = {
   isPaid: boolean;
-  cloudImageBackup: boolean;
 };
 
 const FLAGS_CACHE_TTL_MS = 60_000;
@@ -23,17 +22,13 @@ export async function loadUserImageStorageFlags(
     return cached.flags;
   }
 
-  const { rows } = await pool.query<{
-    is_paid: boolean;
-    cloud_image_backup: boolean;
-  }>(
-    `SELECT is_paid, cloud_image_backup FROM users WHERE id = $1`,
+  const { rows } = await pool.query<{ is_paid: boolean }>(
+    `SELECT is_paid FROM users WHERE id = $1`,
     [userId],
   );
   const row = rows[0];
   const flags: UserImageStorageFlags = {
     isPaid: row?.is_paid ?? false,
-    cloudImageBackup: row?.cloud_image_backup ?? false,
   };
   flagsCache.set(userId, {
     flags,
@@ -43,7 +38,7 @@ export async function loadUserImageStorageFlags(
 }
 
 export function shouldUploadMealToCloud(flags: UserImageStorageFlags): boolean {
-  return flags.isPaid && flags.cloudImageBackup;
+  return flags.isPaid;
 }
 
 /** Persisted cloud URL for meals — empty when photos are device-only or legacy inline base64. */

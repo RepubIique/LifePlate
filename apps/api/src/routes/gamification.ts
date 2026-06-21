@@ -6,7 +6,6 @@ import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
 import {
   acceptCoopChallenge,
-  applyStreakFreeze,
   CoopChallengeError,
   declineCoopChallenge,
   inviteCoopChallenge,
@@ -98,21 +97,4 @@ export async function gamificationRoutes(app: FastifyInstance) {
       }
     },
   );
-
-  app.post("/api/gamification/streak-freeze", { preHandler: requireAuth }, async (request, reply) => {
-    const { userId } = request as AuthedRequest;
-    const { rows } = await pool.query<{ is_paid: boolean }>(
-      `SELECT is_paid FROM users WHERE id = $1`,
-      [userId],
-    );
-    try {
-      const result = await applyStreakFreeze(userId, rows[0]?.is_paid ?? false);
-      return result;
-    } catch (err) {
-      if (err instanceof CoopChallengeError) {
-        return reply.code(err.status).send({ error: err.message, code: err.code, message: err.message });
-      }
-      throw err;
-    }
-  });
 }

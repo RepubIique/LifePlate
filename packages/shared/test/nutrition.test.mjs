@@ -23,8 +23,10 @@ import {
   weeklyGutScore,
   parsePlantFoodText,
 } from "../dist/nutrition/index.js";
+import { todayDateKey } from "../dist/logDate.js";
 
 const targets = defaultExtendedNutritionTargets();
+const today = todayDateKey();
 
 test("classifyFoods detects plants, fermented, and prebiotic foods", () => {
   const result = classifyFoods(
@@ -160,7 +162,7 @@ test("buildCoachSummary is gentle in the morning with no meals logged", () => {
     gaps,
     0,
     { protein: 0, fibre: 0, plants: 0, hydration: 0 },
-    { hour: 8, logDate: "2026-06-20", mealTypes: [], mealsCount: 0 },
+    { hour: 8, logDate: today, mealTypes: [], mealsCount: 0 },
   );
   assert.match(summary, /morning|breakfast|across the day/i);
   assert.doesNotMatch(summary, /excellent/i);
@@ -186,7 +188,7 @@ test("buildCoachSummary switches to tomorrow after dinner is logged", () => {
     { protein: 0.5, fibre: 0.35, plants: 0.2, hydration: 0.5 },
     {
       hour: 20,
-      logDate: "2026-06-20",
+      logDate: today,
       mealTypes: ["breakfast", "lunch", "dinner"],
       mealsCount: 3,
     },
@@ -204,7 +206,7 @@ test("buildPlateMessage focuses on tomorrow once dinner is logged, even before 7
   ];
   const message = buildPlateMessage(lowPillars, true, {
     hour: 18,
-    logDate: "2026-06-20",
+    logDate: today,
     mealTypes: ["breakfast", "lunch", "dinner"],
     mealsCount: 3,
   });
@@ -232,7 +234,7 @@ test("buildCoachSummary after early dinner avoids eat-more-today nudges", () => 
     { protein: 0.5, fibre: 0.35, plants: 0.2, hydration: 0.5 },
     {
       hour: 18,
-      logDate: "2026-06-20",
+      logDate: today,
       mealTypes: ["breakfast", "lunch", "dinner"],
       mealsCount: 3,
     },

@@ -108,7 +108,6 @@ export async function updateProfile(body: {
   heightCm?: number | null;
   age?: number | null;
   gender?: Gender | null;
-  cloudImageBackup?: boolean;
 }): Promise<ProfilePatchResponse> {
   return request<ProfilePatchResponse>("/api/users/me", {
     method: "PATCH",
@@ -458,8 +457,8 @@ export async function declineCoopChallenge(challengeId: string): Promise<void> {
   });
 }
 
-export async function applyStreakFreeze(): Promise<{ logDate: string }> {
-  return request<{ logDate: string }>("/api/gamification/streak-freeze", {
+export async function syncSubscription(): Promise<{ isPaid: boolean }> {
+  return request<{ isPaid: boolean }>("/api/subscription/sync", {
     method: "POST",
     body: JSON.stringify({}),
   });

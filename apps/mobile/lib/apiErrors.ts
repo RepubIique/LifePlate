@@ -114,6 +114,10 @@ export function hydrationSyncErrorMessage(): string {
   return "Couldn't sync hydration. Tap Retry when you're back online.";
 }
 
+export function isLoggingLockedError(err: unknown): err is ApiError {
+  return err instanceof ApiError && err.code === "LOGGING_LOCKED";
+}
+
 export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return "Session expired. Please sign in again.";
@@ -140,6 +144,9 @@ export function friendlyErrorMessage(err: unknown): string {
     if (err.code === "PLUS_REQUIRED") {
       return "Cloud photo backup requires LifePlate Plus.";
     }
+    if (err.code === "LOGGING_LOCKED") {
+      return err.message || "Your free week has ended. Upgrade to LifePlate Plus to keep logging meals.";
+    }
     if (err.code === "INVALID_IMAGE") {
       return "Please upload a photo of your meal (JPEG or PNG).";
     }
@@ -151,12 +158,6 @@ export function friendlyErrorMessage(err: unknown): string {
     }
     if (err.code === "NOT_FRIEND") {
       return "You can only share meals with friends.";
-    }
-    if (err.code === "ALREADY_USED") {
-      return "You've already used your streak freeze this month.";
-    }
-    if (err.code === "NOT_NEEDED") {
-      return err.message || "You already logged yesterday — no freeze needed.";
     }
     if (err.code === "ALREADY_EXISTS") {
       return err.message || "A challenge with this friend already exists this week.";

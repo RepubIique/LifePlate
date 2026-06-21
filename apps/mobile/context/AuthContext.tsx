@@ -33,6 +33,7 @@ import { clearReportSourceCache } from "@/lib/pdf/reportSourceCache";
 import { clearSeenMilestones } from "@/lib/milestonePrefs";
 import { setUnauthorizedHandler } from "@/lib/sessionEvents";
 import { supabase } from "@/lib/supabase";
+import { useRevenueCatSession } from "@/lib/useRevenueCatSession";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -69,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profileDirtyRef = useRef(false);
   const profileInflightRef = useRef<Promise<UserProfile | null> | null>(null);
 
+  useRevenueCatSession(session);
+
   useEffect(() => {
     profileRef.current = profile;
   }, [profile]);
@@ -95,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           currentStreak: 0,
           longestStreak: 0,
           isPaid: false,
-          cloudImageBackup: false,
+          createdAt: new Date().toISOString(),
+          loggingLocked: false,
+          freeLoggingDaysRemaining: 7,
           ...patch,
         };
       }

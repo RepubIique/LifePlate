@@ -9,7 +9,7 @@ import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
 import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { palette, semantic, ui, spacing } from "@/src/theme/lifeplate";
 
 const PLATE_SIZE = 196;
 const STROKE = 16;
@@ -62,8 +62,8 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cx={cx}
         cy={cy}
         r={outerR}
-        fill="#FFFFFF"
-        stroke={palette.slateBlue}
+        fill={palette.white}
+        stroke={ui.borderSubtle}
         strokeWidth={2.5}
       />
       <Circle
@@ -78,7 +78,7 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cx={cx}
         cy={cy}
         r={wellR}
-        fill={ui.cardBackground}
+        fill={palette.white}
         stroke={ui.borderSubtle}
         strokeWidth={1}
       />
@@ -87,8 +87,8 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cy={cy - wellR * 0.28}
         rx={wellR * 0.42}
         ry={wellR * 0.16}
-        fill="#FFFFFF"
-        opacity={0.5}
+        fill={palette.white}
+        opacity={0.35}
       />
     </Svg>
   );

@@ -51,6 +51,11 @@ export const config = {
   storageBucket: optional("SUPABASE_STORAGE_BUCKET", "meals"),
   corsOrigin: optional("CORS_ORIGIN", "*"),
   runMigrations: optional("RUN_MIGRATIONS", isProduction ? "false" : "true") === "true",
+  /** Bearer token RevenueCat sends on POST /api/subscription/revenuecat-webhook */
+  revenuecatWebhookSecret: optional("REVENUECAT_WEBHOOK_SECRET", ""),
+  /** Secret API key for GET /v1/subscribers — used by POST /api/subscription/sync */
+  revenuecatSecretApiKey: optional("REVENUECAT_SECRET_API_KEY", ""),
+  revenuecatEntitlementId: optional("REVENUECAT_ENTITLEMENT_ID", "plus"),
 };
 
 export function assertRuntimeConfig() {

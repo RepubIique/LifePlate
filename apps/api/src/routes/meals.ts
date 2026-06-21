@@ -33,6 +33,11 @@ import { analyzeMealImage, analyzeMealText, reanalyzeMealFromFoods, refineMealIm
 import { assertMealReanalyzeAllowed } from "../services/mealReanalyze.js";
 import { onMealDataChanged } from "../services/mealSideEffects.js";
 import {
+  assertCanLogMeals,
+  FreeTierError,
+  UserProfileNotReadyError,
+} from "../services/freeTier.js";
+import {
   reorderMealsForDay,
   ReorderMealsValidationError,
 } from "../services/mealReorder.js";
@@ -57,7 +62,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/upload",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const file = await request.file();
       if (!file) {
         return reply.code(400).send({ error: "No image provided" });
@@ -67,6 +72,7 @@ export async function mealRoutes(app: FastifyInstance) {
       const mimeType = file.mimetype || "image/jpeg";
 
       try {
+        await assertCanLogMeals(userId, userEmail);
         await reserveUploadAttempt(userId);
         validateUploadImage(buffer, mimeType);
         const { analysis, raw } = await analyzeMealImage(buffer, mimeType);
@@ -99,7 +105,12 @@ export async function mealRoutes(app: FastifyInstance) {
           coachNudge,
         };
       } catch (err) {
-        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof RateLimitError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,
@@ -115,7 +126,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/log-text",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const description = request.body?.description?.trim() ?? "";
 
       if (!description) {
@@ -126,6 +137,7 @@ export async function mealRoutes(app: FastifyInstance) {
       }
 
       try {
+        await assertCanLogMeals(userId, userEmail);
         await reserveUploadAttempt(userId);
         const { analysis, raw } = await analyzeMealText(description);
 
@@ -145,7 +157,12 @@ export async function mealRoutes(app: FastifyInstance) {
           coachNudge,
         };
       } catch (err) {
-        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof RateLimitError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,
@@ -161,7 +178,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/refine",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const { draftId, clarification } = request.body ?? {};
 
       if (!draftId?.trim() || !clarification?.trim()) {
@@ -181,6 +198,7 @@ export async function mealRoutes(app: FastifyInstance) {
 
       const { buffer, mimeType } = await getDraftImage(draft);
       try {
+        await assertCanLogMeals(userId, userEmail);
         await reserveRefineAttempt(userId);
         const { analysis, raw } = await refineMealImage(
           buffer,
@@ -195,7 +213,12 @@ export async function mealRoutes(app: FastifyInstance) {
 
         return { ...analysis, coachNudge };
       } catch (err) {
-        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof RateLimitError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,
@@ -211,7 +234,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/drafts/:draftId/photo",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const { draftId } = request.params;
 
       const owned = await draftBelongsToUser(draftId, userId);
@@ -228,9 +251,14 @@ export async function mealRoutes(app: FastifyInstance) {
       const mimeType = file.mimetype || "image/jpeg";
 
       try {
+        await assertCanLogMeals(userId, userEmail);
         validateUploadImage(buffer, mimeType);
       } catch (err) {
-        if (err instanceof MealGuardrailError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,
@@ -267,7 +295,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/confirm",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const body = request.body;
 
       const draft = body.draftId
@@ -302,6 +330,7 @@ export async function mealRoutes(app: FastifyInstance) {
       const logDate = dateKeyFromIso(loggedAtDate.toISOString());
 
       try {
+        await assertCanLogMeals(userId, userEmail);
         assertMealAnalysis({
           mealName: body.mealName,
           foods: body.foods,
@@ -315,7 +344,11 @@ export async function mealRoutes(app: FastifyInstance) {
           confidence: body.confidence,
         });
       } catch (err) {
-        if (err instanceof MealGuardrailError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,
@@ -733,7 +766,7 @@ export async function mealRoutes(app: FastifyInstance) {
     "/api/meals/:id/reanalyze",
     { preHandler: requireAuth },
     async (request, reply) => {
-      const { userId } = request as AuthedRequest;
+      const { userId, userEmail } = request as AuthedRequest;
       const { id } = request.params;
       const body = request.body ?? {};
       const foods = (body.foods ?? []).map((food) => food.trim()).filter(Boolean);
@@ -758,6 +791,7 @@ export async function mealRoutes(app: FastifyInstance) {
       }
 
       try {
+        await assertCanLogMeals(userId, userEmail);
         assertMealReanalyzeAllowed(owned.reanalyze_count);
         await reserveRefineAttempt(userId);
         const { analysis } = await reanalyzeMealFromFoods({
@@ -786,7 +820,12 @@ export async function mealRoutes(app: FastifyInstance) {
           reanalyzeRemaining: mealReanalyzeRemaining(updatedRows[0].reanalyze_count),
         };
       } catch (err) {
-        if (err instanceof MealGuardrailError || err instanceof RateLimitError) {
+        if (
+          err instanceof MealGuardrailError ||
+          err instanceof RateLimitError ||
+          err instanceof FreeTierError ||
+          err instanceof UserProfileNotReadyError
+        ) {
           return reply.code(err.status).send({
             error: err.message,
             code: err.code,

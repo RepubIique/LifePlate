@@ -7,6 +7,7 @@ dist
 .env.*
 !.env.example
 coverage
+.idea
 
 # Accidental Expo prebuild at repo root (native app lives in apps/mobile)
 /app.json

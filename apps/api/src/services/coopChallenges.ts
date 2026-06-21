@@ -10,10 +10,7 @@ import {
 } from "@lifeplate/shared";
 import { pool } from "../db.js";
 import { areFriends, friendshipPair } from "./friendships.js";
-import { streakFreezeUsedThisMonth } from "./gamificationStats.js";
-import { MEAL_LOG_DATE_KEY_SQL } from "./mealLogDate.js";
 import { fetchHydrationHistory } from "./nutritionDashboard.js";
-import { syncUserMealStats } from "./userMealStats.js";
 
 export class CoopChallengeError extends Error {
   constructor(
@@ -254,34 +251,4 @@ export async function declineCoopChallenge(userId: string, challengeId: string):
   }
 
   await pool.query(`UPDATE coop_challenges SET status = 'declined' WHERE id = $1`, [challengeId]);
-}
-
-export async function applyStreakFreeze(userId: string, isPaid: boolean): Promise<{ logDate: string }> {
-  if (!isPaid) {
-    throw new CoopChallengeError("Streak freeze requires LifePlate Plus", 403, "PLUS_REQUIRED");
-  }
-  if (await streakFreezeUsedThisMonth(userId)) {
-    throw new CoopChallengeError("Streak freeze already used this month", 409, "ALREADY_USED");
-  }
-
-  const yesterday = offsetLogDateKey(todayDateKey(), -1);
-  const { rows } = await pool.query<{ found: number }>(
-    `SELECT 1 AS found FROM meals
-     WHERE user_id = $1 AND ${MEAL_LOG_DATE_KEY_SQL} = $2::date
-     LIMIT 1`,
-    [userId, yesterday],
-  );
-  if (rows.length > 0) {
-    throw new CoopChallengeError("You already logged yesterday — no freeze needed", 400, "NOT_NEEDED");
-  }
-
-  await pool.query(
-    `INSERT INTO user_streak_freezes (user_id, log_date) VALUES ($1, $2::date)
-     ON CONFLICT DO NOTHING`,
-    [userId, yesterday],
-  );
-
-  await syncUserMealStats(userId);
-
-  return { logDate: yesterday };
 }
