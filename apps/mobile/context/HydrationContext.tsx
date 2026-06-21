@@ -18,6 +18,7 @@ import {
   loadCachedHydration,
   saveCachedHydration,
 } from "@/lib/hydrationCache";
+import { clearReportSourceCache } from "@/lib/pdf/reportSourceCache";
 
 export const HYDRATION_HISTORY_DAYS = 60;
 
@@ -121,7 +122,8 @@ export function HydrationProvider({ children }: { children: ReactNode }) {
   const invalidateHydration = useCallback(() => {
     dirtyRef.current = true;
     fetchedAtRef.current = 0;
-  }, []);
+    if (userId) clearReportSourceCache(userId);
+  }, [userId]);
 
   const loadHydration = useCallback(
     async (options?: LoadOptions) => {
