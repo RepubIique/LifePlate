@@ -2,11 +2,12 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { IconButton, Text } from "react-native-paper";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import type { ComparisonPeriod, PeriodComparison, WeeklyTrendItem } from "@lifeplate/shared";
 import { mealLogDateKey, offsetLogDateKey } from "@lifeplate/shared";
 import { GutHealthInsightCard } from "@/components/insights/GutHealthInsightCard";
+import { PdfExportPreviewModal } from "@/components/pdf/PdfExportPreviewModal";
 import { InsightsStreakCard } from "@/components/insights/InsightsStreakCard";
 import { PeriodComparisonCard } from "@/components/insights/PeriodComparisonCard";
 import { PeriodSelector } from "@/components/insights/PeriodSelector";
@@ -25,6 +26,7 @@ import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
 import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
+import type { ReportWindowId } from "@/lib/pdf/reportWindows";
 import { currentWeekStartKey } from "@/lib/weekInsightsWindow";
 import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
 
@@ -77,6 +79,7 @@ export default function InsightsScreen() {
   } = useWeekInsights();
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [period, setPeriod] = useState<ComparisonPeriod>("day");
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,6 +114,8 @@ export default function InsightsScreen() {
   const periodSection = PERIOD_SECTION[period];
   const activeComparison = dashboard ? comparisonForPeriod(dashboard, period) : null;
 
+  const defaultPdfWindow: ReportWindowId = period === "month" ? "this_month" : "this_week";
+
   return (
     <Screen
       scroll
@@ -125,6 +130,19 @@ export default function InsightsScreen() {
       <PremiumHeader
         title="Insights"
         subtitle="See how you're tracking over time"
+        right={
+          profile && dashboard ? (
+            <IconButton
+              icon="file-pdf-box"
+              mode="contained-tonal"
+              containerColor={ui.selectedBackground}
+              iconColor={semantic.primary}
+              size={22}
+              onPress={() => setPdfModalVisible(true)}
+              accessibilityLabel="Export trend report"
+            />
+          ) : null
+        }
       />
       <View style={styles.body}>
         {showDashboardSkeleton ? (
@@ -194,6 +212,13 @@ export default function InsightsScreen() {
       <BottomSnackbar visible={!!snackbar} onDismiss={() => setSnackbar(null)} duration={4000}>
         {snackbar}
       </BottomSnackbar>
+
+      <PdfExportPreviewModal
+        visible={pdfModalVisible}
+        onClose={() => setPdfModalVisible(false)}
+        defaultWindowId={defaultPdfWindow}
+        onExported={(message) => setSnackbar(message)}
+      />
     </Screen>
   );
 }

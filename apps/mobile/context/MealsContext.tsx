@@ -17,6 +17,7 @@ import {
   loadCachedMeals,
   saveCachedMeals,
 } from "@/lib/mealsCache";
+import { clearReportSourceCache } from "@/lib/pdf/reportSourceCache";
 
 const STALE_MS = TAB_FOCUS_STALE_MS;
 
@@ -96,7 +97,8 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const invalidateMeals = useCallback(() => {
     dirtyRef.current = true;
     fetchedAtRef.current = 0;
-  }, []);
+    if (userId) clearReportSourceCache(userId);
+  }, [userId]);
 
   const removeMealLocally = useCallback(
     (id: string) => {
