@@ -5,8 +5,8 @@ import { useFonts } from "expo-font";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PaperProvider } from "react-native-paper";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { PlusPaywallProvider } from "@/context/PlusPaywallContext";
 import { FriendsProvider } from "@/context/FriendsContext";
 import { GamificationProvider } from "@/context/GamificationContext";
@@ -21,7 +21,6 @@ import { AlphaWelcomeModal } from "@/components/AlphaWelcomeModal";
 import { MealPendingSync } from "@/components/meal/PendingMealRecoveryModal";
 import { DigitalPlateWidgetSync } from "@/components/plus/DigitalPlateWidgetSync";
 import { WidgetInteractionHandler } from "@/components/plus/WidgetInteractionHandler";
-import { lifeplateTheme } from "@/src/theme/lifeplate";
 import { assertMobileEnv } from "@/lib/env";
 
 assertMobileEnv();
@@ -45,7 +44,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PaperProvider theme={lifeplateTheme}>
+      <ThemeProvider>
         <AuthProvider>
           <WidgetQuickActionProvider>
           <PlusPaywallProvider>
@@ -91,7 +90,7 @@ export default function RootLayout() {
           </PlusPaywallProvider>
           </WidgetQuickActionProvider>
         </AuthProvider>
-      </PaperProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

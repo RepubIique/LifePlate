@@ -4,13 +4,56 @@ import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { palette } from "@/src/theme/palette";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   friends: FriendSummary[];
 };
 
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm, backgroundColor: tints.creamLight },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    headerCopy: { flex: 1, gap: 2 },
+    title: { color: semantic.primary },
+    subtitle: { opacity: 0.6, lineHeight: 18 },
+    list: { marginTop: spacing.xs },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+    },
+    name: { flex: 1, color: semantic.primary },
+    streakPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: tints.orangeLight,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    streak: { color: ui.iconStreak, fontWeight: "700" },
+    divider: {
+      height: 1,
+      backgroundColor: palette.cream,
+      marginLeft: 52,
+    },
+  });
+}
+
 export function TogetherStreakSection({ friends }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { ui } = useAppColors();
   const withStreak = friends
     .filter((f) => (f.togetherStreak ?? 0) > 0)
     .sort((a, b) => (b.togetherStreak ?? 0) - (a.togetherStreak ?? 0));
@@ -52,38 +95,3 @@ export function TogetherStreakSection({ friends }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: tints.creamLight },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  headerCopy: { flex: 1, gap: 2 },
-  title: { color: semantic.primary },
-  subtitle: { opacity: 0.6, lineHeight: 18 },
-  list: { marginTop: spacing.xs },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  name: { flex: 1, color: semantic.primary },
-  streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: tints.orangeLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  streak: { color: ui.iconStreak, fontWeight: "700" },
-  divider: {
-    height: 1,
-    backgroundColor: palette.cream,
-    marginLeft: 52,
-  },
-});

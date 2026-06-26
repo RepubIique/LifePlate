@@ -11,7 +11,9 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { G, Path, Rect } from "react-native-svg";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { palette, tints, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
@@ -19,7 +21,6 @@ const WATER_DEEP = PILLAR_COLORS.hydration;
 const WATER_MID = "#7ABFB7";
 const WATER_LIGHT = "#B5DFDB";
 const GLASS_FILLED = PILLAR_COLORS.hydration;
-const GLASS_EMPTY = "rgba(255, 255, 255, 0.92)";
 
 type Props = {
   progress: number;
@@ -106,7 +107,53 @@ function HydrationWaterWaves({ width }: { width: number }) {
   );
 }
 
+function createStyles({ palette, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    cup: {
+      flex: 1,
+      minHeight: 132,
+      overflow: "hidden",
+      backgroundColor: tints.tealLight,
+    },
+    water: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      overflow: "hidden",
+    },
+    foreground: {
+      flex: 1,
+      zIndex: 1,
+      padding: spacing.lg,
+      gap: spacing.md,
+      justifyContent: "space-between",
+    },
+    glasses: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    glass: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+    },
+    glassFilled: {
+      backgroundColor: GLASS_FILLED,
+      borderWidth: 1,
+      borderColor: palette.slateBlue,
+    },
+    glassEmpty: {
+      backgroundColor: ui.frostedChip,
+      borderWidth: 1.5,
+      borderColor: palette.teal,
+    },
+  });
+}
+
 export function HydrationLevelFill({ progress, total, filled, children }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [cupSize, setCupSize] = useState({ width: 0, height: 0 });
   const fill = useSharedValue(clampProgress(progress));
 
@@ -158,46 +205,3 @@ export function HydrationLevelFill({ progress, total, filled, children }: Props)
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  cup: {
-    flex: 1,
-    minHeight: 132,
-    overflow: "hidden",
-    backgroundColor: tints.tealLight,
-  },
-  water: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: "hidden",
-  },
-  foreground: {
-    flex: 1,
-    zIndex: 1,
-    padding: spacing.lg,
-    gap: spacing.md,
-    justifyContent: "space-between",
-  },
-  glasses: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  glass: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  glassFilled: {
-    backgroundColor: GLASS_FILLED,
-    borderWidth: 1,
-    borderColor: palette.slateBlue,
-  },
-  glassEmpty: {
-    backgroundColor: GLASS_EMPTY,
-    borderWidth: 1.5,
-    borderColor: palette.teal,
-  },
-});

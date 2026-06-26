@@ -7,7 +7,9 @@ import {
   type Gender,
 } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 export function toOptionalNumber(value: string): number | null {
   const trimmed = value.trim();
@@ -33,7 +35,42 @@ type BodyMetricsFormProps = {
   showTargets?: boolean;
 };
 
-function TargetRow({ label, value }: { label: string; value: string }) {
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    form: { gap: spacing.sm },
+    sectionTitle: { letterSpacing: 0.15 },
+    genderList: { gap: spacing.xs },
+    genderCard: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    genderCardSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    genderTextSelected: { color: semantic.primary },
+    metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    metricInput: { flexBasis: "48%", flexGrow: 1 },
+    targetsBox: { gap: spacing.xs, marginTop: spacing.xs },
+    targetRow: {
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: ui.trackBackground,
+    },
+    targetLabel: { opacity: 0.65, marginBottom: 2 },
+    hint: { opacity: 0.65, lineHeight: 18 },
+  });
+}
+
+function TargetRow({
+  label,
+  value,
+  styles,
+}: {
+  label: string;
+  value: string;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.targetRow}>
       <Text variant="bodyMedium" style={styles.targetLabel}>
@@ -55,6 +92,7 @@ export function BodyMetricsForm({
   onGenderChange,
   showTargets = true,
 }: BodyMetricsFormProps) {
+  const styles = useThemedStyles(createStyles);
   const targets = useMemo(
     () =>
       computeNutritionTargets({
@@ -125,10 +163,12 @@ export function BodyMetricsForm({
             <TargetRow
               label="Recommended fibre / day"
               value={`${targets.dailyFibreG}g`}
+              styles={styles}
             />
             <TargetRow
               label="Estimated calories / day"
               value={`${targets.dailyCalories} kcal`}
+              styles={styles}
             />
           </View>
         ) : (
@@ -156,28 +196,3 @@ export function isBodyMetricsFormComplete(
     }) != null
   );
 }
-
-const styles = StyleSheet.create({
-  form: { gap: spacing.sm },
-  sectionTitle: { letterSpacing: 0.15 },
-  genderList: { gap: spacing.xs },
-  genderCard: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  genderCardSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  genderTextSelected: { color: semantic.primary },
-  metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  metricInput: { flexBasis: "48%", flexGrow: 1 },
-  targetsBox: { gap: spacing.xs, marginTop: spacing.xs },
-  targetRow: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: ui.trackBackground,
-  },
-  targetLabel: { opacity: 0.65, marginBottom: 2 },
-  hint: { opacity: 0.65, lineHeight: 18 },
-});

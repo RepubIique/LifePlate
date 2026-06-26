@@ -4,7 +4,9 @@ import type { GutHealthSummary, TrendStatus } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { FoodChips } from "@/components/nutrition/shared";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   gutHealth: GutHealthSummary;
@@ -12,7 +14,51 @@ type Props = {
   periodGutLabel?: string;
 };
 
+function createStyles({ semantic }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.md },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    titleCol: { flex: 1, gap: 4 },
+    title: { letterSpacing: 0.15, color: semantic.primary },
+    subtitle: { opacity: 0.55, lineHeight: 18 },
+    scoreCol: { alignItems: "center", minWidth: 52 },
+    score: { fontWeight: "700", color: semantic.primary, letterSpacing: -0.5 },
+    scoreCaption: { opacity: 0.45 },
+    badges: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.md,
+    },
+    badgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    badgeHint: {
+      opacity: 0.45,
+      letterSpacing: 0.2,
+    },
+    section: { gap: spacing.xs },
+    sectionLabel: {
+      opacity: 0.5,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    empty: {
+      opacity: 0.65,
+      lineHeight: 22,
+      fontStyle: "italic",
+    },
+  });
+}
+
 export function GutHealthInsightCard({ gutHealth, periodGutStatus, periodGutLabel }: Props) {
+  const styles = useThemedStyles(createStyles);
   const hasFoods =
     gutHealth.fermentedFoods.length > 0 || gutHealth.prebioticFoods.length > 0;
 
@@ -81,44 +127,3 @@ export function GutHealthInsightCard({ gutHealth, periodGutStatus, periodGutLabe
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  titleCol: { flex: 1, gap: 4 },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  subtitle: { opacity: 0.55, lineHeight: 18 },
-  scoreCol: { alignItems: "center", minWidth: 52 },
-  score: { fontWeight: "700", color: semantic.primary, letterSpacing: -0.5 },
-  scoreCaption: { opacity: 0.45 },
-  badges: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  badgeHint: {
-    opacity: 0.45,
-    letterSpacing: 0.2,
-  },
-  section: { gap: spacing.xs },
-  sectionLabel: {
-    opacity: 0.5,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  empty: {
-    opacity: 0.65,
-    lineHeight: 22,
-    fontStyle: "italic",
-  },
-});

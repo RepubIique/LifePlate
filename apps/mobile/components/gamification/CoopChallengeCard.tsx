@@ -2,7 +2,9 @@ import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import type { CoopChallengeSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   challenge: CoopChallengeSummary;
@@ -11,7 +13,26 @@ type Props = {
   onDecline?: (id: string) => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
+    title: { color: semantic.primary },
+    subtitle: { opacity: 0.6 },
+    status: { color: semantic.primary, lineHeight: 22, opacity: 0.85 },
+    progressList: { gap: spacing.xs, marginTop: spacing.xs },
+    progressRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    progressName: { opacity: 0.7 },
+    progressValue: { color: semantic.primary, fontWeight: "600" },
+    actions: { gap: spacing.sm, marginTop: spacing.sm },
+  });
+}
+
 export function CoopChallengeCard({ challenge, busy, onAccept, onDecline }: Props) {
+  const styles = useThemedStyles(createStyles);
   const friendLabel = challenge.friendName?.trim() || "Friend";
   const isPendingInvite = challenge.status === "pending" && !challenge.isInviter;
   const bothProgress = challenge.participants;
@@ -69,19 +90,3 @@ export function CoopChallengeCard({ challenge, busy, onAccept, onDecline }: Prop
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
-  title: { color: semantic.primary },
-  subtitle: { opacity: 0.6 },
-  status: { color: semantic.primary, lineHeight: 22, opacity: 0.85 },
-  progressList: { gap: spacing.xs, marginTop: spacing.xs },
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  progressName: { opacity: 0.7 },
-  progressValue: { color: semantic.primary, fontWeight: "600" },
-  actions: { gap: spacing.sm, marginTop: spacing.sm },
-});

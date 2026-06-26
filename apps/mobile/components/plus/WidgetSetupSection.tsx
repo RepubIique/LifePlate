@@ -2,14 +2,65 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Platform, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
 import { usePlusPaywall } from "@/context/PlusPaywallContext";
-import { semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   isPaid: boolean;
 };
 
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      gap: spacing.md,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: tints.tealLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    copy: {
+      flex: 1,
+      gap: 2,
+    },
+    title: {
+      color: semantic.primary,
+    },
+    subtitle: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+    steps: {
+      gap: spacing.xs,
+      paddingTop: spacing.xs,
+      borderTopWidth: 1,
+      borderTopColor: ui.borderSubtle,
+    },
+    stepsTitle: {
+      color: semantic.primary,
+      marginBottom: 2,
+    },
+    step: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+  });
+}
+
 export function WidgetSetupSection({ isPaid }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { openPaywall } = usePlusPaywall();
   const isIos = Platform.OS === "ios";
 
@@ -89,47 +140,3 @@ export function WidgetSetupSection({ isPaid }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    gap: spacing.md,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: tints.tealLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copy: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    color: semantic.primary,
-  },
-  subtitle: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-  steps: {
-    gap: spacing.xs,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: ui.borderSubtle,
-  },
-  stepsTitle: {
-    color: semantic.primary,
-    marginBottom: 2,
-  },
-  step: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-});

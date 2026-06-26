@@ -2,10 +2,12 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useState } from "react";
 import { Image, type ImageStyle, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useAuth } from "@/context/AuthContext";
+import { useAppColors } from "@/context/ThemeContext";
 import { resolveMealImageUri } from "@/lib/mealImages";
 import { mealTypeIcon } from "@/lib/mealUtils";
-import { premiumStyles } from "@/src/theme/premium";
-import { semantic, ui } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { usePremiumStyles } from "@/src/theme/premium";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type MealImagePlaceholderProps = {
   mealType?: string | null;
@@ -14,14 +16,28 @@ type MealImagePlaceholderProps = {
   iconSize?: number;
 };
 
+function createPlaceholderStyles({ ui }: AppColors) {
+  return StyleSheet.create({
+    placeholder: {
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: ui.trackBackground,
+    },
+  });
+}
+
 export function MealImagePlaceholder({
   mealType,
   style,
   placeholderStyle,
   iconSize = 28,
 }: MealImagePlaceholderProps) {
+  const premiumStyles = usePremiumStyles();
+  const placeholderStyles = useThemedStyles(createPlaceholderStyles);
+  const { semantic } = useAppColors();
+
   return (
-    <View style={[premiumStyles.thumbPlaceholder, mealImageStyles.placeholder, style, placeholderStyle]}>
+    <View style={[premiumStyles.thumbPlaceholder, placeholderStyles.placeholder, style, placeholderStyle]}>
       <MaterialCommunityIcons
         name={mealTypeIcon(mealType)}
         size={iconSize}
@@ -84,9 +100,4 @@ export function MealImage({
 
 export const mealImageStyles = StyleSheet.create({
   hero: { width: "100%", height: 220 },
-  placeholder: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ui.trackBackground,
-  },
 });

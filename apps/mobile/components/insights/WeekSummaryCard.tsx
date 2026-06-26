@@ -3,13 +3,68 @@ import { Text } from "react-native-paper";
 import type { InsightsResponse } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { capitalize } from "@/lib/mealUtils";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   insights: InsightsResponse;
 };
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.md },
+    title: { letterSpacing: 0.15, color: semantic.primary },
+    stats: { gap: spacing.sm },
+    statRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    statLabel: { opacity: 0.65, flex: 1 },
+    statValue: { color: semantic.primary, letterSpacing: 0.1 },
+    splitRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: ui.cardBackground,
+      borderRadius: 14,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+    },
+    splitCol: {
+      flex: 1,
+      alignItems: "center",
+      gap: 4,
+    },
+    splitLabel: {
+      opacity: 0.5,
+      letterSpacing: 0.3,
+      textTransform: "uppercase",
+    },
+    splitValue: {
+      fontWeight: "700",
+      color: semantic.primary,
+      letterSpacing: -0.3,
+    },
+    takeaway: { color: semantic.accent },
+    divider: {
+      width: StyleSheet.hairlineWidth,
+      alignSelf: "stretch",
+      backgroundColor: semantic.borderLight,
+    },
+  });
+}
+
+function StatRow({
+  label,
+  value,
+  styles,
+}: {
+  label: string;
+  value: string;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.statRow}>
       <Text variant="bodyMedium" style={styles.statLabel}>
@@ -23,6 +78,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 export function WeekSummaryCard({ insights }: Props) {
+  const styles = useThemedStyles(createStyles);
   const commonFood = insights.mostCommonFood
     ? capitalize(insights.mostCommonFood)
     : "—";
@@ -33,10 +89,10 @@ export function WeekSummaryCard({ insights }: Props) {
         {insights.period}
       </Text>
       <View style={styles.stats}>
-        <StatRow label="Meals logged" value={String(insights.mealsLogged)} />
-        <StatRow label="Plant foods" value={String(insights.vegetablesConsumed)} />
-        <StatRow label="Protein average" value={`${insights.proteinAverage}g/day`} />
-        <StatRow label="Most common" value={commonFood} />
+        <StatRow styles={styles} label="Meals logged" value={String(insights.mealsLogged)} />
+        <StatRow styles={styles} label="Plant foods" value={String(insights.vegetablesConsumed)} />
+        <StatRow styles={styles} label="Protein average" value={`${insights.proteinAverage}g/day`} />
+        <StatRow styles={styles} label="Most common" value={commonFood} />
       </View>
       <View style={styles.splitRow}>
         <View style={styles.splitCol}>
@@ -60,46 +116,3 @@ export function WeekSummaryCard({ insights }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  stats: { gap: spacing.sm },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  statLabel: { opacity: 0.65, flex: 1 },
-  statValue: { color: semantic.primary, letterSpacing: 0.1 },
-  splitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: ui.cardBackground,
-    borderRadius: 14,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  splitCol: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  splitLabel: {
-    opacity: 0.5,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  splitValue: {
-    fontWeight: "700",
-    color: semantic.primary,
-    letterSpacing: -0.3,
-  },
-  takeaway: { color: "#E07A5F" },
-  divider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: "stretch",
-    backgroundColor: "#DDE5E0",
-  },
-});

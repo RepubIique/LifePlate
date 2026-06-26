@@ -2,7 +2,9 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { clampMealPortions } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 const TOTAL_PORTION_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -15,14 +17,45 @@ type SharedMealPortionsCardProps = {
   onPortionsEatenChange: (value: number) => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    title: { letterSpacing: 0.15 },
+    subtitle: { opacity: 0.7, marginTop: spacing.xs, lineHeight: 18 },
+    sectionLabel: {
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+      opacity: 0.65,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      minWidth: 52,
+      alignItems: "center",
+    },
+    chipSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    chipTextSelected: { color: semantic.primary },
+    hint: { opacity: 0.65, marginTop: spacing.sm, lineHeight: 18 },
+    embedded: { gap: spacing.xs },
+    sectionLabelFirst: { marginTop: 0 },
+  });
+}
+
 function PortionChip({
   label,
   selected,
   onPress,
+  styles,
 }: {
   label: string;
   selected: boolean;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <Pressable onPress={onPress}>
@@ -43,6 +76,7 @@ export function SharedMealPortionsCard({
   onTotalPortionsChange,
   onPortionsEatenChange,
 }: SharedMealPortionsCardProps) {
+  const styles = useThemedStyles(createStyles);
   const eatenOptions = Array.from(
     { length: Math.min(totalPortions, 4) },
     (_, i) => i + 1,
@@ -82,6 +116,7 @@ export function SharedMealPortionsCard({
               onTotalPortionsChange(n);
               onPortionsEatenChange(n === 1 ? 1 : Math.min(portionsEaten, n));
             }}
+            styles={styles}
           />
         ))}
       </View>
@@ -98,6 +133,7 @@ export function SharedMealPortionsCard({
             label={n === 1 ? "1 portion" : `${n} portions`}
             selected={portionsEaten === n}
             onPress={() => onPortionsEatenChange(n)}
+            styles={styles}
           />
         ))}
         {totalPortions > 4 ? (
@@ -105,6 +141,7 @@ export function SharedMealPortionsCard({
             label={`${totalPortions} (all)`}
             selected={portionsEaten === totalPortions}
             onPress={() => onPortionsEatenChange(totalPortions)}
+            styles={styles}
           />
         ) : null}
       </View>
@@ -124,30 +161,3 @@ export function SharedMealPortionsCard({
 
   return <PremiumCard>{content}</PremiumCard>;
 }
-
-const styles = StyleSheet.create({
-  title: { letterSpacing: 0.15 },
-  subtitle: { opacity: 0.7, marginTop: spacing.xs, lineHeight: 18 },
-  sectionLabel: {
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    opacity: 0.65,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    minWidth: 52,
-    alignItems: "center",
-  },
-  chipSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  chipTextSelected: { color: semantic.primary },
-  hint: { opacity: 0.65, marginTop: spacing.sm, lineHeight: 18 },
-  embedded: { gap: spacing.xs },
-  sectionLabelFirst: { marginTop: 0 },
-});

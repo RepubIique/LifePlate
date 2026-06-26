@@ -5,12 +5,63 @@ import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type FriendsListProps = {
   friends: FriendSummary[];
   onRemove: (friendId: string) => void;
 };
+
+function useFriendsListStyles() {
+  return useThemedStyles((colors) =>
+    StyleSheet.create({
+      card: {
+        paddingVertical: spacing.xs,
+      },
+      row: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.xs,
+        borderRadius: 12,
+      },
+      rowPressed: { backgroundColor: colors.ui.cardBackground },
+      rowCopy: { flex: 1, gap: 2 },
+      name: { color: colors.semantic.primary },
+      streakBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+      },
+      streakText: { color: colors.ui.iconStreak, fontWeight: "600" },
+      hint: { opacity: 0.45 },
+      divider: {
+        height: 1,
+        backgroundColor: colors.ui.trackBackground,
+        marginLeft: 56,
+      },
+      empty: {
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.ui.cardBackground,
+        paddingVertical: spacing.lg,
+      },
+      emptyIconWrap: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: colors.ui.selectedBackground,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      emptyTitle: { color: colors.semantic.primary },
+      emptyText: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
+    }),
+  );
+}
 
 function FriendRow({
   friend,
@@ -21,6 +72,8 @@ function FriendRow({
   onRemove: (friendId: string) => void;
   showDivider: boolean;
 }) {
+  const { semantic, ui } = useAppColors();
+  const styles = useFriendsListStyles();
   const label = friend.name?.trim() || "Friend";
   const streak = friend.togetherStreak ?? 0;
 
@@ -71,6 +124,9 @@ function FriendRow({
 }
 
 export function FriendsList({ friends, onRemove }: FriendsListProps) {
+  const { semantic } = useAppColors();
+  const styles = useFriendsListStyles();
+
   if (friends.length === 0) {
     return (
       <PremiumCard style={styles.empty} noBlur>
@@ -100,49 +156,3 @@ export function FriendsList({ friends, onRemove }: FriendsListProps) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    paddingVertical: spacing.xs,
-    backgroundColor: "#FFFFFF",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 12,
-  },
-  rowPressed: { backgroundColor: ui.cardBackground },
-  rowCopy: { flex: 1, gap: 2 },
-  name: { color: semantic.primary },
-  streakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  streakText: { color: ui.iconStreak, fontWeight: "600" },
-  hint: { opacity: 0.45 },
-  divider: {
-    height: 1,
-    backgroundColor: ui.trackBackground,
-    marginLeft: 56,
-  },
-  empty: {
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: ui.cardBackground,
-    paddingVertical: spacing.lg,
-  },
-  emptyIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: { color: semantic.primary },
-  emptyText: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
-});

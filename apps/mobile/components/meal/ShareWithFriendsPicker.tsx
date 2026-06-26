@@ -4,7 +4,9 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Chip, Text } from "react-native-paper";
 import { useFriends } from "@/context/FriendsContext";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type ShareWithFriendsPickerProps = {
   selectedFriendIds: string[];
@@ -13,12 +15,33 @@ type ShareWithFriendsPickerProps = {
   embedded?: boolean;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm },
+    title: { color: semantic.primary },
+    subtitle: { opacity: 0.65 },
+    chips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+    },
+    chip: { backgroundColor: ui.trackBackground },
+    link: {
+      color: semantic.primary,
+      textDecorationLine: "underline",
+      opacity: 0.85,
+    },
+    embedded: { gap: spacing.sm },
+  });
+}
+
 export function ShareWithFriendsPicker({
   selectedFriendIds,
   onSelectionChange,
   onTotalPeopleChange,
   embedded = false,
 }: ShareWithFriendsPickerProps) {
+  const styles = useThemedStyles(createStyles);
   const { friends, hydrated, loadFriends } = useFriends();
 
   useEffect(() => {
@@ -90,21 +113,3 @@ export function ShareWithFriendsPicker({
 
   return <PremiumCard style={styles.card}>{content}</PremiumCard>;
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  title: { color: semantic.primary },
-  subtitle: { opacity: 0.65 },
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  chip: { backgroundColor: ui.trackBackground },
-  link: {
-    color: semantic.primary,
-    textDecorationLine: "underline",
-    opacity: 0.85,
-  },
-  embedded: { gap: spacing.sm },
-});

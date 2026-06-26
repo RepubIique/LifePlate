@@ -1,18 +1,21 @@
 import { Redirect, type Href } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button, Text, useTheme } from "react-native-paper";
 import { isOnboardingComplete } from "@lifeplate/shared";
 import { useAuth } from "@/context/AuthContext";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function Index() {
+  const theme = useTheme();
+  const { semantic } = useAppColors();
   const { session, profile, loading, profileLoading, loadProfile, signOut } = useAuth();
   const [retrying, setRetrying] = useState(false);
 
   if (loading || (session && profileLoading && !profile)) {
     return (
-      <View style={styles.boot}>
+      <View style={[styles.boot, { backgroundColor: theme.colors.background }]}>
         <Image
           source={require("@/assets/images/logo.png")}
           style={styles.logo}
@@ -32,13 +35,13 @@ export default function Index() {
 
   if (!profile) {
     return (
-      <View style={styles.boot}>
+      <View style={[styles.boot, { backgroundColor: theme.colors.background }]}>
         <Image
           source={require("@/assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text variant="titleMedium" style={styles.errorTitle}>
+        <Text variant="titleMedium" style={[styles.errorTitle, { color: semantic.primary }]}>
           Couldn&apos;t load your profile
         </Text>
         <Text variant="bodyMedium" style={styles.errorBody}>
@@ -88,10 +91,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: spacing.xl,
     gap: spacing.md,
-    backgroundColor: "#FFFFFF",
   },
   logo: { width: 88, height: 88 },
   bootHint: { opacity: 0.5 },
-  errorTitle: { color: semantic.primary, textAlign: "center" },
+  errorTitle: { textAlign: "center" },
   errorBody: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

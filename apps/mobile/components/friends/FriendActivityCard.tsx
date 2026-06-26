@@ -3,7 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { FriendProfileSummary } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   profile: FriendProfileSummary;
@@ -20,6 +22,28 @@ function StatBlock({
   label: string;
   accent?: boolean;
 }) {
+  const { semantic, ui } = useAppColors();
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      stat: {
+        flex: 1,
+        alignItems: "center",
+        gap: 4,
+        paddingVertical: spacing.sm,
+      },
+      value: {
+        fontWeight: "700",
+        color: colors.semantic.primary,
+        letterSpacing: -0.3,
+      },
+      label: {
+        opacity: 0.55,
+        textAlign: "center",
+        letterSpacing: 0.1,
+      },
+    }),
+  );
+
   return (
     <View style={styles.stat}>
       <MaterialCommunityIcons
@@ -38,6 +62,21 @@ function StatBlock({
 }
 
 export function FriendActivityCard({ profile }: Props) {
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      card: {
+        gap: spacing.sm,
+      },
+      title: { letterSpacing: 0.15, color: colors.semantic.primary },
+      subtitle: { opacity: 0.6, lineHeight: 18 },
+      row: {
+        flexDirection: "row",
+        gap: spacing.sm,
+        marginTop: spacing.xs,
+      },
+    }),
+  );
+
   const encouragement =
     profile.mealsThisWeek > 0
       ? `${profile.name?.trim() || "They"} logged ${profile.mealsThisWeek} meal${profile.mealsThisWeek === 1 ? "" : "s"} this week.`
@@ -59,33 +98,3 @@ export function FriendActivityCard({ profile }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    gap: spacing.sm,
-    backgroundColor: "#FFFFFF",
-  },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  subtitle: { opacity: 0.6, lineHeight: 18 },
-  row: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  stat: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: spacing.sm,
-  },
-  value: {
-    fontWeight: "700",
-    color: semantic.primary,
-    letterSpacing: -0.3,
-  },
-  label: {
-    opacity: 0.55,
-    textAlign: "center",
-    letterSpacing: 0.1,
-  },
-});

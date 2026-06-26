@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { PillarStatus } from "@lifeplate/shared";
+import { useAppColors } from "@/context/ThemeContext";
 import { pillarColor, statusBackground } from "./pillarColors";
 
 type TrendStatus = "on_track" | "moderate" | "needs_improvement";
@@ -17,11 +18,14 @@ function defaultLabel(status: PillarStatus | TrendStatus): string {
 }
 
 export function StatusBadge({ status, label }: Props) {
+  const { semantic } = useAppColors();
   const text = label ?? defaultLabel(status);
-  const color = pillarColor(status === "on_track" ? "good" : status === "needs_improvement" ? "low" : status);
+  const mappedStatus =
+    status === "on_track" ? "good" : status === "needs_improvement" ? "low" : status;
+  const color = pillarColor(mappedStatus, semantic);
 
   return (
-    <View style={[styles.badge, { backgroundColor: statusBackground(status) }]}>
+    <View style={[styles.badge, { backgroundColor: statusBackground(status, semantic) }]}>
       <View style={[styles.dot, { backgroundColor: color }]} />
       <Text variant="labelMedium" style={[styles.text, { color }]}>
         {text}

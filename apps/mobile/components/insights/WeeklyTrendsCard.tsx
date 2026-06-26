@@ -4,7 +4,9 @@ import type { ComparisonPeriod } from "@lifeplate/shared";
 import type { WeeklyTrendItem } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   trends: WeeklyTrendItem[];
@@ -26,7 +28,28 @@ const PERIOD_COPY: Record<ComparisonPeriod, { title: string; subtitle: string }>
   },
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm },
+    title: { letterSpacing: 0.15, color: semantic.primary },
+    subtitle: { opacity: 0.55, lineHeight: 18 },
+    list: { gap: spacing.sm, marginTop: spacing.xs },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: ui.trackBackground,
+    },
+    label: { flex: 1, letterSpacing: 0.1 },
+  });
+}
+
 export function WeeklyTrendsCard({ trends, period }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   if (trends.length === 0) return null;
 
   const copy = PERIOD_COPY[period];
@@ -52,20 +75,3 @@ export function WeeklyTrendsCard({ trends, period }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  subtitle: { opacity: 0.55, lineHeight: 18 },
-  list: { gap: spacing.sm, marginTop: spacing.xs },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ui.trackBackground,
-  },
-  label: { flex: 1, letterSpacing: 0.1 },
-});

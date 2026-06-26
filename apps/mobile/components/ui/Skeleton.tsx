@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -14,6 +14,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useAppColors } from "@/context/ThemeContext";
 
 type SkeletonProps = {
   width?: DimensionValue;
@@ -28,6 +29,20 @@ export function Skeleton({
   borderRadius = 8,
   style,
 }: SkeletonProps) {
+  const { ui } = useAppColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        base: {
+          backgroundColor: ui.skeletonBase,
+          overflow: "hidden",
+        },
+        highlight: {
+          backgroundColor: ui.skeletonHighlight,
+        },
+      }),
+    [ui.skeletonBase, ui.skeletonHighlight],
+  );
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -54,13 +69,3 @@ export function Skeleton({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    backgroundColor: "#E9ECEF",
-    overflow: "hidden",
-  },
-  highlight: {
-    backgroundColor: "#F8F9FA",
-  },
-});

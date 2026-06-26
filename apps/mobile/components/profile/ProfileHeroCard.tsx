@@ -7,7 +7,10 @@ import type { UserGoal } from "@lifeplate/shared";
 import { GoalPickerModal } from "@/components/profile/GoalPickerModal";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors, useColorScheme } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 type EditField = "name" | null;
 
@@ -28,6 +31,141 @@ type Props = {
   onShareFriendCode: () => void;
 };
 
+function createStyles({ semantic, ui, palette }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      padding: 0,
+      overflow: "hidden",
+      backgroundColor: "transparent",
+    },
+    inner: {
+      position: "relative",
+      overflow: "hidden",
+    },
+    content: {
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.lg,
+    },
+    copy: {
+      alignItems: "center",
+      gap: spacing.xs,
+      width: "100%",
+    },
+    namePressable: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    pressed: {
+      opacity: 0.75,
+    },
+    heroName: {
+      letterSpacing: 0.15,
+      color: semantic.primary,
+      textAlign: "center",
+      fontWeight: "600",
+    },
+    nameInput: {
+      minWidth: 160,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: palette.sage,
+      backgroundColor: ui.frosted,
+    },
+    heroEmail: {
+      opacity: 0.6,
+      textAlign: "center",
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    goalChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: ui.frostedSoft,
+      borderWidth: 1,
+      borderColor: palette.sage,
+    },
+    goalChipEmpty: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: ui.frostedMuted,
+      borderWidth: 1,
+      borderColor: palette.sage,
+      borderStyle: "dashed",
+    },
+    goalChipText: {
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+    goalChipEmptyText: {
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+    plusChip: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: semantic.primary,
+    },
+    plusChipText: {
+      color: ui.iconOnPrimary,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+    },
+    friendCodePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "stretch",
+      marginTop: spacing.xs,
+      paddingLeft: spacing.md,
+      paddingRight: spacing.xs,
+      paddingVertical: spacing.xs,
+      borderRadius: 14,
+      backgroundColor: ui.frostedPill,
+      borderWidth: 1,
+      borderColor: ui.frosted,
+    },
+    friendCodeCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    friendCodeLabel: {
+      opacity: 0.5,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    friendCode: {
+      letterSpacing: 3,
+      color: semantic.primary,
+      fontWeight: "700",
+    },
+    shareButton: {
+      marginRight: -4,
+    },
+  });
+}
+
 export function ProfileHeroCard({
   userId,
   hasAvatar,
@@ -44,12 +182,17 @@ export function ProfileHeroCard({
   onAvatarPress,
   onShareFriendCode,
 }: Props) {
+  const { semantic, tints, ui, palette } = useAppColors();
+  const colorScheme = useColorScheme();
+  const styles = useThemedStyles(createStyles);
   const [editing, setEditing] = useState<EditField>(null);
   const [goalPickerOpen, setGoalPickerOpen] = useState(false);
   const nameInputRef = useRef<RNTextInput>(null);
 
   const displayName = name.trim() || "Your name";
   const displayGoal = goal.trim();
+  const gradientEnd =
+    colorScheme === "dark" ? semantic.backgroundWarm : palette.cream;
 
   function startEditing(field: EditField) {
     setEditing(field);
@@ -70,7 +213,7 @@ export function ProfileHeroCard({
             <LinearGradient id="profileHeroGrad" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0" stopColor={tints.tealLight} />
               <Stop offset="0.45" stopColor={ui.selectedBackground} />
-              <Stop offset="1" stopColor={palette.cream} />
+              <Stop offset="1" stopColor={gradientEnd} />
             </LinearGradient>
           </Defs>
           <Rect width="100%" height="100%" fill="url(#profileHeroGrad)" />
@@ -188,136 +331,3 @@ export function ProfileHeroCard({
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    padding: 0,
-    overflow: "hidden",
-    backgroundColor: "transparent",
-  },
-  inner: {
-    position: "relative",
-    overflow: "hidden",
-  },
-  content: {
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  copy: {
-    alignItems: "center",
-    gap: spacing.xs,
-    width: "100%",
-  },
-  namePressable: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  pressed: {
-    opacity: 0.75,
-  },
-  heroName: {
-    letterSpacing: 0.15,
-    color: semantic.primary,
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  nameInput: {
-    minWidth: 160,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: palette.sage,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-  },
-  heroEmail: {
-    opacity: 0.6,
-    textAlign: "center",
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  goalChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderWidth: 1,
-    borderColor: palette.sage,
-  },
-  goalChipEmpty: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.45)",
-    borderWidth: 1,
-    borderColor: palette.sage,
-    borderStyle: "dashed",
-  },
-  goalChipText: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-  goalChipEmptyText: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-  plusChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: semantic.primary,
-  },
-  plusChipText: {
-    color: palette.white,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-  friendCodePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "stretch",
-    marginTop: spacing.xs,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
-    paddingVertical: spacing.xs,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.82)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.95)",
-  },
-  friendCodeCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  friendCodeLabel: {
-    opacity: 0.5,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  friendCode: {
-    letterSpacing: 3,
-    color: semantic.primary,
-    fontWeight: "700",
-  },
-  shareButton: {
-    marginRight: -4,
-  },
-});

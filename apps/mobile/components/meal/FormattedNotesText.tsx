@@ -5,7 +5,8 @@ import {
   type TextStyle,
 } from "react-native";
 import { parseInlineNotes } from "@/lib/mealNotesFormat";
-import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   value: string;
@@ -13,7 +14,31 @@ type Props = {
   numberOfLines?: number;
 };
 
+function createStyles({ semantic }: AppColors) {
+  return StyleSheet.create({
+    base: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: semantic.text,
+    },
+    bold: {
+      fontWeight: "700",
+      fontStyle: "normal",
+    },
+    italic: {
+      fontStyle: "italic",
+      fontWeight: "400",
+    },
+    mention: {
+      color: semantic.primary,
+      fontWeight: "600",
+      fontStyle: "normal",
+    },
+  });
+}
+
 export function FormattedNotesText({ value, style, numberOfLines }: Props) {
+  const styles = useThemedStyles(createStyles);
   const trimmed = value.trim();
   if (!trimmed) return null;
 
@@ -48,24 +73,3 @@ export function FormattedNotesText({ value, style, numberOfLines }: Props) {
     </RNText>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "#2D3436",
-  },
-  bold: {
-    fontWeight: "700",
-    fontStyle: "normal",
-  },
-  italic: {
-    fontStyle: "italic",
-    fontWeight: "400",
-  },
-  mention: {
-    color: semantic.primary,
-    fontWeight: "600",
-    fontStyle: "normal",
-  },
-});

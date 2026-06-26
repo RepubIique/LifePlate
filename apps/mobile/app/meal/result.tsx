@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import { Button, Chip, Text, TextInput } from "react-native-paper";
+import { Button, Chip, Text, TextInput, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import {
@@ -55,6 +55,7 @@ function normalizeFood(value: string) {
 }
 
 export default function MealResultScreen() {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { profile, session } = useAuth();
   const { requireLoggingAccess } = useLoggingAccess();
@@ -345,7 +346,7 @@ export default function MealResultScreen() {
 
   return (
     <KeyboardAvoidingScrollView
-      style={styles.scroll}
+      style={[styles.scroll, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}
     >
       <PremiumCard>
@@ -599,7 +600,7 @@ export default function MealResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#FFFFFF" },
+  scroll: { flex: 1 },
   container: { padding: spacing.lg, gap: spacing.md },
   image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
   coachLabel: { opacity: 0.55, letterSpacing: 0.8, textTransform: "uppercase" },

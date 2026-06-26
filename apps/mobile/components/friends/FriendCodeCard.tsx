@@ -2,7 +2,9 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Share, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type FriendCodeCardProps = {
   friendCode: string;
@@ -21,6 +23,63 @@ export function FriendCodeCard({
   onAddFriend,
   onCopied,
 }: FriendCodeCardProps) {
+  const { semantic } = useAppColors();
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      card: { gap: spacing.md },
+      sectionHeader: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: spacing.sm,
+      },
+      iconWrap: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: colors.ui.selectedBackground,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      addIconWrap: { backgroundColor: colors.ui.trackBackground },
+      sectionCopy: { flex: 1, gap: 2 },
+      title: { color: colors.semantic.primary, letterSpacing: 0.1 },
+      subtitle: { opacity: 0.6, lineHeight: 18 },
+      codePill: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+        backgroundColor: colors.ui.cardBackground,
+        borderRadius: 14,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.semantic.border,
+      },
+      code: {
+        letterSpacing: 5,
+        color: colors.semantic.primary,
+        fontWeight: "700",
+        fontVariant: ["tabular-nums"],
+      },
+      divider: {
+        height: 1,
+        backgroundColor: colors.ui.trackBackground,
+      },
+      addRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+      },
+      input: {
+        flex: 1,
+        backgroundColor: colors.semantic.surface,
+      },
+      addBtn: { marginTop: 6 },
+      addBtnContent: { paddingHorizontal: spacing.sm },
+    }),
+  );
+
   async function handleShare() {
     await Share.share({
       message: `Join me on LifePlate! Use my friend code: ${friendCode}`,
@@ -104,57 +163,3 @@ export function FriendCodeCard({
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addIconWrap: { backgroundColor: ui.trackBackground },
-  sectionCopy: { flex: 1, gap: 2 },
-  title: { color: semantic.primary, letterSpacing: 0.1 },
-  subtitle: { opacity: 0.6, lineHeight: 18 },
-  codePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-    backgroundColor: ui.cardBackground,
-    borderRadius: 14,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-  },
-  code: {
-    letterSpacing: 5,
-    color: semantic.primary,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: ui.trackBackground,
-  },
-  addRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  addBtn: { marginTop: 6 },
-  addBtnContent: { paddingHorizontal: spacing.sm },
-});

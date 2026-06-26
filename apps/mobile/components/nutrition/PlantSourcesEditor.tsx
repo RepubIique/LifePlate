@@ -17,7 +17,10 @@ import {
   type PlantUnit,
 } from "@/lib/plantSources";
 import { MEAL_SLOTS, mealMatchesSlot, type MealSlotKey } from "@/lib/mealSlots";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 import { DetailBlock } from "./shared";
 
 type Props = {
@@ -32,7 +35,106 @@ function amountLabel(amount: number): string {
   return formatPlantAmount(amount);
 }
 
+function createEditorStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    chips: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    chip: {
+      backgroundColor: ui.trackBackground,
+    },
+    chipText: {
+      color: semantic.primary,
+    },
+    empty: {
+      opacity: 0.55,
+      fontStyle: "italic",
+    },
+    addButton: {
+      alignSelf: "flex-start",
+      marginLeft: -spacing.sm,
+    },
+    error: {
+      color: semantic.danger,
+      marginTop: spacing.xs,
+    },
+    dialogTitle: {
+      letterSpacing: 0.15,
+    },
+    pickerSection: {
+      gap: spacing.xs,
+    },
+    pickerLabel: {
+      opacity: 0.55,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    pickerRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    optionChip: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: 999,
+      backgroundColor: ui.trackBackground,
+    },
+    optionChipSelected: {
+      backgroundColor: ui.selectedBackground,
+    },
+    optionChipText: {
+      color: semantic.textMuted,
+    },
+    optionChipTextSelected: {
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+    dialogActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: spacing.sm,
+    },
+    slotPicker: {
+      gap: spacing.sm,
+    },
+    slotLabel: {
+      opacity: 0.55,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    slotRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    slotChip: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: 999,
+      backgroundColor: ui.trackBackground,
+    },
+    slotChipSelected: {
+      backgroundColor: ui.selectedBackground,
+    },
+    slotChipMuted: {
+      opacity: 0.55,
+    },
+    slotChipText: {
+      color: semantic.textMuted,
+    },
+    slotChipTextSelected: {
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function PlantSourcesEditor({ meals, onChanged }: Props) {
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createEditorStyles);
   const sources = useMemo(() => buildPlantSources(meals), [meals]);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [draftName, setDraftName] = useState("");
@@ -195,8 +297,8 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
         animationType="fade"
         onRequestClose={closeDialog}
       >
-        <Pressable style={styles.backdrop} onPress={closeDialog}>
-          <Pressable style={styles.dialogCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable style={modalStyles.centerBackdrop} onPress={closeDialog}>
+          <Pressable style={modalStyles.dialog} onPress={(e) => e.stopPropagation()}>
             <Text variant="titleMedium" style={styles.dialogTitle}>
               {dialogMode === "add" ? "Add plant source" : "Edit source"}
             </Text>
@@ -330,110 +432,3 @@ export function PlantSourcesEditor({ meals, onChanged }: Props) {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: ui.trackBackground,
-  },
-  chipText: {
-    color: semantic.primary,
-  },
-  empty: {
-    opacity: 0.55,
-    fontStyle: "italic",
-  },
-  addButton: {
-    alignSelf: "flex-start",
-    marginLeft: -spacing.sm,
-  },
-  error: {
-    color: semantic.danger,
-    marginTop: spacing.xs,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "center",
-    padding: spacing.lg,
-  },
-  dialogCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  dialogTitle: {
-    letterSpacing: 0.15,
-  },
-  pickerSection: {
-    gap: spacing.xs,
-  },
-  pickerLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  pickerRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  optionChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    backgroundColor: ui.trackBackground,
-  },
-  optionChipSelected: {
-    backgroundColor: ui.selectedBackground,
-  },
-  optionChipText: {
-    color: semantic.textMuted,
-  },
-  optionChipTextSelected: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-  dialogActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: spacing.sm,
-  },
-  slotPicker: {
-    gap: spacing.sm,
-  },
-  slotLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  slotRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  slotChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    backgroundColor: ui.trackBackground,
-  },
-  slotChipSelected: {
-    backgroundColor: ui.selectedBackground,
-  },
-  slotChipMuted: {
-    opacity: 0.55,
-  },
-  slotChipText: {
-    color: semantic.textMuted,
-  },
-  slotChipTextSelected: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-});

@@ -2,7 +2,9 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { MEAL_TYPE_OPTIONS, type MealType } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type MealTypePickerProps = {
   value: MealType;
@@ -10,7 +12,49 @@ type MealTypePickerProps = {
   compact?: boolean;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    root: { gap: spacing.xs },
+    title: { letterSpacing: 0.15 },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    option: { flexBasis: "48%", flexGrow: 1 },
+    card: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      alignItems: "center",
+    },
+    cardSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    textSelected: { color: semantic.primary },
+    compactRoot: { gap: spacing.xs },
+    compactLabel: {
+      opacity: 0.55,
+      letterSpacing: 0.4,
+      textTransform: "uppercase",
+    },
+    compactScroll: { gap: spacing.xs, paddingRight: spacing.sm },
+    compactChip: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: ui.borderSubtle,
+      backgroundColor: ui.pickerSurface,
+    },
+    compactChipSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    compactChipText: { color: semantic.textMuted },
+    compactChipTextSelected: { color: semantic.primary },
+  });
+}
+
 export function MealTypePicker({ value, onChange, compact = false }: MealTypePickerProps) {
+  const styles = useThemedStyles(createStyles);
+
   if (compact) {
     return (
       <View style={styles.compactRoot}>
@@ -74,41 +118,3 @@ export function MealTypePicker({ value, onChange, compact = false }: MealTypePic
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { gap: spacing.xs },
-  title: { letterSpacing: 0.15 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  option: { flexBasis: "48%", flexGrow: 1 },
-  card: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: "center",
-  },
-  cardSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  textSelected: { color: semantic.primary },
-  compactRoot: { gap: spacing.xs },
-  compactLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  compactScroll: { gap: spacing.xs, paddingRight: spacing.sm },
-  compactChip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#E3E8E5",
-    backgroundColor: "#FAFBFA",
-  },
-  compactChipSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  compactChipText: { color: "#495057" },
-  compactChipTextSelected: { color: semantic.primary },
-});

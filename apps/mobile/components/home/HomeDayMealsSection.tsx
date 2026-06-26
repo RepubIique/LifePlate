@@ -7,8 +7,11 @@ import { HomeMealsEmptyState } from "@/components/home/HomeMealsEmptyState";
 import { SuggestedMealSlotCard } from "@/components/home/SuggestedMealSlotCard";
 import { HomeMealsSkeleton } from "@/components/skeletons/HomeSkeletons";
 import { TimelineMealCard } from "@/components/timeline/TimelineMealCard";
+import { useAppColors } from "@/context/ThemeContext";
 import { buildHomeMealsTimeline } from "@/lib/homeMealsTimeline";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   title: string;
@@ -27,6 +30,54 @@ function formatCalories(total: number): string {
   return total.toLocaleString();
 }
 
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    section: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      paddingTop: spacing.xs,
+      gap: spacing.xs,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    headerCopy: {
+      flex: 1,
+      gap: 4,
+    },
+    title: {
+      letterSpacing: 0.15,
+      color: semantic.primary,
+    },
+    summary: {
+      opacity: 0.6,
+      lineHeight: 18,
+    },
+    countPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: tints.tealLight,
+      borderWidth: 1,
+      borderColor: ui.selectedBackground,
+    },
+    countText: {
+      color: semantic.primary,
+      fontWeight: "700",
+    },
+    list: {
+      gap: 0,
+    },
+  });
+}
+
 export function HomeDayMealsSection({
   title,
   meals,
@@ -39,6 +90,8 @@ export function HomeDayMealsSection({
   onLogPhoto,
   onLogText,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { items: timelineItems, suggestedSlot } = useMemo(
     () =>
       buildHomeMealsTimeline(meals, {
@@ -154,49 +207,3 @@ export function HomeDayMealsSection({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  section: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.xs,
-    gap: spacing.xs,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  headerCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  title: {
-    letterSpacing: 0.15,
-    color: semantic.primary,
-  },
-  summary: {
-    opacity: 0.6,
-    lineHeight: 18,
-  },
-  countPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: tints.tealLight,
-    borderWidth: 1,
-    borderColor: ui.selectedBackground,
-  },
-  countText: {
-    color: semantic.primary,
-    fontWeight: "700",
-  },
-  list: {
-    gap: 0,
-  },
-});

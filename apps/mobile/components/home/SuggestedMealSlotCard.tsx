@@ -2,15 +2,69 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
 import { MEAL_SLOTS, type MealSlotKey } from "@/lib/mealSlots";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   slot: MealSlotKey;
   onPress?: () => void;
 };
 
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      padding: 0,
+      overflow: "hidden",
+      backgroundColor: tints.tealLight,
+      borderColor: semantic.primary,
+      borderWidth: 1.5,
+      marginBottom: spacing.md,
+    },
+    inner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      padding: spacing.sm,
+    },
+    pressed: {
+      opacity: 0.92,
+    },
+    iconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    copy: {
+      flex: 1,
+      gap: 2,
+    },
+    eyebrow: {
+      color: semantic.primary,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+      fontWeight: "600",
+    },
+    title: {
+      color: semantic.primary,
+      letterSpacing: 0.1,
+    },
+    subtitle: {
+      opacity: 0.65,
+      lineHeight: 18,
+    },
+  });
+}
+
 export function SuggestedMealSlotCard({ slot, onPress }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const slotMeta = MEAL_SLOTS.find((entry) => entry.key === slot) ?? MEAL_SLOTS[0]!;
 
   return (
@@ -43,50 +97,3 @@ export function SuggestedMealSlotCard({ slot, onPress }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    padding: 0,
-    overflow: "hidden",
-    backgroundColor: tints.tealLight,
-    borderColor: semantic.primary,
-    borderWidth: 1.5,
-    marginBottom: spacing.md,
-  },
-  inner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  pressed: {
-    opacity: 0.92,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copy: {
-    flex: 1,
-    gap: 2,
-  },
-  eyebrow: {
-    color: semantic.primary,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    fontWeight: "600",
-  },
-  title: {
-    color: semantic.primary,
-    letterSpacing: 0.1,
-  },
-  subtitle: {
-    opacity: 0.65,
-    lineHeight: 18,
-  },
-});

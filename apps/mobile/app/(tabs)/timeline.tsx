@@ -34,12 +34,16 @@ import {
   mealMatchesTimelineSearch,
   timelineDayMatchesSearch,
 } from "@/lib/mealUtils";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 const UNDO_MS = 5000;
 const HYDRATION_TARGET = 8;
 
 export default function TimelineScreen() {
+  const styles = useThemedStyles(createScreenStyles);
   const { profile } = useAuth();
   const { setPendingLogDate } = usePendingLogDate();
   const {
@@ -366,58 +370,60 @@ export default function TimelineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { flex: 1 },
-  uploadBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 12,
-    backgroundColor: ui.cardBackground,
-  },
-  uploadText: { opacity: 0.75 },
-  shareBanner: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 12,
-    backgroundColor: ui.selectedBackground,
-  },
-  shareBannerText: {
-    color: semantic.primary,
-    textAlign: "center",
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  dayGroup: {
-    marginBottom: spacing.lg,
-  },
-  addMeal: {
-    alignSelf: "flex-start",
-    marginTop: -spacing.xs,
-  },
-  emptyWrap: {
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  pastActions: {
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    alignItems: "center",
-  },
-  noResults: {
-    paddingVertical: spacing.xl,
-    alignItems: "center",
-  },
-  noResultsText: {
-    opacity: 0.6,
-    textAlign: "center",
-  },
-});
+function createScreenStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    scroll: { flex: 1 },
+    uploadBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: 12,
+      backgroundColor: ui.cardBackground,
+    },
+    uploadText: { opacity: 0.75 },
+    shareBanner: {
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: 12,
+      backgroundColor: ui.selectedBackground,
+    },
+    shareBannerText: {
+      color: semantic.primary,
+      textAlign: "center",
+    },
+    list: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    dayGroup: {
+      marginBottom: spacing.lg,
+    },
+    addMeal: {
+      alignSelf: "flex-start",
+      marginTop: -spacing.xs,
+    },
+    emptyWrap: {
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    pastActions: {
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+      alignItems: "center",
+    },
+    noResults: {
+      paddingVertical: spacing.xl,
+      alignItems: "center",
+    },
+    noResultsText: {
+      opacity: 0.6,
+      textAlign: "center",
+    },
+  });
+}

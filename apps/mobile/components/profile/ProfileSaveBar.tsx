@@ -12,6 +12,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { Button } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -20,7 +22,16 @@ type Props = {
   onSave: () => void;
 };
 
+function createStyles(_colors: AppColors) {
+  return StyleSheet.create({
+    card: {
+      paddingVertical: spacing.md,
+    },
+  });
+}
+
 export function ProfileSaveBar({ visible, saving, onSave }: Props) {
+  const styles = useThemedStyles(createStyles);
   const pulse = useSharedValue(1);
 
   useEffect(() => {
@@ -66,10 +77,3 @@ export function ProfileSaveBar({ visible, saving, onSave }: Props) {
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    paddingVertical: spacing.md,
-    backgroundColor: "#FFFFFF",
-  },
-});

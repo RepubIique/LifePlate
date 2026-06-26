@@ -3,8 +3,11 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, Button, IconButton, Text } from "react-native-paper";
 import { MealImagePlaceholder } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
-import { premium } from "@/src/theme/premium";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { createPremiumTokens } from "@/src/theme/premium";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   mealType?: string | null;
@@ -16,6 +19,47 @@ type Props = {
   onPickLibrary: () => void;
 };
 
+function createStyles(colors: AppColors) {
+  const premium = createPremiumTokens(colors);
+  return StyleSheet.create({
+    wrap: { gap: spacing.sm },
+    compactWrap: { paddingHorizontal: spacing.lg },
+    compactImageFrame: {
+      width: "100%",
+      height: 168,
+      borderRadius: premium.imageRadius,
+      overflow: "hidden",
+      backgroundColor: colors.ui.inputBackgroundAlt,
+    },
+    compactImage: { width: "100%", height: "100%" },
+    compactLoading: {
+      ...StyleSheet.absoluteFill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.25)",
+    },
+    compactActions: {
+      position: "absolute",
+      right: spacing.xs,
+      bottom: spacing.xs,
+      flexDirection: "row",
+      gap: 2,
+    },
+    image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
+    title: { letterSpacing: 0.15 },
+    subtitle: { opacity: 0.7, lineHeight: 20, marginTop: spacing.xs, marginBottom: spacing.sm },
+    actions: { gap: spacing.sm },
+    actionBtn: { alignSelf: "stretch" },
+    loading: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    loadingText: { opacity: 0.7 },
+  });
+}
+
 export function MealPhotoAttachSection({
   mealType,
   imageUri,
@@ -25,6 +69,8 @@ export function MealPhotoAttachSection({
   onPickCamera,
   onPickLibrary,
 }: Props) {
+  const { semantic, ui } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const hasPhoto = Boolean(imageUri?.trim());
   const compact = variant === "compact";
 
@@ -39,7 +85,7 @@ export function MealPhotoAttachSection({
           )}
           {attaching ? (
             <View style={styles.compactLoading}>
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={ui.iconOnPrimary} />
             </View>
           ) : null}
           <View style={styles.compactActions}>
@@ -47,7 +93,7 @@ export function MealPhotoAttachSection({
             <IconButton
               icon="camera"
               mode="contained"
-              containerColor="rgba(255,255,255,0.92)"
+              containerColor={ui.frostedChip}
               iconColor={semantic.primary}
               size={18}
               onPress={onPickCamera}
@@ -57,7 +103,7 @@ export function MealPhotoAttachSection({
             <IconButton
               icon="image"
               mode="contained"
-              containerColor="rgba(255,255,255,0.92)"
+              containerColor={ui.frostedChip}
               iconColor={semantic.primary}
               size={18}
               onPress={onPickLibrary}
@@ -119,41 +165,3 @@ export function MealPhotoAttachSection({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.sm },
-  compactWrap: { paddingHorizontal: spacing.lg },
-  compactImageFrame: {
-    width: "100%",
-    height: 168,
-    borderRadius: premium.imageRadius,
-    overflow: "hidden",
-    backgroundColor: "#F4F7F5",
-  },
-  compactImage: { width: "100%", height: "100%" },
-  compactLoading: {
-    ...StyleSheet.absoluteFill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  compactActions: {
-    position: "absolute",
-    right: spacing.xs,
-    bottom: spacing.xs,
-    flexDirection: "row",
-    gap: 2,
-  },
-  image: { width: "100%", height: 220, borderRadius: premium.imageRadius },
-  title: { letterSpacing: 0.15 },
-  subtitle: { opacity: 0.7, lineHeight: 20, marginTop: spacing.xs, marginBottom: spacing.sm },
-  actions: { gap: spacing.sm },
-  actionBtn: { alignSelf: "stretch" },
-  loading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  loadingText: { opacity: 0.7 },
-});

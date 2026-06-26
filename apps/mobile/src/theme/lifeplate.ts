@@ -1,5 +1,18 @@
-import { MD3LightTheme, configureFonts } from "react-native-paper";
-import { palette, semantic, tints } from "./palette";
+import { MD3DarkTheme, MD3LightTheme, configureFonts } from "react-native-paper";
+import type { MD3Theme } from "react-native-paper";
+import {
+  palette,
+  semantic,
+  semanticDark,
+  semanticLight,
+  tints,
+  tintsDark,
+  tintsLight,
+  ui,
+  type ColorScheme,
+  type SemanticColors,
+  type TintColors,
+} from "./palette";
 
 const fontConfig = configureFonts({
   config: {
@@ -7,40 +20,66 @@ const fontConfig = configureFonts({
   },
 });
 
-export const lifeplateTheme = {
-  ...MD3LightTheme,
-  roundness: 16,
-  fonts: fontConfig,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: semantic.primary,
-    onPrimary: semantic.textOnPrimary,
-    primaryContainer: semantic.primaryContainer,
-    onPrimaryContainer: semantic.primary,
-    secondary: semantic.secondary,
-    onSecondary: semantic.textOnPrimary,
-    secondaryContainer: tints.sageLight,
-    onSecondaryContainer: semantic.primary,
-    tertiary: semantic.tertiary,
-    onTertiary: semantic.textOnDark,
-    tertiaryContainer: tints.tealLight,
-    onTertiaryContainer: semantic.primary,
-    background: semantic.background,
-    surface: semantic.surface,
-    surfaceVariant: semantic.surfaceWarm,
-    onSurface: semantic.text,
-    onSurfaceVariant: semantic.textMuted,
-    outline: semantic.border,
-    outlineVariant: tints.sageLight,
-    error: semantic.danger,
-    elevation: {
-      ...MD3LightTheme.colors.elevation,
-      level1: semantic.surface,
+function buildLifeplateTheme(
+  base: MD3Theme,
+  semanticColors: SemanticColors,
+  tintColors: TintColors,
+): MD3Theme {
+  return {
+    ...base,
+    roundness: 16,
+    fonts: fontConfig,
+    colors: {
+      ...base.colors,
+      primary: semanticColors.primary,
+      onPrimary: semanticColors.textOnPrimary,
+      primaryContainer: semanticColors.primaryContainer,
+      onPrimaryContainer: semanticColors.primary,
+      secondary: semanticColors.secondary,
+      onSecondary: semanticColors.textOnPrimary,
+      secondaryContainer: tintColors.sageLight,
+      onSecondaryContainer: semanticColors.primary,
+      tertiary: semanticColors.tertiary,
+      onTertiary: semanticColors.textOnDark,
+      tertiaryContainer: tintColors.tealLight,
+      onTertiaryContainer: semanticColors.primary,
+      background: semanticColors.background,
+      surface: semanticColors.surface,
+      surfaceVariant: semanticColors.surfaceWarm,
+      onSurface: semanticColors.text,
+      onSurfaceVariant: semanticColors.textMuted,
+      outline: semanticColors.border,
+      outlineVariant: tintColors.sageLight,
+      error: semanticColors.danger,
+      elevation: {
+        ...base.colors.elevation,
+        level1: semanticColors.surface,
+      },
     },
-  },
-};
+  };
+}
+
+export const lifeplateLightTheme = buildLifeplateTheme(
+  MD3LightTheme,
+  semanticLight,
+  tintsLight,
+);
+
+export const lifeplateDarkTheme = buildLifeplateTheme(
+  MD3DarkTheme,
+  semanticDark,
+  tintsDark,
+);
+
+/** @deprecated Use `getLifeplateTheme(colorScheme)` or `useThemeContext().paperTheme`. */
+export const lifeplateTheme = lifeplateLightTheme;
+
+export function getLifeplateTheme(scheme: ColorScheme): MD3Theme {
+  return scheme === "dark" ? lifeplateDarkTheme : lifeplateLightTheme;
+}
 
 export { palette, semantic, tints, ui } from "./palette";
+export { getAppColors, type AppColors, type ColorScheme } from "./palette";
 
 export const spacing = {
   xs: 8,

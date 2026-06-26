@@ -3,7 +3,10 @@ import { IconButton, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightContent } from "@/components/nutrition/PillarInsightContent";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -14,6 +17,29 @@ type Props = {
   onClose: () => void;
 };
 
+function createLocalStyles({ ui }: AppColors) {
+  return StyleSheet.create({
+    handle: {
+      alignSelf: "center",
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: ui.borderSubtle,
+      marginBottom: spacing.xs,
+    },
+    sheetHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginRight: -spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    sheetTitle: {
+      letterSpacing: 0.15,
+    },
+  });
+}
+
 export function PillarInsightModal({
   visible,
   pillar,
@@ -23,14 +49,19 @@ export function PillarInsightModal({
   onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createLocalStyles);
 
   if (!pillar) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
         <Pressable
-          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}
+          style={[
+            modalStyles.sheet,
+            { paddingBottom: insets.bottom + spacing.md, paddingTop: spacing.sm, maxHeight: "78%" },
+          ]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.handle} />
@@ -58,37 +89,3 @@ export function PillarInsightModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    maxHeight: "78%",
-  },
-  handle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ui.borderSubtle,
-    marginBottom: spacing.xs,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginRight: -spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  sheetTitle: {
-    letterSpacing: 0.15,
-  },
-});

@@ -3,7 +3,11 @@ import { StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import { PillarIcon } from "@/components/icons/PillarIcon";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { palette } from "@/src/theme/palette";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   glasses: number;
@@ -13,6 +17,34 @@ type Props = {
   onDecrement: () => void;
 };
 
+function createStyles({ ui }: AppColors) {
+  return StyleSheet.create({
+    wrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: ui.cardBackground,
+      borderRadius: 14,
+      paddingLeft: spacing.sm,
+      paddingVertical: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+    left: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      flex: 1,
+    },
+    label: { letterSpacing: 0.15 },
+    count: { opacity: 0.55, marginTop: 1 },
+    countSyncing: { opacity: 0.35 },
+    controls: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+  });
+}
+
 export function TimelineDayHydration({
   glasses,
   target = 8,
@@ -20,6 +52,8 @@ export function TimelineDayHydration({
   onIncrement,
   onDecrement,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { ui } = useAppColors();
   const fillColor = PILLAR_COLORS.hydration;
 
   return (
@@ -63,29 +97,3 @@ export function TimelineDayHydration({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: ui.cardBackground,
-    borderRadius: 14,
-    paddingLeft: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  left: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    flex: 1,
-  },
-  label: { letterSpacing: 0.15 },
-  count: { opacity: 0.55, marginTop: 1 },
-  countSyncing: { opacity: 0.35 },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-});

@@ -5,12 +5,14 @@ import type { MealListSummary } from "@lifeplate/shared";
 import { FormattedNotesText } from "@/components/meal/FormattedNotesText";
 import { MealImage } from "@/components/MealImage";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
 import {
   formatMealTime,
   formatMealTypeLabel,
   mealTypeIcon,
 } from "@/lib/mealUtils";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meal: MealListSummary;
@@ -19,7 +21,24 @@ type Props = {
   onDelete?: () => void;
 };
 
+const THUMB = 80;
+
 function NutritionChip({ label }: { label: string }) {
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      chip: {
+        backgroundColor: colors.ui.trackBackground,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 999,
+      },
+      chipText: {
+        opacity: 0.7,
+        letterSpacing: 0.1,
+      },
+    }),
+  );
+
   return (
     <View style={styles.chip}>
       <Text variant="labelMedium" style={styles.chipText}>
@@ -35,6 +54,105 @@ export function TimelineMealCard({
   onPress,
   onDelete,
 }: Props) {
+  const { semantic, ui } = useAppColors();
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      row: {
+        marginBottom: spacing.md,
+      },
+      rowDimmed: {
+        opacity: 0.52,
+      },
+      card: {
+        padding: 0,
+        overflow: "hidden",
+      },
+      cardInner: {
+        flexDirection: "row",
+        alignItems: "stretch",
+        minHeight: THUMB + spacing.sm * 2,
+      },
+      main: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        padding: spacing.sm,
+      },
+      mainPressed: {
+        opacity: 0.94,
+      },
+      image: {
+        width: THUMB,
+        height: THUMB,
+        borderRadius: 14,
+      },
+      imagePlaceholder: {
+        width: THUMB,
+        height: THUMB,
+        borderRadius: 14,
+        backgroundColor: colors.ui.trackBackground,
+        alignItems: "center",
+        justifyContent: "center",
+      },
+      body: {
+        flex: 1,
+        gap: 6,
+        paddingVertical: 2,
+      },
+      metaRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.xs,
+      },
+      typeBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: colors.ui.selectedBackground,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 999,
+      },
+      typeText: {
+        color: colors.semantic.primary,
+        letterSpacing: 0.1,
+      },
+      time: {
+        opacity: 0.5,
+      },
+      name: {
+        letterSpacing: 0.1,
+        lineHeight: 22,
+      },
+      notes: {
+        opacity: 0.65,
+        lineHeight: 18,
+      },
+      sharedBy: {
+        opacity: 0.55,
+        color: colors.semantic.primary,
+        fontSize: 12,
+      },
+      chips: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 6,
+      },
+      deleteBtn: {
+        width: 44,
+        alignItems: "center",
+        justifyContent: "center",
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderLeftColor: colors.ui.borderSubtle,
+      },
+      deleteBtnPressed: {
+        backgroundColor: colors.ui.dangerPressed,
+      },
+    }),
+  );
+
   const icon = mealTypeIcon(meal.mealType);
   const typeLabel = formatMealTypeLabel(meal.mealType);
   const time = formatMealTime(meal.createdAt);
@@ -117,7 +235,7 @@ export function TimelineMealCard({
               <MaterialCommunityIcons
                 name="trash-can-outline"
                 size={20}
-                color="#95A5A6"
+                color={ui.disabled}
               />
             </Pressable>
           ) : null}
@@ -126,112 +244,3 @@ export function TimelineMealCard({
     </View>
   );
 }
-
-const THUMB = 80;
-
-const styles = StyleSheet.create({
-  row: {
-    marginBottom: spacing.md,
-  },
-  rowDimmed: {
-    opacity: 0.52,
-  },
-  card: {
-    padding: 0,
-    overflow: "hidden",
-    backgroundColor: "#FFFFFF",
-  },
-  cardInner: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    minHeight: THUMB + spacing.sm * 2,
-  },
-  main: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  mainPressed: {
-    opacity: 0.94,
-  },
-  image: {
-    width: THUMB,
-    height: THUMB,
-    borderRadius: 14,
-  },
-  imagePlaceholder: {
-    width: THUMB,
-    height: THUMB,
-    borderRadius: 14,
-    backgroundColor: ui.trackBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  body: {
-    flex: 1,
-    gap: 6,
-    paddingVertical: 2,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.xs,
-  },
-  typeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: ui.selectedBackground,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  typeText: {
-    color: semantic.primary,
-    letterSpacing: 0.1,
-  },
-  time: {
-    opacity: 0.5,
-  },
-  name: {
-    letterSpacing: 0.1,
-    lineHeight: 22,
-  },
-  notes: {
-    opacity: 0.65,
-    lineHeight: 18,
-  },
-  sharedBy: {
-    opacity: 0.55,
-    color: semantic.primary,
-    fontSize: 12,
-  },
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  chip: {
-    backgroundColor: ui.trackBackground,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  chipText: {
-    opacity: 0.7,
-    letterSpacing: 0.1,
-  },
-  deleteBtn: {
-    width: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: ui.borderSubtle,
-  },
-  deleteBtnPressed: {
-    backgroundColor: "#FDF2F2",
-  },
-});

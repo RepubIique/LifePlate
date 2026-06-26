@@ -11,7 +11,9 @@ import {
 } from "@lifeplate/shared";
 import { SharedMealPortionsCard } from "@/components/SharedMealPortionsCard";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type PendingShareCardProps = {
   share: MealShareRequestSummary;
@@ -21,6 +23,63 @@ type PendingShareCardProps = {
 };
 
 export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingShareCardProps) {
+  const { semantic } = useAppColors();
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      card: {
+        gap: spacing.sm,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.semantic.primary,
+      },
+      header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      },
+      badge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: colors.ui.selectedBackground,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 4,
+        borderRadius: 999,
+      },
+      badgeText: { color: colors.semantic.primary, fontWeight: "600", letterSpacing: 0.2 },
+      date: { opacity: 0.5 },
+      from: { color: colors.semantic.primary },
+      content: {
+        flexDirection: "row",
+        gap: spacing.sm,
+        alignItems: "center",
+      },
+      image: {
+        width: 72,
+        height: 72,
+        borderRadius: 14,
+      },
+      imagePlaceholder: {
+        width: 72,
+        height: 72,
+        borderRadius: 14,
+        backgroundColor: colors.ui.cardBackground,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: colors.ui.trackBackground,
+      },
+      details: { flex: 1, gap: 4 },
+      mealName: { color: colors.semantic.primary, lineHeight: 22 },
+      macros: { opacity: 0.65 },
+      actions: {
+        flexDirection: "row",
+        gap: spacing.sm,
+        marginTop: spacing.xs,
+      },
+      actionBtn: { flex: 1 },
+    }),
+  );
+
   const initialTotal = share.portionMeta?.totalPortions ?? 1;
   const initialEaten = share.portionMeta?.portionsEaten ?? 1;
   const baseMacros = share.portionMeta?.baseMacros ?? {
@@ -121,58 +180,3 @@ export function PendingShareCard({ share, busy, onAccept, onDecline }: PendingSh
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    gap: spacing.sm,
-    backgroundColor: "#FFFFFF",
-    borderLeftWidth: 3,
-    borderLeftColor: semantic.primary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: ui.selectedBackground,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeText: { color: semantic.primary, fontWeight: "600", letterSpacing: 0.2 },
-  date: { opacity: 0.5 },
-  from: { color: semantic.primary },
-  content: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "center",
-  },
-  image: {
-    width: 72,
-    height: 72,
-    borderRadius: 14,
-  },
-  imagePlaceholder: {
-    width: 72,
-    height: 72,
-    borderRadius: 14,
-    backgroundColor: ui.cardBackground,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: ui.trackBackground,
-  },
-  details: { flex: 1, gap: 4 },
-  mealName: { color: semantic.primary, lineHeight: 22 },
-  macros: { opacity: 0.65 },
-  actions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  actionBtn: { flex: 1 },
-});

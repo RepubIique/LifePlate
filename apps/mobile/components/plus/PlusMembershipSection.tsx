@@ -3,14 +3,67 @@ import { StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PLUS_FEATURES, PLUS_PLAN } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
 import { usePlusPaywall } from "@/context/PlusPaywallContext";
-import { semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   isPaid: boolean;
 };
 
+function createStyles({ semantic, tints }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      gap: spacing.md,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: tints.tealLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    copy: {
+      flex: 1,
+      gap: 2,
+    },
+    title: {
+      color: semantic.primary,
+    },
+    subtitle: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+    bullets: {
+      gap: spacing.sm,
+      paddingLeft: spacing.xs,
+    },
+    bulletRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    bulletText: {
+      color: semantic.textMuted,
+      flex: 1,
+    },
+    button: {
+      alignSelf: "flex-start",
+    },
+  });
+}
+
 export function PlusMembershipSection({ isPaid }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { openPaywall } = usePlusPaywall();
 
   if (isPaid) {
@@ -70,49 +123,3 @@ export function PlusMembershipSection({ isPaid }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    gap: spacing.md,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: tints.tealLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copy: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    color: semantic.primary,
-  },
-  subtitle: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-  bullets: {
-    gap: spacing.sm,
-    paddingLeft: spacing.xs,
-  },
-  bulletRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  bulletText: {
-    color: semantic.textMuted,
-    flex: 1,
-  },
-  button: {
-    alignSelf: "flex-start",
-  },
-});

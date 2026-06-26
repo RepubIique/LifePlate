@@ -3,7 +3,10 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { NutritionIconKey, NutritionDashboardResponse } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   recommendations: NutritionDashboardResponse["recommendations"];
@@ -26,7 +29,53 @@ const ICON_MAP: Record<NutritionIconKey, keyof typeof MaterialCommunityIcons.gly
   prebiotic: "sprout",
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm },
+    title: { letterSpacing: 0.15, color: semantic.primary },
+    subtitle: { opacity: 0.55, lineHeight: 18 },
+    items: { gap: spacing.xs, marginTop: spacing.xs },
+    item: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: 4,
+    },
+    iconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    itemName: { flex: 1, letterSpacing: 0.1 },
+    impact: {
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+      paddingTop: spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: ui.borderSubtle,
+    },
+    impactLabel: {
+      opacity: 0.5,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    impactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    impactName: { opacity: 0.75, flex: 1 },
+    impactDetail: { color: semantic.primary, fontWeight: "600" },
+  });
+}
+
 export function RecommendationsCard({ recommendations }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { items, impact } = recommendations;
   if (items.length === 0) return null;
 
@@ -76,45 +125,3 @@ export function RecommendationsCard({ recommendations }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  subtitle: { opacity: 0.55, lineHeight: 18 },
-  items: { gap: spacing.xs, marginTop: spacing.xs },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: 4,
-  },
-  iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  itemName: { flex: 1, letterSpacing: 0.1 },
-  impact: {
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: ui.borderSubtle,
-  },
-  impactLabel: {
-    opacity: 0.5,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  impactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  impactName: { opacity: 0.75, flex: 1 },
-  impactDetail: { color: semantic.primary, fontWeight: "600" },
-});

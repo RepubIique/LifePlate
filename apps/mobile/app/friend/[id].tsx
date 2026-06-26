@@ -21,9 +21,11 @@ import {
   removeFriend,
 } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function FriendProfileScreen() {
+  const { semantic } = useAppColors();
   const { id, name: nameParam } = useLocalSearchParams<{ id: string; name?: string }>();
   const friendId = typeof id === "string" ? id : "";
   const { patchFriends, friends } = useFriends();

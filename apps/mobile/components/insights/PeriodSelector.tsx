@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { ComparisonPeriod } from "@lifeplate/shared";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   value: ComparisonPeriod;
@@ -14,7 +16,46 @@ const OPTIONS: Array<{ key: ComparisonPeriod; label: string; enabled: boolean }>
   { key: "month", label: "Month", enabled: true },
 ];
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    wrap: {
+      flexDirection: "row",
+      backgroundColor: ui.trackBackground,
+      borderRadius: 12,
+      padding: 4,
+      gap: 4,
+    },
+    option: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.sm,
+      borderRadius: 10,
+      gap: 2,
+    },
+    optionActive: {
+      backgroundColor: semantic.surface,
+    },
+    optionDisabled: {
+      opacity: 0.45,
+    },
+    optionText: {
+      opacity: 0.55,
+      letterSpacing: 0.2,
+    },
+    optionTextActive: {
+      opacity: 1,
+      color: semantic.primary,
+    },
+    optionTextDisabled: {
+      opacity: 0.35,
+    },
+  });
+}
+
 export function PeriodSelector({ value, onChange }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.wrap}>
       {OPTIONS.map((option) => {
@@ -48,38 +89,3 @@ export function PeriodSelector({ value, onChange }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    backgroundColor: ui.trackBackground,
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  option: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.sm,
-    borderRadius: 10,
-    gap: 2,
-  },
-  optionActive: {
-    backgroundColor: "#FFFFFF",
-  },
-  optionDisabled: {
-    opacity: 0.45,
-  },
-  optionText: {
-    opacity: 0.55,
-    letterSpacing: 0.2,
-  },
-  optionTextActive: {
-    opacity: 1,
-    color: semantic.primary,
-  },
-  optionTextDisabled: {
-    opacity: 0.35,
-  },
-});

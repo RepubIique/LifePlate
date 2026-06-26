@@ -8,7 +8,9 @@ import { pillarColorForLabel, pillarKeyFromLabel } from "@/lib/pillarTheme";
 import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
 import { buildMacroSources } from "@/lib/macroSources";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 import { BulletList, DetailBlock, FoodChips } from "./shared";
 import { PlantSourcesEditor } from "./PlantSourcesEditor";
 import type { MealListItem } from "@lifeplate/shared";
@@ -26,6 +28,7 @@ export function PillarInsightContent({
   todayMeals,
   onPlantSourcesChanged,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const fillColor = pillarColorForLabel(pillar.label);
   const sectionKey = pillarKeyFromLabel(pillar.label);
   const serveLine = pillar.serves
@@ -126,37 +129,39 @@ export function PillarInsightContent({
   );
 }
 
-const styles = StyleSheet.create({
-  content: { gap: spacing.md },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    flex: 1,
-  },
-  titleCol: { flex: 1 },
-  title: { letterSpacing: 0.15 },
-  serves: { opacity: 0.55, marginTop: 2 },
-  metricRow: {
-    gap: 4,
-  },
-  statusHeadline: { fontWeight: "700", letterSpacing: -0.3 },
-  metricDetail: { opacity: 0.55 },
-  tipBox: {
-    backgroundColor: ui.cardBackground,
-    borderRadius: 12,
-    padding: spacing.sm,
-  },
-  tip: { lineHeight: 22, opacity: 0.85 },
-  hydrationHint: {
-    opacity: 0.55,
-    lineHeight: 18,
-    fontStyle: "italic",
-  },
-});
+function createStyles({ ui }: AppColors) {
+  return StyleSheet.create({
+    content: { gap: spacing.md },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      flex: 1,
+    },
+    titleCol: { flex: 1 },
+    title: { letterSpacing: 0.15 },
+    serves: { opacity: 0.55, marginTop: 2 },
+    metricRow: {
+      gap: 4,
+    },
+    statusHeadline: { fontWeight: "700", letterSpacing: -0.3 },
+    metricDetail: { opacity: 0.55 },
+    tipBox: {
+      backgroundColor: ui.cardBackground,
+      borderRadius: 12,
+      padding: spacing.sm,
+    },
+    tip: { lineHeight: 22, opacity: 0.85 },
+    hydrationHint: {
+      opacity: 0.55,
+      lineHeight: 18,
+      fontStyle: "italic",
+    },
+  });
+}

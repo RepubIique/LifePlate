@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { clampLoggedAtToNow, setLoggedAtTime } from "@lifeplate/shared";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -15,6 +17,20 @@ type Props = {
 };
 
 export function LogTimePickerModal({ visible, loggedAt, onChange, onClose }: Props) {
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(() =>
+    StyleSheet.create({
+      title: {
+        letterSpacing: 0.15,
+      },
+      pickerWrap: {
+        alignItems: "center",
+      },
+      actions: {
+        gap: spacing.xs,
+      },
+    }),
+  );
   const [draft, setDraft] = useState(() => new Date(loggedAt));
 
   useEffect(() => {
@@ -58,8 +74,11 @@ export function LogTimePickerModal({ visible, loggedAt, onChange, onClose }: Pro
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
+        <Pressable
+          style={[modalStyles.sheet, { paddingBottom: spacing.xl, gap: spacing.sm }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <Text variant="titleMedium" style={styles.title}>
             What time did you eat?
           </Text>
@@ -85,29 +104,3 @@ export function LogTimePickerModal({ visible, loggedAt, onChange, onClose }: Pro
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  title: {
-    letterSpacing: 0.15,
-  },
-  pickerWrap: {
-    alignItems: "center",
-  },
-  actions: {
-    gap: spacing.xs,
-  },
-});

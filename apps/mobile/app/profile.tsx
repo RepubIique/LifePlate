@@ -12,6 +12,7 @@ import {
   toOptionalNumber,
 } from "@/components/BodyMetricsForm";
 import { ProfileHeroCard } from "@/components/profile/ProfileHeroCard";
+import { AppearanceSection } from "@/components/profile/AppearanceSection";
 import { ProfileSaveBar } from "@/components/profile/ProfileSaveBar";
 import { ProfileStatsRow } from "@/components/profile/ProfileStatsRow";
 import { BadgeShelf } from "@/components/gamification/BadgeShelf";
@@ -36,7 +37,10 @@ import { getCachedAvatarUri, saveAvatarFromLocalUri } from "@/lib/avatarCache";
 import { authFriendlyErrorMessage, friendlyErrorMessage, mediaPermissionMessage } from "@/lib/apiErrors";
 import { exportUserData } from "@/lib/exportData";
 import { prepareProfileImage } from "@/lib/imagePrep";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 import { useGamificationStatsInput } from "@/lib/useGamificationStatsInput";
 
 function applyProfileToForm(
@@ -65,6 +69,8 @@ function metricEqual(stored: number | null, draft: number | null): boolean {
 }
 
 export default function ProfileScreen() {
+  const styles = useThemedStyles(createScreenStyles);
+  const { semantic } = useAppColors();
   const { profile, linkProvider, patchProfile, refreshProfile, signOut } = useAuth();
   const { friendCode, loadFriends, refreshFriends } = useFriends();
   const { refreshGamification } = useGamification();
@@ -421,6 +427,11 @@ export default function ProfileScreen() {
 
         {badgeStats ? <BadgeShelf stats={badgeStats} /> : null}
 
+        <SectionLabel title="Preferences" />
+        <PremiumCard noBlur>
+          <AppearanceSection />
+        </PremiumCard>
+
         <SectionLabel title="Membership" />
         <PlusMembershipSection isPaid={profile?.isPaid ?? false} />
 
@@ -531,24 +542,26 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  body: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  linkActions: { gap: spacing.sm },
-  footerCard: {
-    gap: 0,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  footerButtonContent: {
-    justifyContent: "flex-start",
-  },
-  footerDivider: {
-    height: 1,
-    backgroundColor: ui.trackBackground,
-    marginHorizontal: spacing.sm,
-  },
-});
+function createScreenStyles({ ui }: AppColors) {
+  return StyleSheet.create({
+    body: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.md,
+    },
+    linkActions: { gap: spacing.sm },
+    footerCard: {
+      gap: 0,
+      paddingVertical: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    footerButtonContent: {
+      justifyContent: "flex-start",
+    },
+    footerDivider: {
+      height: 1,
+      backgroundColor: ui.trackBackground,
+      marginHorizontal: spacing.sm,
+    },
+  });
+}

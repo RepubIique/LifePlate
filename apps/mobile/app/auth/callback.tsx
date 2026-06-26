@@ -2,12 +2,15 @@ import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { Button, Text, useTheme } from "react-native-paper";
 import { authFriendlyErrorMessage } from "@/lib/apiErrors";
 import { createSessionFromUrl } from "@/lib/authRedirect";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function AuthCallbackScreen() {
+  const theme = useTheme();
+  const { semantic } = useAppColors();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,7 +40,7 @@ export default function AuthCallbackScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Image
         source={require("@/assets/images/logo.png")}
         style={styles.logo}
@@ -45,7 +48,7 @@ export default function AuthCallbackScreen() {
       />
       {error ? (
         <>
-          <Text variant="titleMedium" style={styles.title}>
+          <Text variant="titleMedium" style={[styles.title, { color: semantic.primary }]}>
             Sign-in didn&apos;t complete
           </Text>
           <Text variant="bodyMedium" style={styles.body}>
@@ -77,9 +80,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: spacing.xl,
     gap: spacing.md,
-    backgroundColor: "#FFFFFF",
   },
   logo: { width: 72, height: 72, marginBottom: spacing.sm },
-  title: { color: semantic.primary, textAlign: "center" },
+  title: { textAlign: "center" },
   body: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
 });

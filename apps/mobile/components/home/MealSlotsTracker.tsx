@@ -6,12 +6,15 @@ import { Text } from "react-native-paper";
 import type { MealListSummary } from "@lifeplate/shared";
 import { areCorePlatesComplete } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
 import {
   getFilledSlots,
   getSuggestedSlot,
   MEAL_SLOTS,
 } from "@/lib/mealSlots";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   meals: MealListSummary[];
@@ -19,7 +22,81 @@ type Props = {
   onLogSuggested?: () => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    title: { letterSpacing: 0.15 },
+    count: { opacity: 0.5 },
+    completeBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: ui.selectedBackground,
+      borderRadius: 12,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    completeText: {
+      flex: 1,
+      color: semantic.primary,
+      opacity: 0.85,
+      lineHeight: 18,
+    },
+    slots: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingVertical: 2,
+    },
+    slot: {
+      flex: 1,
+    },
+    chip: {
+      alignItems: "center",
+      gap: 6,
+      width: "100%",
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    chipFilled: {},
+    chipSuggested: {
+      backgroundColor: ui.selectedBackground,
+      borderColor: semantic.primary,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: ui.trackBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconWrapFilled: {
+      backgroundColor: semantic.primary,
+    },
+    chipLabel: {
+      opacity: 0.65,
+      letterSpacing: 0.1,
+    },
+    chipLabelFilled: {
+      opacity: 0.9,
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+    pressed: { opacity: 0.85 },
+  });
+}
+
 export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggested }: Props) {
+  const { semantic } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const filled = getFilledSlots(meals);
   const suggested = getSuggestedSlot(filled);
   const filledCount = filled.size;
@@ -66,6 +143,7 @@ export function MealSlotsTracker({ meals, title = "Today's plates", onLogSuggest
               filled={isFilled}
               suggested={isSuggested}
               onPress={isSuggested ? onLogSuggested : undefined}
+              styles={styles}
             />
           );
         })}
@@ -80,13 +158,17 @@ function SlotChip({
   filled,
   suggested,
   onPress,
+  styles,
 }: {
   label: string;
   icon: (typeof MEAL_SLOTS)[number]["icon"];
   filled: boolean;
   suggested: boolean;
   onPress?: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
+  const { semantic, ui } = useAppColors();
+
   const content = (
     <View
       style={[
@@ -97,7 +179,7 @@ function SlotChip({
     >
       <View style={[styles.iconWrap, filled && styles.iconWrapFilled]}>
         {filled ? (
-          <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+          <MaterialCommunityIcons name="check" size={16} color={ui.iconOnPrimary} />
         ) : (
           <MaterialCommunityIcons
             name={icon}
@@ -129,73 +211,3 @@ function SlotChip({
 
   return <View style={styles.slot}>{content}</View>;
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  title: { letterSpacing: 0.15 },
-  count: { opacity: 0.5 },
-  completeBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: ui.selectedBackground,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  completeText: {
-    flex: 1,
-    color: semantic.primary,
-    opacity: 0.85,
-    lineHeight: 18,
-  },
-  slots: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: 2,
-  },
-  slot: {
-    flex: 1,
-  },
-  chip: {
-    alignItems: "center",
-    gap: 6,
-    width: "100%",
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  chipFilled: {},
-  chipSuggested: {
-    backgroundColor: ui.selectedBackground,
-    borderColor: semantic.primary,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ui.trackBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconWrapFilled: {
-    backgroundColor: semantic.primary,
-  },
-  chipLabel: {
-    opacity: 0.65,
-    letterSpacing: 0.1,
-  },
-  chipLabelFilled: {
-    opacity: 0.9,
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-  pressed: { opacity: 0.85 },
-});

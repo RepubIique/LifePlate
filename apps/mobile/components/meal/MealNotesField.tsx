@@ -19,8 +19,10 @@ import {
   insertFriendMention,
   type NotesSelection,
 } from "@/lib/mealNotesFormat";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { createPremiumTokens } from "@/src/theme/premium";
 import { spacing } from "@/src/theme/lifeplate";
-import { premium } from "@/src/theme/premium";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   value: string;
@@ -28,7 +30,53 @@ type Props = {
   compact?: boolean;
 };
 
+function createStyles(colors: AppColors) {
+  const premium = createPremiumTokens(colors);
+  return StyleSheet.create({
+    sectionTitle: {
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+      letterSpacing: 0.15,
+    },
+    hint: {
+      opacity: 0.65,
+      marginBottom: spacing.sm,
+      lineHeight: 18,
+    },
+    toolbar: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.xs,
+      borderWidth: 1,
+      borderColor: premium.borderColor,
+      borderRadius: 12,
+      alignSelf: "flex-start",
+      paddingHorizontal: spacing.xs,
+    },
+    input: { minHeight: 112 },
+    preview: {
+      marginTop: spacing.sm,
+      padding: spacing.sm,
+      borderRadius: 12,
+      backgroundColor: colors.ui.inputBackground,
+      borderWidth: 1,
+      borderColor: premium.borderColor,
+      gap: spacing.xs,
+    },
+    previewLabel: {
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
+    previewText: {
+      opacity: 0.85,
+    },
+    count: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
+  });
+}
+
 export function MealNotesField({ value, onChange, compact = false }: Props) {
+  const styles = useThemedStyles(createStyles);
   const { friends, hydrated, loadFriends } = useFriends();
   const selectionRef = useRef<NotesSelection>({ start: 0, end: 0 });
   const [selection, setSelection] = useState<NotesSelection>({ start: 0, end: 0 });
@@ -213,45 +261,3 @@ export function MealNotesField({ value, onChange, compact = false }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionTitle: {
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.15,
-  },
-  hint: {
-    opacity: 0.65,
-    marginBottom: spacing.sm,
-    lineHeight: 18,
-  },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-    borderWidth: 1,
-    borderColor: premium.borderColor,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.xs,
-  },
-  input: { minHeight: 112 },
-  preview: {
-    marginTop: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: 12,
-    backgroundColor: "#F8F9FA",
-    borderWidth: 1,
-    borderColor: premium.borderColor,
-    gap: spacing.xs,
-  },
-  previewLabel: {
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  previewText: {
-    opacity: 0.85,
-  },
-  count: { opacity: 0.5, textAlign: "right", marginTop: spacing.xs },
-});

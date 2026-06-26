@@ -2,7 +2,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   currentStreak: number;
@@ -26,15 +29,57 @@ function buildEncouragement(mealsThisWeek: number, mealsLastWeek?: number): stri
   return null;
 }
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      gap: spacing.sm,
+      backgroundColor: ui.cardBackground,
+    },
+    title: { letterSpacing: 0.15, color: semantic.primary },
+    subtitle: { opacity: 0.55, lineHeight: 18 },
+    encouragement: {
+      opacity: 0.7,
+      lineHeight: 18,
+      color: semantic.primary,
+      fontStyle: "italic",
+    },
+    row: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    stat: {
+      flex: 1,
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: spacing.sm,
+    },
+    value: {
+      fontWeight: "700",
+      color: semantic.primary,
+      letterSpacing: -0.3,
+    },
+    label: {
+      opacity: 0.55,
+      textAlign: "center",
+      letterSpacing: 0.1,
+    },
+  });
+}
+
 function StatBlock({
   icon,
   value,
   label,
+  styles,
 }: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   value: string;
   label: string;
+  styles: ReturnType<typeof createStyles>;
 }) {
+  const { semantic } = useAppColors();
+
   return (
     <View style={styles.stat}>
       <MaterialCommunityIcons name={icon} size={20} color={semantic.primary} />
@@ -54,6 +99,7 @@ export function InsightsStreakCard({
   mealsThisWeek,
   mealsLastWeek,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const encouragement = buildEncouragement(mealsThisWeek, mealsLastWeek);
   return (
     <PremiumCard style={styles.card} noBlur>
@@ -69,46 +115,10 @@ export function InsightsStreakCard({
         </Text>
       ) : null}
       <View style={styles.row}>
-        <StatBlock icon="fire" value={String(currentStreak)} label="Day streak" />
-        <StatBlock icon="trophy-outline" value={String(longestStreak)} label="Best streak" />
-        <StatBlock icon="calendar-week" value={String(mealsThisWeek)} label="Meals this week" />
+        <StatBlock icon="fire" value={String(currentStreak)} label="Day streak" styles={styles} />
+        <StatBlock icon="trophy-outline" value={String(longestStreak)} label="Best streak" styles={styles} />
+        <StatBlock icon="calendar-week" value={String(mealsThisWeek)} label="Meals this week" styles={styles} />
       </View>
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    gap: spacing.sm,
-    backgroundColor: ui.cardBackground,
-  },
-  title: { letterSpacing: 0.15, color: semantic.primary },
-  subtitle: { opacity: 0.55, lineHeight: 18 },
-  encouragement: {
-    opacity: 0.7,
-    lineHeight: 18,
-    color: semantic.primary,
-    fontStyle: "italic",
-  },
-  row: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  stat: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: spacing.sm,
-  },
-  value: {
-    fontWeight: "700",
-    color: semantic.primary,
-    letterSpacing: -0.3,
-  },
-  label: {
-    opacity: 0.55,
-    textAlign: "center",
-    letterSpacing: 0.1,
-  },
-});

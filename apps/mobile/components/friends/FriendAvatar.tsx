@@ -4,7 +4,8 @@ import { Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { ensureFriendAvatarCached } from "@/lib/friendAvatars";
 import { getCachedAvatarUri } from "@/lib/avatarCache";
-import { semantic, ui } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 const SIZE = 44;
 
@@ -18,9 +19,29 @@ function friendInitials(name: string | null): string {
   return trimmed[0]!.toUpperCase();
 }
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    image: {
+      width: SIZE,
+      height: SIZE,
+      borderRadius: SIZE / 2,
+    },
+    placeholder: {
+      width: SIZE,
+      height: SIZE,
+      borderRadius: SIZE / 2,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    initials: { color: semantic.primary, fontWeight: "600" },
+  });
+}
+
 type Props = Pick<FriendSummary, "id" | "name" | "hasAvatar">;
 
 export function FriendAvatar({ id, name, hasAvatar }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [uri, setUri] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
 
@@ -72,20 +93,3 @@ export function FriendAvatar({ id, name, hasAvatar }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  image: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-  },
-  placeholder: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: SIZE / 2,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  initials: { color: semantic.primary, fontWeight: "600" },
-});

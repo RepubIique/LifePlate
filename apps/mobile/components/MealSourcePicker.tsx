@@ -2,7 +2,9 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { SegmentedButtons, Text } from "react-native-paper";
 import { MEAL_SOURCE_OPTIONS, type MealSource } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type MealSourcePickerProps = {
   value: MealSource | null;
@@ -24,12 +26,56 @@ function handleSourcePress(
   onChange(option.value);
 }
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    root: { gap: spacing.xs },
+    title: { letterSpacing: 0.15 },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    option: { flexBasis: "48%", flexGrow: 1 },
+    card: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      alignItems: "center",
+    },
+    cardSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    textSelected: { color: semantic.primary },
+    compactRoot: { gap: spacing.xs },
+    compactLabel: {
+      opacity: 0.55,
+      letterSpacing: 0.4,
+      textTransform: "uppercase",
+    },
+    segmented: { alignSelf: "stretch" },
+    compactRow: { flexDirection: "row", gap: spacing.xs },
+    compactOption: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "rgba(0,0,0,0.12)",
+      alignItems: "center",
+    },
+    compactOptionSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    compactText: { opacity: 0.7 },
+    compactTextSelected: { color: semantic.primary },
+  });
+}
+
 export function MealSourcePicker({
   value,
   onChange,
   compact = false,
   optional = false,
 }: MealSourcePickerProps) {
+  const styles = useThemedStyles(createStyles);
+
   if (compact) {
     return (
       <View style={styles.compactRoot}>
@@ -103,43 +149,3 @@ export function MealSourcePicker({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { gap: spacing.xs },
-  title: { letterSpacing: 0.15 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  option: { flexBasis: "48%", flexGrow: 1 },
-  card: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: "center",
-  },
-  cardSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  textSelected: { color: semantic.primary },
-  compactRoot: { gap: spacing.xs },
-  compactLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  segmented: { alignSelf: "stretch" },
-  compactRow: { flexDirection: "row", gap: spacing.xs },
-  compactOption: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.12)",
-    alignItems: "center",
-  },
-  compactOptionSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  compactText: { opacity: 0.7 },
-  compactTextSelected: { color: semantic.primary },
-});

@@ -1,6 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { palette, semantic, tints, ui } from "@/src/theme/lifeplate";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 export type RailPosition = "first" | "middle" | "last" | "only";
 
@@ -24,16 +26,92 @@ type Props = ReorderProps & {
   variant?: "default" | "filled" | "suggested";
 };
 
+function createStyles({ palette, semantic, ui }: AppColors) {
+  const DOT = 10;
+
+  return StyleSheet.create({
+    rail: {
+      width: 22,
+      alignSelf: "stretch",
+    },
+    railReorder: {
+      width: 32,
+    },
+    lineCol: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    line: {
+      flex: 1,
+      width: 2,
+      backgroundColor: ui.borderSubtle,
+      borderRadius: 1,
+      minHeight: 8,
+    },
+    lineFilled: {
+      backgroundColor: palette.sage,
+    },
+    lineSuggested: {
+      backgroundColor: palette.teal,
+    },
+    lineGap: {
+      flex: 1,
+      minHeight: 8,
+    },
+    dot: {
+      width: DOT,
+      height: DOT,
+      borderRadius: DOT / 2,
+      backgroundColor: semantic.surface,
+      borderWidth: 2,
+      borderColor: ui.borderSubtle,
+      marginVertical: 2,
+    },
+    dotFilled: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.selectedBackground,
+    },
+    dotSuggested: {
+      width: DOT + 4,
+      height: DOT + 4,
+      borderRadius: (DOT + 4) / 2,
+      borderColor: semantic.primary,
+      backgroundColor: semantic.primary,
+      marginVertical: 0,
+    },
+    reorderButton: {
+      width: 28,
+      height: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
+    reorderButtonPressed: {
+      backgroundColor: ui.selectedBackground,
+    },
+    reorderButtonDisabled: {
+      opacity: 0.4,
+    },
+  });
+}
+
 function RailReorderButton({
   icon,
   disabled,
   onPress,
   label,
+  styles,
+  enabledColor,
+  disabledColor,
 }: {
   icon: "chevron-up" | "chevron-down";
   disabled?: boolean;
   onPress?: () => void;
   label: string;
+  styles: ReturnType<typeof createStyles>;
+  enabledColor: string;
+  disabledColor: string;
 }) {
   return (
     <Pressable
@@ -51,7 +129,7 @@ function RailReorderButton({
       <MaterialCommunityIcons
         name={icon}
         size={16}
-        color={disabled ? ui.disabled : semantic.primary}
+        color={disabled ? disabledColor : enabledColor}
       />
     </Pressable>
   );
@@ -66,6 +144,8 @@ export function MealTimelineRail({
   onMoveUp,
   onMoveDown,
 }: Props) {
+  const { semantic, ui } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const showTopLine = position === "middle" || position === "last";
   const showBottomLine = position === "first" || position === "middle";
 
@@ -78,6 +158,9 @@ export function MealTimelineRail({
             disabled={!canMoveUp}
             onPress={onMoveUp}
             label="Move meal earlier in the day"
+            styles={styles}
+            enabledColor={semantic.primary}
+            disabledColor={ui.disabled}
           />
         ) : null}
 
@@ -118,77 +201,12 @@ export function MealTimelineRail({
             disabled={!canMoveDown}
             onPress={onMoveDown}
             label="Move meal later in the day"
+            styles={styles}
+            enabledColor={semantic.primary}
+            disabledColor={ui.disabled}
           />
         ) : null}
       </View>
     </View>
   );
 }
-
-const DOT = 10;
-
-const styles = StyleSheet.create({
-  rail: {
-    width: 22,
-    alignSelf: "stretch",
-  },
-  railReorder: {
-    width: 32,
-  },
-  lineCol: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  line: {
-    flex: 1,
-    width: 2,
-    backgroundColor: ui.borderSubtle,
-    borderRadius: 1,
-    minHeight: 8,
-  },
-  lineFilled: {
-    backgroundColor: palette.sage,
-  },
-  lineSuggested: {
-    backgroundColor: palette.teal,
-  },
-  lineGap: {
-    flex: 1,
-    minHeight: 8,
-  },
-  dot: {
-    width: DOT,
-    height: DOT,
-    borderRadius: DOT / 2,
-    backgroundColor: palette.white,
-    borderWidth: 2,
-    borderColor: ui.borderSubtle,
-    marginVertical: 2,
-  },
-  dotFilled: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.selectedBackground,
-  },
-  dotSuggested: {
-    width: DOT + 4,
-    height: DOT + 4,
-    borderRadius: (DOT + 4) / 2,
-    borderColor: semantic.primary,
-    backgroundColor: semantic.primary,
-    marginVertical: 0,
-  },
-  reorderButton: {
-    width: 28,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-  },
-  reorderButtonPressed: {
-    backgroundColor: ui.selectedBackground,
-  },
-  reorderButtonDisabled: {
-    opacity: 0.4,
-  },
-});

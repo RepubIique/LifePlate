@@ -11,6 +11,8 @@ import { Button, Text, TextInput } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { dateKeyFromIso } from "@lifeplate/shared";
 import { MealLogDateField, loggedAtFromDateKey } from "@/components/meal/MealLogDateField";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
 import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
@@ -35,16 +37,40 @@ export function TextLogModal({
   onClose,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(() =>
+    StyleSheet.create({
+      sheetContent: {
+        gap: spacing.sm,
+      },
+      title: {
+        letterSpacing: 0.15,
+      },
+      subtitle: {
+        opacity: 0.7,
+        lineHeight: 22,
+        marginBottom: spacing.xs,
+      },
+      hint: {
+        opacity: 0.5,
+        lineHeight: 18,
+      },
+      actions: {
+        gap: spacing.xs,
+        marginTop: spacing.xs,
+      },
+    }),
+  );
   const canSubmit = description.trim().length > 0 && !loading;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.keyboardRoot}
+        style={modalStyles.keyboardRoot}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-        <View style={styles.backdrop}>
+        <View style={modalStyles.backdrop}>
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={loading ? undefined : onClose}
@@ -52,7 +78,7 @@ export function TextLogModal({
             accessibilityLabel="Close log without photo"
           />
           <View
-            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}
+            style={[modalStyles.sheet, { paddingBottom: insets.bottom + spacing.sm }]}
           >
             <ScrollView
               keyboardShouldPersistTaps="handled"
@@ -103,41 +129,3 @@ export function TextLogModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  keyboardRoot: {
-    flex: 1,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    maxHeight: "92%",
-  },
-  sheetContent: {
-    gap: spacing.sm,
-  },
-  title: {
-    letterSpacing: 0.15,
-  },
-  subtitle: {
-    opacity: 0.7,
-    lineHeight: 22,
-    marginBottom: spacing.xs,
-  },
-  hint: {
-    opacity: 0.5,
-    lineHeight: 18,
-  },
-  actions: {
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-});

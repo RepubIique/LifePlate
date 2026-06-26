@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View, type ViewProps } from "react-native";
-import { premium, premiumStyles } from "@/src/theme/premium";
-import { palette } from "@/src/theme/lifeplate";
+import { useAppColors, useColorScheme } from "@/context/ThemeContext";
+import { usePremiumStyles } from "@/src/theme/premium";
 
 type Props = ViewProps & {
   children: React.ReactNode;
@@ -9,23 +9,38 @@ type Props = ViewProps & {
 };
 
 export function PremiumCard({ children, style, noBlur, ...rest }: Props) {
+  const colorScheme = useColorScheme();
+  const { semantic, tints } = useAppColors();
+  const premiumStyles = usePremiumStyles();
+  const blurTint = colorScheme === "dark" ? "dark" : "light";
+  const themedCardStyle = {
+    backgroundColor: semantic.surface,
+    borderColor: tints.sageLight,
+  };
+
   if (Platform.OS === "web" || noBlur) {
     return (
-      <View style={[premiumStyles.card, styles.webCard, style]} {...rest}>
+      <View
+        style={[
+          premiumStyles.card,
+          themedCardStyle,
+          style,
+        ]}
+        {...rest}
+      >
         {children}
       </View>
     );
   }
 
   return (
-    <BlurView intensity={18} tint="light" style={[premiumStyles.card, style]} {...rest}>
+    <BlurView
+      intensity={18}
+      tint={blurTint}
+      style={[premiumStyles.card, themedCardStyle, style]}
+      {...rest}
+    >
       {children}
     </BlurView>
   );
 }
-
-const styles = StyleSheet.create({
-  webCard: {
-    backgroundColor: palette.white,
-  },
-});

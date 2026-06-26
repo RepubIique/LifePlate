@@ -6,13 +6,17 @@ import { useState } from "react";
 import type { PlusFeatureId } from "@lifeplate/shared";
 import { PLUS_FEATURES, PLUS_FREE_TIER_NOTE, PLUS_PLAN } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
+import { useAppColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
 import {
   purchasePlus,
   restorePurchases,
   showPlusSyncFailedAlert,
 } from "@/lib/subscription";
-import { palette, semantic, tints, spacing } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -20,21 +24,117 @@ type Props = {
   onClose: () => void;
 };
 
+function createPaywallStyles({ semantic, tints }: AppColors) {
+  return StyleSheet.create({
+    sheet: {
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: "92%",
+    },
+    card: {
+      gap: spacing.md,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+    },
+    scrollContent: {
+      gap: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    hero: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    logo: {
+      width: 56,
+      height: 56,
+    },
+    heroCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    title: {
+      color: semantic.primary,
+      letterSpacing: 0.15,
+    },
+    tagline: {
+      color: semantic.textMuted,
+      lineHeight: 20,
+    },
+    featureList: {
+      gap: spacing.sm,
+    },
+    featureRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.md,
+      padding: spacing.sm,
+      borderRadius: 12,
+    },
+    featureRowHighlighted: {
+      backgroundColor: tints.tealLight,
+    },
+    featureIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: tints.tealLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    featureCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    featureTitle: {
+      color: semantic.primary,
+    },
+    featureDescription: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+    freeTierNote: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+    pricing: {
+      gap: 2,
+      paddingTop: spacing.xs,
+    },
+    priceLabel: {
+      color: semantic.primary,
+    },
+    priceNote: {
+      color: semantic.textMuted,
+      lineHeight: 18,
+    },
+    cta: {
+      marginTop: spacing.xs,
+    },
+  });
+}
+
 function PlusFeatureRow({
   icon,
   title,
   description,
   highlighted,
+  styles,
+  iconColor,
 }: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   title: string;
   description: string;
   highlighted: boolean;
+  styles: ReturnType<typeof createPaywallStyles>;
+  iconColor: string;
 }) {
   return (
     <View style={[styles.featureRow, highlighted && styles.featureRowHighlighted]}>
       <View style={styles.featureIconWrap}>
-        <MaterialCommunityIcons name={icon} size={20} color={semantic.primary} />
+        <MaterialCommunityIcons name={icon} size={20} color={iconColor} />
       </View>
       <View style={styles.featureCopy}>
         <Text variant="titleSmall" style={styles.featureTitle}>
@@ -50,6 +150,9 @@ function PlusFeatureRow({
 
 export function PlusPaywallModal({ visible, highlightFeatureId, onClose }: Props) {
   const insets = useSafeAreaInsets();
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createPaywallStyles);
+  const { semantic } = useAppColors();
   const { refreshProfile, patchProfile } = useAuth();
   const [busy, setBusy] = useState<"purchase" | "restore" | null>(null);
 
@@ -106,9 +209,13 @@ export function PlusPaywallModal({ visible, highlightFeatureId, onClose }: Props
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
         <Pressable
-          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
+          style={[
+            styles.sheet,
+            modalStyles.sheet,
+            { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+          ]}
           onPress={(event) => event.stopPropagation()}
         >
           <PremiumCard noBlur style={styles.card}>
@@ -140,6 +247,8 @@ export function PlusPaywallModal({ visible, highlightFeatureId, onClose }: Props
                     title={feature.title}
                     description={feature.description}
                     highlighted={highlightFeatureId === feature.id}
+                    styles={styles}
+                    iconColor={semantic.primary}
                   />
                 ))}
               </View>
@@ -184,99 +293,3 @@ export function PlusPaywallModal({ visible, highlightFeatureId, onClose }: Props
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: palette.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "92%",
-  },
-  card: {
-    gap: spacing.md,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-  },
-  scrollContent: {
-    gap: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  hero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  logo: {
-    width: 56,
-    height: 56,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    color: semantic.primary,
-    letterSpacing: 0.15,
-  },
-  tagline: {
-    color: semantic.textMuted,
-    lineHeight: 20,
-  },
-  featureList: {
-    gap: spacing.sm,
-  },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.md,
-    padding: spacing.sm,
-    borderRadius: 12,
-  },
-  featureRowHighlighted: {
-    backgroundColor: tints.tealLight,
-  },
-  featureIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: tints.tealLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  featureCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  featureTitle: {
-    color: semantic.primary,
-  },
-  featureDescription: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-  freeTierNote: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-  pricing: {
-    gap: 2,
-    paddingTop: spacing.xs,
-  },
-  priceLabel: {
-    color: semantic.primary,
-  },
-  priceNote: {
-    color: semantic.textMuted,
-    lineHeight: 18,
-  },
-  cta: {
-    marginTop: spacing.xs,
-  },
-});

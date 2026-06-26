@@ -4,7 +4,10 @@ import { Button, Text } from "react-native-paper";
 import type { FriendSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   friends: FriendSummary[];
@@ -12,7 +15,45 @@ type Props = {
   onInvite: (friendId: string) => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    iconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerCopy: { flex: 1, gap: 2 },
+    title: { color: semantic.primary },
+    subtitle: { opacity: 0.6, lineHeight: 18 },
+    list: { marginTop: spacing.xs },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+    },
+    name: { flex: 1, color: semantic.primary },
+    divider: {
+      height: 1,
+      backgroundColor: ui.trackBackground,
+      marginLeft: 52,
+    },
+  });
+}
+
 export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
+
   if (friends.length === 0) return null;
 
   return (
@@ -55,36 +96,3 @@ export function CoopChallengeInviteSection({ friends, busyFriendId, onInvite }: 
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCopy: { flex: 1, gap: 2 },
-  title: { color: semantic.primary },
-  subtitle: { opacity: 0.6, lineHeight: 18 },
-  list: { marginTop: spacing.xs },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  name: { flex: 1, color: semantic.primary },
-  divider: {
-    height: 1,
-    backgroundColor: ui.trackBackground,
-    marginLeft: 52,
-  },
-});

@@ -13,9 +13,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { updateGoal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 export default function GoalScreen() {
+  const styles = useThemedStyles(createScreenStyles);
   const { profile, profileLoading, patchProfile, signOut } = useAuth();
   const insets = useSafeAreaInsets();
   const [goal, setGoal] = useState<UserGoal>(GOALS[0]);
@@ -104,18 +107,20 @@ export default function GoalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  goalCard: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  goalCardSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  goalTextSelected: { color: semantic.primary },
-  cta: { marginTop: spacing.lg },
-  signOut: { alignSelf: "flex-start" },
-});
+function createScreenStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+    goalCard: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xs,
+    },
+    goalCardSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    goalTextSelected: { color: semantic.primary },
+    cta: { marginTop: spacing.lg },
+    signOut: { alignSelf: "flex-start" },
+  });
+}

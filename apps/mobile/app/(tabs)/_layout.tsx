@@ -1,20 +1,29 @@
 import { Tabs } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
+import { useTheme } from "react-native-paper";
 import { useFriends } from "@/context/FriendsContext";
-import { lifeplateTheme, palette, semantic, tints } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 export default function TabLayout() {
   const { pendingShareCount } = useFriends();
+  const theme = useTheme();
+  const { semantic, tints } = useAppColors();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: lifeplateTheme.colors.primary,
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: semantic.textMuted,
         tabBarBackground: () => (
-          <View style={[StyleSheet.absoluteFill, styles.tabBarBackground]} />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: semantic.surface },
+            ]}
+          />
         ),
         tabBarStyle: {
           backgroundColor: "transparent",
@@ -66,9 +75,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBarBackground: {
-    backgroundColor: palette.white,
-  },
-});

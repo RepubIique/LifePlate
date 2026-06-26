@@ -5,8 +5,11 @@ import { Button, Text } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PremiumCard } from "@/components/PremiumCard";
 import { useAuth } from "@/context/AuthContext";
+import { createModalStyles } from "@/lib/modalStyles";
 import { getHasSeenAlphaWelcome, setHasSeenAlphaWelcome } from "@/lib/alphaWelcomePrefs";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 function shouldShowWelcome(segments: string[], hasSession: boolean) {
   if (!hasSession) return false;
@@ -15,7 +18,46 @@ function shouldShowWelcome(segments: string[], hasSession: boolean) {
   return true;
 }
 
+function createStyles({ semantic }: AppColors) {
+  return StyleSheet.create({
+    sheet: {
+      width: "100%",
+    },
+    card: {
+      gap: spacing.md,
+      alignItems: "stretch",
+    },
+    hero: {
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    logo: {
+      width: 72,
+      height: 72,
+    },
+    title: {
+      letterSpacing: 0.2,
+      color: semantic.primary,
+      textAlign: "center",
+    },
+    body: {
+      lineHeight: 24,
+      textAlign: "center",
+    },
+    bodyMuted: {
+      opacity: 0.72,
+      lineHeight: 22,
+      textAlign: "center",
+    },
+    cta: {
+      marginTop: spacing.xs,
+    },
+  });
+}
+
 export function AlphaWelcomeModal() {
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createStyles);
   const { session } = useAuth();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
@@ -53,7 +95,7 @@ export function AlphaWelcomeModal() {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => void dismiss()}>
-      <Pressable style={styles.backdrop} onPress={() => void dismiss()}>
+      <Pressable style={modalStyles.centerBackdrop} onPress={() => void dismiss()}>
         <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]} onPress={(e) => e.stopPropagation()}>
           <PremiumCard noBlur style={styles.card}>
             <View style={styles.hero}>
@@ -88,44 +130,3 @@ export function AlphaWelcomeModal() {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-  },
-  sheet: {
-    width: "100%",
-  },
-  card: {
-    gap: spacing.md,
-    alignItems: "stretch",
-  },
-  hero: {
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  logo: {
-    width: 72,
-    height: 72,
-  },
-  title: {
-    letterSpacing: 0.2,
-    color: semantic.primary,
-    textAlign: "center",
-  },
-  body: {
-    lineHeight: 24,
-    textAlign: "center",
-  },
-  bodyMuted: {
-    opacity: 0.72,
-    lineHeight: 22,
-    textAlign: "center",
-  },
-  cta: {
-    marginTop: spacing.xs,
-  },
-});

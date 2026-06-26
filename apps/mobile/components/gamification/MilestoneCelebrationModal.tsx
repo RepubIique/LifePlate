@@ -2,7 +2,11 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -10,12 +14,43 @@ type Props = {
   onDismiss: () => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    sheet: { width: "100%" },
+    card: {
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.lg,
+    },
+    iconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: { color: semantic.primary, letterSpacing: 0.2 },
+    message: {
+      textAlign: "center",
+      color: semantic.primary,
+      lineHeight: 24,
+      opacity: 0.85,
+    },
+    button: { marginTop: spacing.sm, alignSelf: "stretch" },
+  });
+}
+
 export function MilestoneCelebrationModal({ visible, message, onDismiss }: Props) {
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
+
   if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      <Pressable style={styles.backdrop} onPress={onDismiss}>
+      <Pressable style={modalStyles.backdrop} onPress={onDismiss}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <PremiumCard style={styles.card}>
             <View style={styles.iconWrap}>
@@ -36,34 +71,3 @@ export function MilestoneCelebrationModal({ visible, message, onDismiss }: Props
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-    padding: spacing.lg,
-  },
-  sheet: { width: "100%" },
-  card: {
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { color: semantic.primary, letterSpacing: 0.2 },
-  message: {
-    textAlign: "center",
-    color: semantic.primary,
-    lineHeight: 24,
-    opacity: 0.85,
-  },
-  button: { marginTop: spacing.sm, alignSelf: "stretch" },
-});

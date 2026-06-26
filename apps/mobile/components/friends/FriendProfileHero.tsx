@@ -4,13 +4,78 @@ import { Text } from "react-native-paper";
 import type { FriendProfileSummary } from "@lifeplate/shared";
 import { FriendAvatar } from "@/components/friends/FriendAvatar";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   profile: FriendProfileSummary;
 };
 
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: ui.cardBackground,
+    },
+    content: {
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    name: {
+      color: semantic.primary,
+      fontWeight: "600",
+      letterSpacing: 0.15,
+      textAlign: "center",
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    statusChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+    statusChipActive: {
+      backgroundColor: ui.selectedBackground,
+    },
+    statusChipIdle: {
+      backgroundColor: ui.trackBackground,
+    },
+    statusActiveText: {
+      color: semantic.primary,
+      fontWeight: "600",
+    },
+    statusIdleText: {
+      color: semantic.textMuted,
+      fontWeight: "600",
+    },
+    streakChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: tints.orangeLight,
+    },
+    streakText: {
+      color: ui.iconStreak,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function FriendProfileHero({ profile }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic, ui } = useAppColors();
   const label = profile.name?.trim() || "Friend";
 
   return (
@@ -58,61 +123,3 @@ export function FriendProfileHero({ profile }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: ui.cardBackground,
-  },
-  content: {
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  name: {
-    color: semantic.primary,
-    fontWeight: "600",
-    letterSpacing: 0.15,
-    textAlign: "center",
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  statusChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  statusChipActive: {
-    backgroundColor: ui.selectedBackground,
-  },
-  statusChipIdle: {
-    backgroundColor: ui.trackBackground,
-  },
-  statusActiveText: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-  statusIdleText: {
-    color: semantic.textMuted,
-    fontWeight: "600",
-  },
-  streakChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: tints.orangeLight,
-  },
-  streakText: {
-    color: ui.iconStreak,
-    fontWeight: "600",
-  },
-});

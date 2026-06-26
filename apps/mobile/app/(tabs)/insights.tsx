@@ -28,7 +28,10 @@ import { useWeekInsights } from "@/context/WeekInsightsContext";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import type { ReportWindowId } from "@/lib/pdf/reportWindows";
 import { currentWeekStartKey } from "@/lib/weekInsightsWindow";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 const PERIOD_SECTION: Record<ComparisonPeriod, { title: string; subtitle: string }> = {
   day: { title: "Today", subtitle: "Compared with yesterday" },
@@ -61,6 +64,8 @@ const PERIOD_GUT_LABEL: Record<ComparisonPeriod, string | null> = {
 };
 
 export default function InsightsScreen() {
+  const styles = useThemedStyles(createScreenStyles);
+  const { semantic, ui } = useAppColors();
   const { profile } = useAuth();
   const { meals } = useMeals();
   const {
@@ -223,44 +228,46 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  body: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  weekSkeleton: {
-    gap: spacing.md,
-  },
-  weekSkeletonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  emptyCard: {
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-    backgroundColor: ui.cardBackground,
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: ui.selectedBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    color: semantic.primary,
-    textAlign: "center",
-    letterSpacing: 0.15,
-  },
-  empty: {
-    opacity: 0.65,
-    lineHeight: 22,
-    textAlign: "center",
-    paddingHorizontal: spacing.sm,
-  },
-});
+function createScreenStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    body: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.md,
+    },
+    weekSkeleton: {
+      gap: spacing.md,
+    },
+    weekSkeletonRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    emptyCard: {
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.xl,
+      backgroundColor: ui.cardBackground,
+    },
+    emptyIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: ui.selectedBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: {
+      color: semantic.primary,
+      textAlign: "center",
+      letterSpacing: 0.15,
+    },
+    empty: {
+      opacity: 0.65,
+      lineHeight: 22,
+      textAlign: "center",
+      paddingHorizontal: spacing.sm,
+    },
+  });
+}

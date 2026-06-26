@@ -9,8 +9,12 @@ import {
 } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
 import { PillarIcon } from "@/components/icons/PillarIcon";
+import { useAppColors } from "@/context/ThemeContext";
 import { PILLAR_COLORS } from "@/lib/pillarTheme";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { palette } from "@/src/theme/palette";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   comparison: PeriodComparison;
@@ -27,20 +31,130 @@ const PILLAR_ROWS: Array<{ key: ComparisonPillarKey; label: string }> = [
   { key: "hydration", label: "Hydration" },
 ];
 
-function deltaColor(delta: number): string {
+function deltaColor(delta: number, { semantic }: AppColors): string {
   if (delta > 0) return semantic.primary;
   if (delta < 0) return palette.coral;
   return semantic.textMuted;
+}
+
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.md },
+    scoreRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    scoreCol: {
+      flex: 1,
+      alignItems: "center",
+      gap: 2,
+    },
+    scoreLabel: {
+      opacity: 0.55,
+      letterSpacing: 0.4,
+      textTransform: "uppercase",
+    },
+    scoreValue: {
+      fontWeight: "700",
+      letterSpacing: -0.5,
+      color: semantic.primary,
+    },
+    scoreCaption: {
+      opacity: 0.4,
+    },
+    muted: {
+      opacity: 0.45,
+    },
+    deltaCol: {
+      alignItems: "center",
+      minWidth: 56,
+      gap: 2,
+    },
+    vsLabel: {
+      opacity: 0.4,
+      letterSpacing: 0.3,
+    },
+    deltaValue: {
+      fontWeight: "700",
+      letterSpacing: -0.3,
+    },
+    noBaseline: {
+      opacity: 0.45,
+      textAlign: "center",
+      lineHeight: 18,
+    },
+    summary: {
+      lineHeight: 22,
+      opacity: 0.8,
+      textAlign: "center",
+    },
+    pillarList: { gap: spacing.md },
+    pillarRow: { gap: spacing.xs },
+    pillarHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    pillarLabel: {
+      flex: 1,
+      letterSpacing: 0.1,
+    },
+    pillarDelta: {
+      fontWeight: "600",
+    },
+    barTrack: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: ui.trackBackground,
+      overflow: "hidden",
+      position: "relative",
+    },
+    barPrevious: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      borderRadius: 5,
+    },
+    barCurrent: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      borderRadius: 5,
+    },
+    barLegend: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    barLegendText: {
+      opacity: 0.45,
+    },
+    mealsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingTop: spacing.xs,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: ui.borderSubtle,
+    },
+    mealsText: {
+      opacity: 0.5,
+    },
+  });
 }
 
 function ScoreColumn({
   label,
   score,
   muted,
+  styles,
 }: {
   label: string;
   score: number;
   muted?: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.scoreCol}>
@@ -65,6 +179,8 @@ function PillarComparisonRow({
   showDelta,
   currentLabel,
   previousLabel,
+  styles,
+  colors,
 }: {
   pillarKey: ComparisonPillarKey;
   label: string;
@@ -73,6 +189,8 @@ function PillarComparisonRow({
   showDelta: boolean;
   currentLabel: string;
   previousLabel: string;
+  styles: ReturnType<typeof createStyles>;
+  colors: AppColors;
 }) {
   const color = PILLAR_COLORS[pillarKey];
   const delta = current - previous;
@@ -85,7 +203,7 @@ function PillarComparisonRow({
           {label}
         </Text>
         {showDelta ? (
-          <Text variant="labelLarge" style={[styles.pillarDelta, { color: deltaColor(delta) }]}>
+          <Text variant="labelLarge" style={[styles.pillarDelta, { color: deltaColor(delta, colors) }]}>
             {formatScoreDelta(delta)}%
           </Text>
         ) : null}
@@ -117,6 +235,8 @@ function PillarComparisonRow({
 }
 
 export function PeriodComparisonCard({ comparison }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const colors = useAppColors();
   const { current, previous } = comparison;
   const delta = scoreDelta(comparison);
   const summary = buildComparisonSummary(comparison);
@@ -131,14 +251,14 @@ export function PeriodComparisonCard({ comparison }: Props) {
   return (
     <PremiumCard style={styles.card}>
       <View style={styles.scoreRow}>
-        <ScoreColumn label={comparison.currentLabel} score={current.score} />
+        <ScoreColumn label={comparison.currentLabel} score={current.score} styles={styles} />
         <View style={styles.deltaCol}>
           {showDelta ? (
             <>
               <Text variant="labelLarge" style={styles.vsLabel}>
                 vs
               </Text>
-              <Text variant="titleLarge" style={[styles.deltaValue, { color: deltaColor(delta) }]}>
+              <Text variant="titleLarge" style={[styles.deltaValue, { color: deltaColor(delta, colors) }]}>
                 {formatScoreDelta(delta)}
               </Text>
             </>
@@ -148,7 +268,7 @@ export function PeriodComparisonCard({ comparison }: Props) {
             </Text>
           )}
         </View>
-        <ScoreColumn label={comparison.previousLabel} score={previous.score} muted />
+        <ScoreColumn label={comparison.previousLabel} score={previous.score} muted styles={styles} />
       </View>
 
       <Text variant="bodyMedium" style={styles.summary}>
@@ -166,6 +286,8 @@ export function PeriodComparisonCard({ comparison }: Props) {
             showDelta={showDelta}
             currentLabel={comparison.currentLabel}
             previousLabel={comparison.previousLabel}
+            styles={styles}
+            colors={colors}
           />
         ))}
       </View>
@@ -183,109 +305,3 @@ export function PeriodComparisonCard({ comparison }: Props) {
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  scoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  scoreCol: {
-    flex: 1,
-    alignItems: "center",
-    gap: 2,
-  },
-  scoreLabel: {
-    opacity: 0.55,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-  },
-  scoreValue: {
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    color: semantic.primary,
-  },
-  scoreCaption: {
-    opacity: 0.4,
-  },
-  muted: {
-    opacity: 0.45,
-  },
-  deltaCol: {
-    alignItems: "center",
-    minWidth: 56,
-    gap: 2,
-  },
-  vsLabel: {
-    opacity: 0.4,
-    letterSpacing: 0.3,
-  },
-  deltaValue: {
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  noBaseline: {
-    opacity: 0.45,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  summary: {
-    lineHeight: 22,
-    opacity: 0.8,
-    textAlign: "center",
-  },
-  pillarList: { gap: spacing.md },
-  pillarRow: { gap: spacing.xs },
-  pillarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  pillarLabel: {
-    flex: 1,
-    letterSpacing: 0.1,
-  },
-  pillarDelta: {
-    fontWeight: "600",
-  },
-  barTrack: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ui.trackBackground,
-    overflow: "hidden",
-    position: "relative",
-  },
-  barPrevious: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 5,
-  },
-  barCurrent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 5,
-  },
-  barLegend: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  barLegendText: {
-    opacity: 0.45,
-  },
-  mealsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: ui.borderSubtle,
-  },
-  mealsText: {
-    opacity: 0.5,
-  },
-});

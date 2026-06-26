@@ -2,7 +2,7 @@ import { clampLoggedAtToNow } from "@lifeplate/shared";
 import { useState } from "react";
 import { IconButton } from "react-native-paper";
 import { LogTimePickerModal } from "@/components/meal/LogTimePickerModal";
-import { semantic } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
 
 type Props = {
   loggedAt: string;
@@ -18,6 +18,7 @@ export function MealLogTimeButton({
   variant = "overlay",
   accessibilityLabel = "Change meal time",
 }: Props) {
+  const { semantic } = useAppColors();
   const [open, setOpen] = useState(false);
 
   function handleTimeChange(nextLoggedAt: string) {

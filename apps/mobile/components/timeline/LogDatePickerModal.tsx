@@ -1,7 +1,11 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useMemo } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { MAX_LOG_PAST_DAYS, formatLogDateLabel, recentLogDateKeys } from "@lifeplate/shared";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -11,12 +15,45 @@ type Props = {
 };
 
 export function LogDatePickerModal({ visible, selectedDateKey, onSelect, onClose }: Props) {
+  const colors = useAppColors();
+  const modalStyles = useMemo(() => createModalStyles(colors), [colors]);
+  const styles = useThemedStyles((colors) =>
+    StyleSheet.create({
+      sheetExtra: {
+        paddingBottom: spacing.xl,
+        maxHeight: "70%",
+        gap: spacing.sm,
+      },
+      title: {
+        letterSpacing: 0.15,
+      },
+      list: {
+        maxHeight: 360,
+      },
+      option: {
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        borderRadius: 12,
+      },
+      optionSelected: {
+        backgroundColor: colors.ui.selectedBackground,
+      },
+      optionText: {
+        letterSpacing: 0.1,
+      },
+      optionTextSelected: {
+        color: colors.semantic.primary,
+        fontWeight: "600",
+      },
+    }),
+  );
+
   const options = recentLogDateKeys(MAX_LOG_PAST_DAYS);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
+        <Pressable style={[modalStyles.sheet, styles.sheetExtra]} onPress={(e) => e.stopPropagation()}>
           <Text variant="titleMedium" style={styles.title}>
             Which day was this meal?
           </Text>
@@ -47,42 +84,3 @@ export function LogDatePickerModal({ visible, selectedDateKey, onSelect, onClose
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
-    maxHeight: "70%",
-    gap: spacing.sm,
-  },
-  title: {
-    letterSpacing: 0.15,
-  },
-  list: {
-    maxHeight: 360,
-  },
-  option: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 12,
-  },
-  optionSelected: {
-    backgroundColor: ui.selectedBackground,
-  },
-  optionText: {
-    letterSpacing: 0.1,
-  },
-  optionTextSelected: {
-    color: semantic.primary,
-    fontWeight: "600",
-  },
-});

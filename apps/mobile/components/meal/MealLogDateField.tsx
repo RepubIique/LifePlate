@@ -12,7 +12,8 @@ import { Button, IconButton, Text } from "react-native-paper";
 import { LogDatePickerModal } from "@/components/timeline/LogDatePickerModal";
 import { LogTimePickerModal } from "@/components/meal/LogTimePickerModal";
 import { formatMealTime } from "@/lib/mealUtils";
-import { semantic, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   loggedAt: string;
@@ -29,6 +30,7 @@ export function MealLogDateField({
   showTime = true,
   onChange,
 }: Props) {
+  const { semantic } = useAppColors();
   const [dateOpen, setDateOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const compact = variant === "compact";

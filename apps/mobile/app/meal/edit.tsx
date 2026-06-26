@@ -6,6 +6,7 @@ import {
   Chip,
   Text,
   TextInput,
+  useTheme,
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
@@ -108,6 +109,7 @@ function applyMealToForm(
 }
 
 export default function EditMealScreen() {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { patchMealLocally, removeMealLocally } = useMeals();
@@ -487,7 +489,7 @@ export default function EditMealScreen() {
   const personalisedFibreGoal = profile?.nutritionTargets != null;
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, { backgroundColor: theme.colors.background }]}>
       {loading ? (
         <>
           <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
@@ -495,7 +497,7 @@ export default function EditMealScreen() {
         </>
       ) : meal ? (
     <KeyboardAvoidingScrollView
-      style={styles.scroll}
+      style={[styles.scroll, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xl }]}
     >
       <PremiumHeader title="Edit meal" subtitle="Update what you ate" />
@@ -751,8 +753,8 @@ export default function EditMealScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#FFFFFF" },
-  scroll: { flex: 1, backgroundColor: "#FFFFFF" },
+  page: { flex: 1 },
+  scroll: { flex: 1 },
   container: { gap: spacing.sm },
   cardWrap: { paddingHorizontal: spacing.lg },
   sectionCard: { gap: spacing.sm },

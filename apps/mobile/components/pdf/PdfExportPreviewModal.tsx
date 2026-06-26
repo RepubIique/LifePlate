@@ -31,7 +31,10 @@ import {
   resolveReportWindow,
   type ReportWindowId,
 } from "@/lib/pdf/reportWindows";
-import { semantic, spacing, tints, ui } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -68,6 +71,8 @@ export function PdfExportPreviewModal({
   onExported,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { profile, refreshProfile } = useAuth();
   const { openPaywall } = usePlusPaywall();
   const { hydrationByDate } = useHydration();
@@ -374,101 +379,103 @@ export function PdfExportPreviewModal({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: tints.creamLight,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  title: {
-    color: semantic.primary,
-    letterSpacing: 0.15,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  sectionLabel: {
-    marginTop: spacing.sm,
-    opacity: 0.65,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  chip: {
-    marginBottom: spacing.xs,
-  },
-  customCard: {
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  customRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  windowHint: {
-    opacity: 0.65,
-    marginBottom: spacing.sm,
-  },
-  previewCard: {
-    minHeight: 320,
-    overflow: "hidden",
-    padding: 0,
-  },
-  webview: {
-    flex: 1,
-    minHeight: 320,
-    backgroundColor: "transparent",
-  },
-  previewLoading: {
-    minHeight: 320,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  previewLoadingText: {
-    opacity: 0.65,
-  },
-  previewError: {
-    minHeight: 120,
-    padding: spacing.md,
-    color: semantic.danger,
-  },
-  comingSoonCard: {
-    gap: spacing.md,
-    marginTop: spacing.md,
-    backgroundColor: ui.cardBackground,
-  },
-  comingSoonRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  comingSoonCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  comingSoonHint: {
-    opacity: 0.65,
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: tints.sageLight,
-    backgroundColor: tints.creamLight,
-  },
-});
+function createStyles({ semantic, tints, ui }: AppColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: tints.creamLight,
+    },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    title: {
+      color: semantic.primary,
+      letterSpacing: 0.15,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.sm,
+    },
+    sectionLabel: {
+      marginTop: spacing.sm,
+      opacity: 0.65,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+    },
+    chip: {
+      marginBottom: spacing.xs,
+    },
+    customCard: {
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    customRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    windowHint: {
+      opacity: 0.65,
+      marginBottom: spacing.sm,
+    },
+    previewCard: {
+      minHeight: 320,
+      overflow: "hidden",
+      padding: 0,
+    },
+    webview: {
+      flex: 1,
+      minHeight: 320,
+      backgroundColor: "transparent",
+    },
+    previewLoading: {
+      minHeight: 320,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+    },
+    previewLoadingText: {
+      opacity: 0.65,
+    },
+    previewError: {
+      minHeight: 120,
+      padding: spacing.md,
+      color: semantic.danger,
+    },
+    comingSoonCard: {
+      gap: spacing.md,
+      marginTop: spacing.md,
+      backgroundColor: ui.cardBackground,
+    },
+    comingSoonRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    comingSoonCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    comingSoonHint: {
+      opacity: 0.65,
+    },
+    footer: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: tints.sageLight,
+      backgroundColor: tints.creamLight,
+    },
+  });
+}

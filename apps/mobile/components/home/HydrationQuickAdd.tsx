@@ -8,7 +8,10 @@ import { PillarIcon } from "@/components/icons/PillarIcon";
 import { pillarStatusHeadline } from "@/lib/dayStatusLabels";
 import { pillarColor } from "@/components/ui/pillarColors";
 import { pillarColorForLabel } from "@/lib/pillarTheme";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   pillar: PillarProgress;
@@ -16,15 +19,63 @@ type Props = {
   onDecrement: () => void;
 };
 
+function createStyles({ semantic, palette }: AppColors) {
+  return StyleSheet.create({
+    card: {
+      padding: 0,
+      backgroundColor: palette.teal,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      flex: 1,
+    },
+    titleCol: {
+      flex: 1,
+      gap: 2,
+    },
+    title: {
+      letterSpacing: 0.15,
+      color: semantic.primary,
+    },
+    subtitle: {
+      opacity: 0.55,
+    },
+    rightCol: {
+      alignItems: "flex-end",
+      gap: 2,
+    },
+    status: {
+      fontWeight: "600",
+      letterSpacing: 0.15,
+      marginRight: spacing.xs,
+    },
+    controls: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginRight: -8,
+    },
+  });
+}
+
 export function HydrationQuickAdd({
   pillar,
   onIncrement,
   onDecrement,
 }: Props) {
+  const { semantic, ui, palette } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const total = Math.max(pillar.target, 1);
   const filled = Math.min(pillar.consumed, total);
   const progress = filled / total;
-  const statusColor = pillarColor(pillar.status);
+  const statusColor = pillarColor(pillar.status, semantic);
 
   return (
     <PremiumCard style={styles.card}>
@@ -56,7 +107,7 @@ export function HydrationQuickAdd({
                 icon="minus"
                 size={18}
                 mode="contained-tonal"
-                containerColor="rgba(255, 255, 255, 0.92)"
+                containerColor={ui.frostedChip}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   onDecrement();
@@ -68,7 +119,7 @@ export function HydrationQuickAdd({
                 size={18}
                 mode="contained"
                 containerColor={palette.slateBlue}
-                iconColor={palette.white}
+                iconColor={ui.iconOnPrimary}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   onIncrement();
@@ -82,47 +133,3 @@ export function HydrationQuickAdd({
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    padding: 0,
-    backgroundColor: palette.teal,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    flex: 1,
-  },
-  titleCol: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    letterSpacing: 0.15,
-    color: semantic.primary,
-  },
-  subtitle: {
-    opacity: 0.55,
-  },
-  rightCol: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  status: {
-    fontWeight: "600",
-    letterSpacing: 0.15,
-    marginRight: spacing.xs,
-  },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: -8,
-  },
-});

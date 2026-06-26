@@ -8,10 +8,13 @@ import { Screen } from "@/components/Screen";
 import { useAuth } from "@/context/AuthContext";
 import { authFriendlyErrorMessage } from "@/lib/apiErrors";
 import { supabase } from "@/lib/supabase";
-import { premium } from "@/src/theme/premium";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { createPremiumTokens } from "@/src/theme/premium";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 export default function SignInScreen() {
+  const styles = useThemedStyles(createScreenStyles);
   const { signInWithEmail, signUpWithEmail, signInWithProvider } = useAuth();
   const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -158,11 +161,15 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
-  actions: { gap: spacing.sm },
-  divider: { marginVertical: spacing.sm },
-  hint: { opacity: 0.55, textAlign: "center" },
-  info: { color: semantic.primary, marginTop: spacing.xs, lineHeight: 20 },
-  error: { color: premium.danger, marginTop: spacing.xs },
-});
+function createScreenStyles(colors: AppColors) {
+  const { semantic } = colors;
+  const premium = createPremiumTokens(colors);
+  return StyleSheet.create({
+    body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+    actions: { gap: spacing.sm },
+    divider: { marginVertical: spacing.sm },
+    hint: { opacity: 0.55, textAlign: "center" },
+    info: { color: semantic.primary, marginTop: spacing.xs, lineHeight: 20 },
+    error: { color: premium.danger, marginTop: spacing.xs },
+  });
+}

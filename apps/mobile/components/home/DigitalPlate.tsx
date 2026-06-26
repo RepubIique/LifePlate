@@ -5,11 +5,14 @@ import { Text } from "react-native-paper";
 import Svg, { Circle, Ellipse } from "react-native-svg";
 import type { MealListItem, PillarProgress } from "@lifeplate/shared";
 import { PillarInsightModal } from "@/components/home/PillarInsightModal";
+import { useAppColors } from "@/context/ThemeContext";
 import { fetchMealsFull } from "@/lib/api";
 import { filterTodayMeals } from "@/lib/plantSources";
 import { useRefreshMealsAndDashboard } from "@/lib/refreshAfterMealChange";
 import { PILLAR_COLORS, type PillarKey } from "@/lib/pillarTheme";
-import { palette, semantic, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 const PLATE_SIZE = 196;
 const STROKE = 16;
@@ -49,6 +52,7 @@ function plateCompleteness(sections: PillarProgress[]) {
 }
 
 function PlateCenterGraphic({ size }: { size: number }) {
+  const { ui } = useAppColors();
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 1;
@@ -57,12 +61,12 @@ function PlateCenterGraphic({ size }: { size: number }) {
 
   return (
     <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-      <Circle cx={cx} cy={cy + 1.5} r={outerR} fill="rgba(0,0,0,0.04)" />
+      <Circle cx={cx} cy={cy + 1.5} r={outerR} fill={ui.shadowSubtle} />
       <Circle
         cx={cx}
         cy={cy}
         r={outerR}
-        fill={palette.white}
+        fill={ui.plateCenter}
         stroke={ui.borderSubtle}
         strokeWidth={2.5}
       />
@@ -78,7 +82,7 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cx={cx}
         cy={cy}
         r={wellR}
-        fill={palette.white}
+        fill={ui.plateCenter}
         stroke={ui.borderSubtle}
         strokeWidth={1}
       />
@@ -87,7 +91,7 @@ function PlateCenterGraphic({ size }: { size: number }) {
         cy={cy - wellR * 0.28}
         rx={wellR * 0.42}
         ry={wellR * 0.16}
-        fill={palette.white}
+        fill={ui.plateCenter}
         opacity={0.35}
       />
     </Svg>
@@ -98,10 +102,12 @@ function PlateCenterLabels({
   completeness,
   hasMeals,
   nutritionScore,
+  styles,
 }: {
   completeness: number;
   hasMeals: boolean;
   nutritionScore?: number;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.center} pointerEvents="none">
@@ -129,6 +135,8 @@ function QuadrantArc({
   quarter,
   cx,
   cy,
+  arcOutline,
+  trackBackground,
 }: {
   progress: number;
   rotation: number;
@@ -138,6 +146,8 @@ function QuadrantArc({
   quarter: number;
   cx: number;
   cy: number;
+  arcOutline: string;
+  trackBackground: string;
 }) {
   const dash = `${quarter} ${circumference - quarter}`;
   const fillLen = quarter * clampProgress(progress);
@@ -149,7 +159,7 @@ function QuadrantArc({
         cx={cx}
         cy={cy}
         r={radius}
-        stroke="#FFFFFF"
+        stroke={arcOutline}
         strokeWidth={outlineWidth}
         fill="none"
         strokeDasharray={dash}
@@ -161,7 +171,7 @@ function QuadrantArc({
         cx={cx}
         cy={cy}
         r={radius}
-        stroke={ui.trackBackground}
+        stroke={trackBackground}
         strokeWidth={STROKE}
         fill="none"
         strokeDasharray={dash}
@@ -175,7 +185,7 @@ function QuadrantArc({
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="#FFFFFF"
+            stroke={arcOutline}
             strokeWidth={outlineWidth}
             fill="none"
             strokeDasharray={`${fillLen} ${circumference}`}
@@ -205,10 +215,12 @@ function LegendItem({
   pillar,
   color,
   onPress,
+  styles,
 }: {
   pillar: PillarProgress;
   color: string;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const pct = Math.round(clampProgress(pillar.progress) * 100);
 
@@ -232,6 +244,117 @@ function LegendItem({
   );
 }
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    wrap: {
+      alignItems: "center",
+      gap: spacing.sm,
+      width: "100%",
+    },
+    plateWrap: {
+      position: "relative",
+    },
+    quarterHit: {
+      position: "absolute",
+    },
+    hitTopRight: {
+      top: 0,
+      left: QUARTER,
+      width: QUARTER,
+      height: QUARTER,
+    },
+    hitBottomRight: {
+      top: QUARTER,
+      left: QUARTER,
+      width: QUARTER,
+      height: QUARTER,
+    },
+    hitBottomLeft: {
+      top: QUARTER,
+      left: 0,
+      width: QUARTER,
+      height: QUARTER,
+    },
+    hitTopLeft: {
+      top: 0,
+      left: 0,
+      width: QUARTER,
+      height: QUARTER,
+    },
+    centerPlate: {
+      position: "absolute",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    center: {
+      ...StyleSheet.absoluteFill,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: spacing.md,
+    },
+    completeness: {
+      fontWeight: "700",
+      letterSpacing: -0.5,
+      color: semantic.primary,
+    },
+    centerLabel: {
+      opacity: 0.65,
+      letterSpacing: 0.4,
+      marginTop: 2,
+    },
+    scoreHint: {
+      opacity: 0.45,
+      marginTop: 4,
+    },
+    tapHint: {
+      opacity: 0.4,
+      letterSpacing: 0.3,
+      marginTop: -4,
+    },
+    legend: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      width: "100%",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      width: "47%",
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+      borderRadius: 10,
+    },
+    legendItemPressed: {
+      backgroundColor: ui.cardBackground,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    legendText: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "baseline",
+      justifyContent: "space-between",
+      gap: spacing.xs,
+    },
+    legendLabel: {
+      flex: 1,
+      opacity: 0.7,
+    },
+    legendPct: {
+      fontWeight: "600",
+      minWidth: 36,
+      textAlign: "right",
+    },
+  });
+}
+
 export function DigitalPlate({
   protein,
   fibre,
@@ -240,6 +363,8 @@ export function DigitalPlate({
   nutritionScore,
   hasMeals = true,
 }: Props) {
+  const { semantic, ui } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const [activeKey, setActiveKey] = useState<PlatePillarKey | null>(null);
   const [todayMeals, setTodayMeals] = useState<MealListItem[]>([]);
   const refreshMealsAndDashboard = useRefreshMealsAndDashboard();
@@ -290,7 +415,7 @@ export function DigitalPlate({
         hitStyle: styles.hitTopLeft,
       },
     ],
-    [protein, fibre, plants, carbs],
+    [protein, fibre, plants, carbs, styles],
   );
 
   const pillars = useMemo(
@@ -335,6 +460,8 @@ export function DigitalPlate({
                 quarter={quarter}
                 cx={cx}
                 cy={cy}
+                arcOutline={semantic.background}
+                trackBackground={ui.trackBackground}
               />
             ))}
           </Svg>
@@ -367,6 +494,7 @@ export function DigitalPlate({
               completeness={completeness}
               hasMeals={hasMeals}
               nutritionScore={nutritionScore}
+              styles={styles}
             />
           </View>
         </View>
@@ -382,6 +510,7 @@ export function DigitalPlate({
               pillar={pillar}
               color={color}
               onPress={() => openPillar(key)}
+              styles={styles}
             />
           ))}
         </View>
@@ -404,112 +533,3 @@ export function DigitalPlate({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: "center",
-    gap: spacing.sm,
-    width: "100%",
-  },
-  plateWrap: {
-    position: "relative",
-  },
-  quarterHit: {
-    position: "absolute",
-  },
-  hitTopRight: {
-    top: 0,
-    left: QUARTER,
-    width: QUARTER,
-    height: QUARTER,
-  },
-  hitBottomRight: {
-    top: QUARTER,
-    left: QUARTER,
-    width: QUARTER,
-    height: QUARTER,
-  },
-  hitBottomLeft: {
-    top: QUARTER,
-    left: 0,
-    width: QUARTER,
-    height: QUARTER,
-  },
-  hitTopLeft: {
-    top: 0,
-    left: 0,
-    width: QUARTER,
-    height: QUARTER,
-  },
-  centerPlate: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  center: {
-    ...StyleSheet.absoluteFill,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.md,
-  },
-  completeness: {
-    fontWeight: "700",
-    letterSpacing: -0.5,
-    color: semantic.primary,
-  },
-  centerLabel: {
-    opacity: 0.65,
-    letterSpacing: 0.4,
-    marginTop: 2,
-  },
-  scoreHint: {
-    opacity: 0.45,
-    marginTop: 4,
-  },
-  tapHint: {
-    opacity: 0.4,
-    letterSpacing: 0.3,
-    marginTop: -4,
-  },
-  legend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: "100%",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    width: "47%",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-  },
-  legendItemPressed: {
-    backgroundColor: ui.cardBackground,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: spacing.xs,
-  },
-  legendLabel: {
-    flex: 1,
-    opacity: 0.7,
-  },
-  legendPct: {
-    fontWeight: "600",
-    minWidth: 36,
-    textAlign: "right",
-  },
-});

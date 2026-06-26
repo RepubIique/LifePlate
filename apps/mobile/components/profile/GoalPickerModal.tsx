@@ -1,8 +1,11 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { GOALS, type UserGoal } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { semantic, ui, spacing } from "@/src/theme/lifeplate";
+import { createModalStyles } from "@/lib/modalStyles";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import type { AppColors } from "@/src/theme/lifeplate";
+import { spacing } from "@/src/theme/lifeplate";
 
 type Props = {
   visible: boolean;
@@ -11,11 +14,44 @@ type Props = {
   onClose: () => void;
 };
 
+function createLocalStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    sheet: {
+      paddingBottom: spacing.xl,
+      gap: spacing.sm,
+    },
+    title: {
+      letterSpacing: 0.15,
+    },
+    list: {
+      maxHeight: 420,
+    },
+    option: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xs,
+    },
+    optionSelected: {
+      borderColor: semantic.primary,
+      backgroundColor: ui.cardBackground,
+    },
+    optionTextSelected: {
+      color: semantic.primary,
+    },
+  });
+}
+
 export function GoalPickerModal({ visible, selected, onSelect, onClose }: Props) {
+  const modalStyles = useThemedStyles(createModalStyles);
+  const styles = useThemedStyles(createLocalStyles);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable style={modalStyles.backdrop} onPress={onClose}>
+        <Pressable
+          style={[modalStyles.sheet, styles.sheet]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <Text variant="titleMedium" style={styles.title}>
             What is your goal?
           </Text>
@@ -53,39 +89,3 @@ export function GoalPickerModal({ visible, selected, onSelect, onClose }: Props)
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(45, 52, 54, 0.45)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
-    maxHeight: "75%",
-    gap: spacing.sm,
-  },
-  title: {
-    letterSpacing: 0.15,
-  },
-  list: {
-    maxHeight: 420,
-  },
-  option: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  optionSelected: {
-    borderColor: semantic.primary,
-    backgroundColor: ui.cardBackground,
-  },
-  optionTextSelected: {
-    color: semantic.primary,
-  },
-});

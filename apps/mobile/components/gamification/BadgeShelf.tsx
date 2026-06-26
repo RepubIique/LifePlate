@@ -4,13 +4,62 @@ import { Text } from "react-native-paper";
 import type { GamificationStatsInput } from "@lifeplate/shared";
 import { BADGE_DEFINITIONS, computeUnlockedBadges } from "@lifeplate/shared";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 type Props = {
   stats: GamificationStatsInput;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
+    title: { color: semantic.primary, letterSpacing: 0.15 },
+    subtitle: { opacity: 0.55, lineHeight: 18 },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    tile: {
+      width: "47%",
+      flexGrow: 1,
+      alignItems: "center",
+      gap: 4,
+      padding: spacing.sm,
+      borderRadius: 14,
+      backgroundColor: semantic.surface,
+    },
+    tileLocked: { opacity: 0.55 },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: ui.trackBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconWrapUnlocked: { backgroundColor: ui.selectedBackground },
+    badgeTitle: {
+      color: semantic.primary,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    lockedText: { opacity: 0.7 },
+    badgeDesc: {
+      opacity: 0.55,
+      textAlign: "center",
+      fontSize: 11,
+      lineHeight: 14,
+    },
+  });
+}
+
 export function BadgeShelf({ stats }: Props) {
+  const styles = useThemedStyles(createStyles);
   const unlocked = new Set(computeUnlockedBadges(stats));
 
   return (
@@ -27,6 +76,7 @@ export function BadgeShelf({ stats }: Props) {
             key={badge.id}
             badge={badge}
             unlocked={unlocked.has(badge.id)}
+            styles={styles}
           />
         ))}
       </View>
@@ -37,10 +87,14 @@ export function BadgeShelf({ stats }: Props) {
 function BadgeTile({
   badge,
   unlocked,
+  styles,
 }: {
   badge: (typeof BADGE_DEFINITIONS)[number];
   unlocked: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
+  const { semantic } = useAppColors();
+
   return (
     <View style={[styles.tile, !unlocked && styles.tileLocked]}>
       <View style={[styles.iconWrap, unlocked && styles.iconWrapUnlocked]}>
@@ -59,46 +113,3 @@ function BadgeTile({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.sm, backgroundColor: ui.cardBackground },
-  title: { color: semantic.primary, letterSpacing: 0.15 },
-  subtitle: { opacity: 0.55, lineHeight: 18 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  tile: {
-    width: "47%",
-    flexGrow: 1,
-    alignItems: "center",
-    gap: 4,
-    padding: spacing.sm,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  tileLocked: { opacity: 0.55 },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: ui.trackBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconWrapUnlocked: { backgroundColor: ui.selectedBackground },
-  badgeTitle: {
-    color: semantic.primary,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  lockedText: { opacity: 0.7 },
-  badgeDesc: {
-    opacity: 0.55,
-    textAlign: "center",
-    fontSize: 11,
-    lineHeight: 14,
-  },
-});

@@ -2,11 +2,75 @@ import { StyleSheet, View } from "react-native";
 import { MealTimelineRail, railPositionForIndex } from "@/components/home/MealTimelineRail";
 import { PremiumCard } from "@/components/PremiumCard";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
 
 const THUMB = 88;
 
+function useTimelineSkeletonStyles() {
+  return useThemedStyles((colors) =>
+    StyleSheet.create({
+      summaryCard: {
+        marginBottom: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.xs,
+        backgroundColor: colors.ui.cardBackground,
+      },
+      summaryRow: {
+        flexDirection: "row",
+      },
+      summaryChip: {
+        flex: 1,
+        alignItems: "center",
+        gap: 4,
+      },
+      dayGroup: {
+        marginBottom: spacing.lg,
+      },
+      dayHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: spacing.sm,
+      },
+      hydrationCard: {
+        gap: spacing.xs,
+        marginBottom: spacing.sm,
+      },
+      mealRow: {
+        flexDirection: "row",
+        gap: spacing.sm,
+        marginBottom: spacing.xs,
+      },
+      mealCard: {
+        flex: 1,
+        flexDirection: "row",
+        padding: spacing.sm,
+        gap: spacing.sm,
+        alignItems: "center",
+      },
+      mealBody: {
+        flex: 1,
+        gap: 6,
+      },
+      metaRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      },
+      chips: {
+        flexDirection: "row",
+        gap: 6,
+        marginTop: 2,
+      },
+      gap: { marginTop: spacing.xs },
+    }),
+  );
+}
+
 function TimelineMealRowSkeleton({ index, total }: { index: number; total: number }) {
+  const styles = useTimelineSkeletonStyles();
+
   return (
     <View style={styles.mealRow}>
       <MealTimelineRail
@@ -36,6 +100,8 @@ function TimelineMealRowSkeleton({ index, total }: { index: number; total: numbe
 }
 
 export function TimelineSkeleton() {
+  const styles = useTimelineSkeletonStyles();
+
   return (
     <View>
       <PremiumCard noBlur style={styles.summaryCard}>
@@ -65,61 +131,3 @@ export function TimelineSkeleton() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  summaryCard: {
-    marginBottom: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    backgroundColor: ui.cardBackground,
-  },
-  summaryRow: {
-    flexDirection: "row",
-  },
-  summaryChip: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  dayGroup: {
-    marginBottom: spacing.lg,
-  },
-  dayHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  hydrationCard: {
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  mealRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  mealCard: {
-    flex: 1,
-    flexDirection: "row",
-    padding: spacing.sm,
-    gap: spacing.sm,
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  mealBody: {
-    flex: 1,
-    gap: 6,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  chips: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 2,
-  },
-  gap: { marginTop: spacing.xs },
-});

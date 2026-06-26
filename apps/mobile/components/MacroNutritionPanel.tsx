@@ -10,8 +10,11 @@ import {
   type EnergyUnit,
 } from "@/lib/macroMath";
 import { MACRO_NUTRITION_COLORS } from "@/lib/pillarTheme";
-import { premium } from "@/src/theme/premium";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { createPremiumTokens } from "@/src/theme/premium";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 
 const RING_SIZE = 168;
 const STROKE = 14;
@@ -29,6 +32,8 @@ function MacroRing({
   energyUnit: EnergyUnit;
   onToggleEnergyUnit?: () => void;
 }) {
+  const { ui } = useAppColors();
+  const styles = useThemedStyles(createStyles);
   const radius = (RING_SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const cx = RING_SIZE / 2;
@@ -116,6 +121,7 @@ function MacroBar({
   maxGrams: number;
   subtitle?: string;
 }) {
+  const styles = useThemedStyles(createStyles);
   const fill = maxGrams > 0 ? Math.min(1, grams / maxGrams) : 0;
 
   return (
@@ -159,6 +165,7 @@ function DetailStat({
   value: number;
   unit: string;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.detailStat}>
       <Text variant="bodySmall" style={styles.detailLabel}>
@@ -201,6 +208,7 @@ export function MacroNutritionPanel({
   showConfidence?: boolean;
   energyUnitToggle?: boolean;
 }) {
+  const styles = useThemedStyles(createStyles);
   const [energyUnit, setEnergyUnit] = useState<EnergyUnit>("kcal");
   const data = useMemo(
     () => computeMacroBreakdown(calories, protein, carbs, fat),
@@ -305,6 +313,7 @@ export function MacroNutritionPanel({
 }
 
 function LegendChip({ label, color }: { label: string; color: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.legendChip}>
       <View style={[styles.dot, { backgroundColor: color }]} />
@@ -315,87 +324,91 @@ function LegendChip({ label, color }: { label: string; color: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  panel: { gap: spacing.md },
-  ringWrap: {
-    alignSelf: "center",
-    width: RING_SIZE,
-    height: RING_SIZE,
-    marginTop: spacing.xs,
-  },
-  ringCenter: {
-    ...StyleSheet.absoluteFill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  calorieValue: { fontWeight: "600", letterSpacing: -0.5 },
-  calorieLabel: { opacity: 0.55, marginTop: -2 },
-  calorieLabelTappable: { textDecorationLine: "underline" },
-  energyTap: { alignItems: "center", justifyContent: "center", padding: spacing.xs },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.md,
-    flexWrap: "wrap",
-  },
-  legendChip: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendText: { opacity: 0.75 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  bars: { gap: spacing.md },
-  barRow: { gap: 6 },
-  barHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  barLabelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  gramValue: { letterSpacing: 0.1 },
-  barTrack: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ui.trackBackground,
-    overflow: "hidden",
-  },
-  barFill: { height: "100%", borderRadius: 5 },
-  pctLabel: { opacity: 0.5, fontSize: 12, lineHeight: 16 },
-  detailsSection: {
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: premium.borderColor,
-    gap: spacing.sm,
-  },
-  detailsTitle: {
-    opacity: 0.55,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  detailsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  detailStat: { flex: 1, gap: 2 },
-  detailLabel: { opacity: 0.55 },
-  detailValue: { letterSpacing: 0.1 },
-  detailUnit: { opacity: 0.55 },
-  confidenceRow: {
-    marginTop: spacing.xs,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: premium.borderColor,
-    gap: spacing.xs,
-  },
-  confidenceLabel: { opacity: 0.55 },
-  confidenceTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: ui.trackBackground,
-    overflow: "hidden",
-  },
-  confidenceFill: {
-    height: "100%",
-    borderRadius: 3,
-    backgroundColor: semantic.primary,
-  },
-  confidencePct: { alignSelf: "flex-end", opacity: 0.7 },
-});
+function createStyles(colors: AppColors) {
+  const { semantic, ui } = colors;
+  const premium = createPremiumTokens(colors);
+  return StyleSheet.create({
+    panel: { gap: spacing.md },
+    ringWrap: {
+      alignSelf: "center",
+      width: RING_SIZE,
+      height: RING_SIZE,
+      marginTop: spacing.xs,
+    },
+    ringCenter: {
+      ...StyleSheet.absoluteFill,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    calorieValue: { fontWeight: "600", letterSpacing: -0.5 },
+    calorieLabel: { opacity: 0.55, marginTop: -2 },
+    calorieLabelTappable: { textDecorationLine: "underline" },
+    energyTap: { alignItems: "center", justifyContent: "center", padding: spacing.xs },
+    legend: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: spacing.md,
+      flexWrap: "wrap",
+    },
+    legendChip: { flexDirection: "row", alignItems: "center", gap: 6 },
+    legendText: { opacity: 0.75 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    bars: { gap: spacing.md },
+    barRow: { gap: 6 },
+    barHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    barLabelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    gramValue: { letterSpacing: 0.1 },
+    barTrack: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: ui.trackBackground,
+      overflow: "hidden",
+    },
+    barFill: { height: "100%", borderRadius: 5 },
+    pctLabel: { opacity: 0.5, fontSize: 12, lineHeight: 16 },
+    detailsSection: {
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: premium.borderColor,
+      gap: spacing.sm,
+    },
+    detailsTitle: {
+      opacity: 0.55,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    detailsGrid: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    detailStat: { flex: 1, gap: 2 },
+    detailLabel: { opacity: 0.55 },
+    detailValue: { letterSpacing: 0.1 },
+    detailUnit: { opacity: 0.55 },
+    confidenceRow: {
+      marginTop: spacing.xs,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: premium.borderColor,
+      gap: spacing.xs,
+    },
+    confidenceLabel: { opacity: 0.55 },
+    confidenceTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: ui.trackBackground,
+      overflow: "hidden",
+    },
+    confidenceFill: {
+      height: "100%",
+      borderRadius: 3,
+      backgroundColor: semantic.primary,
+    },
+    confidencePct: { alignSelf: "flex-end", opacity: 0.7 },
+  });
+}

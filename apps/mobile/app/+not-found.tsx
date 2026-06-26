@@ -2,9 +2,28 @@ import { router, Stack } from "expo-router";
 import { Image, StyleSheet, View } from "react-native";
 import { Button, Text } from "react-native-paper";
 import { Screen } from "@/components/Screen";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
+
+function createStyles({ semantic }: AppColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+      padding: spacing.xl,
+    },
+    logo: { width: 72, height: 72 },
+    title: { color: semantic.primary, textAlign: "center" },
+    subtitle: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
+  });
+}
 
 export default function NotFoundScreen() {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <>
       <Stack.Screen options={{ title: "Not found" }} />
@@ -29,16 +48,3 @@ export default function NotFoundScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    padding: spacing.xl,
-  },
-  logo: { width: 72, height: 72 },
-  title: { color: semantic.primary, textAlign: "center" },
-  subtitle: { opacity: 0.65, textAlign: "center", lineHeight: 22 },
-});

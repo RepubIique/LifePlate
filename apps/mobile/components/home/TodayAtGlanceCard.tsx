@@ -3,7 +3,10 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { NutritionDashboardView } from "@/lib/nutritionDashboardView";
 import { PremiumCard } from "@/components/PremiumCard";
-import { palette, semantic, tints, ui, spacing } from "@/src/theme/lifeplate";
+import { useAppColors } from "@/context/ThemeContext";
+import { useThemedStyles } from "@/lib/useThemedStyles";
+import { spacing } from "@/src/theme/lifeplate";
+import type { AppColors } from "@/src/theme/lifeplate";
 import { DigitalPlate } from "./DigitalPlate";
 
 type Props = {
@@ -12,11 +15,38 @@ type Props = {
   onPressInsights?: () => void;
 };
 
+function createStyles({ semantic, ui }: AppColors) {
+  return StyleSheet.create({
+    card: { gap: spacing.md },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    title: { letterSpacing: 0.15 },
+    link: { flexDirection: "row", alignItems: "center", gap: 2 },
+    linkText: { color: semantic.primary, letterSpacing: 0.2 },
+    coachWrap: {
+      width: "100%",
+      paddingTop: spacing.xs,
+      borderTopWidth: 1,
+      borderTopColor: ui.trackBackground,
+    },
+    coach: {
+      lineHeight: 21,
+      opacity: 0.72,
+      textAlign: "center",
+    },
+  });
+}
+
 export function TodayAtGlanceCard({
   dashboard,
   title = "Today at a glance",
   onPressInsights,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { semantic } = useAppColors();
   const { score, coachSummary, essentials } = dashboard;
   const hasActivity =
     essentials.protein.consumed > 0 ||
@@ -60,26 +90,3 @@ export function TodayAtGlanceCard({
     </PremiumCard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  title: { letterSpacing: 0.15 },
-  link: { flexDirection: "row", alignItems: "center", gap: 2 },
-  linkText: { color: semantic.primary, letterSpacing: 0.2 },
-  coachWrap: {
-    width: "100%",
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: ui.trackBackground,
-  },
-  coach: {
-    lineHeight: 21,
-    opacity: 0.72,
-    textAlign: "center",
-  },
-});
