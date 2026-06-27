@@ -7,6 +7,7 @@ import {
   rejectNonMealDescription,
   rejectNonMealPhoto,
 } from "./mealGuardrails.js";
+import { resolveTextLogMealName } from "./mealNaming.js";
 
 const analysisFieldsSchema = z.object({
   mealName: z.string(),
@@ -49,7 +50,7 @@ Return these keys:
 - rejectReason (string|null): brief reason when isFoodDescription is false, otherwise null
 
 When isFoodDescription is true, also return:
-- mealName
+- mealName: a short, specific title for what they ate (e.g. "Long Mac Latte", "Chicken Rice Bowl"). Prefer the user's wording. Do NOT use generic category labels like "Beverage", "Snack", "Lunch", or "Meal".
 - foods (non-empty array of identifiable food items)
 - estimatedCalories
 - protein (grams)
@@ -131,16 +132,17 @@ function assertOpenAiConfigured() {
   }
 }
 
-function parseTextResponse(parsed: unknown): MealAnalysisResult {
+function parseTextResponse(parsed: unknown, description: string): MealAnalysisResult {
   const result = textResponseSchema.parse(parsed);
 
   if (!result.isFoodDescription) {
     rejectNonMealDescription(result.rejectReason);
   }
 
+  const foods = (result.foods ?? []).map((food) => food.trim()).filter(Boolean);
   const analysis = analysisFieldsSchema.parse({
-    mealName: result.mealName,
-    foods: result.foods,
+    mealName: resolveTextLogMealName(result.mealName ?? "", foods, description),
+    foods,
     estimatedCalories: result.estimatedCalories,
     protein: result.protein,
     carbs: result.carbs,
@@ -284,7 +286,7 @@ export async function analyzeMealText(
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error("Empty OpenAI response");
     const parsed = JSON.parse(content);
-    const analysis = parseTextResponse(parsed);
+    const analysis = parseTextResponse(parsed, text);
     return { analysis, raw: { ...parsed, textOnly: true } };
   };
 
