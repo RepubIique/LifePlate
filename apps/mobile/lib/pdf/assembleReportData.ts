@@ -14,6 +14,8 @@ export type AssembleReportDataOptions = {
   windowId?: ReportWindowId;
   customRange?: { startKey: string; endKey: string };
   template?: ReportTemplateId;
+  /** Pin "today" for deterministic report assembly in tests. */
+  now?: Date;
 };
 
 function mealsInWindow(meals: MealListItem[], startKey: string, endKey: string): MealListItem[] {
@@ -37,7 +39,7 @@ export function assembleReportData(
   const fullReport = options?.fullReport ?? false;
   const windowId = options?.windowId ?? "this_week";
   const template = options?.template ?? "trend";
-  const window = resolveReportWindow(windowId, options?.customRange);
+  const window = resolveReportWindow(windowId, options?.customRange, options?.now);
 
   const metrics = computeReportMetrics(profile, window, source.allMeals, source.hydrationDays);
   const windowMeals = fullReport ? mealsInWindow(source.allMeals, window.startKey, window.endKey) : [];

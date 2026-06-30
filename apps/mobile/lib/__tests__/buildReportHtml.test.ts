@@ -9,6 +9,9 @@ import { assembleReportData } from "../pdf/assembleReportData";
 import type { ReportSourceBundle } from "../pdf/reportSourceCache";
 import { resolveReportWindow } from "../pdf/reportWindows";
 
+const REPORT_NOW = new Date("2026-06-21T12:00:00.000Z");
+const REPORT_DAY = "2026-06-21";
+
 function mockProfile(): UserProfile {
   return {
     id: "user-1",
@@ -62,9 +65,9 @@ function mockMeal(id: string, logDate: string, overrides: Partial<MealListItem> 
 }
 
 function mockSource(): ReportSourceBundle {
-  const window = resolveReportWindow("this_week", undefined, new Date("2026-06-21T12:00:00.000Z"));
-  const meals = [mockMeal("meal-1", "2026-06-21", { notes: "Felt great" })];
-  const hydration: HydrationDayRecord[] = [{ date: "2026-06-21", glasses: 6 }];
+  const window = resolveReportWindow("this_week", undefined, REPORT_NOW);
+  const meals = [mockMeal("meal-1", REPORT_DAY, { notes: "Felt great" })];
+  const hydration: HydrationDayRecord[] = [{ date: REPORT_DAY, glasses: 6 }];
   return {
     userId: "user-1",
     allMeals: meals,
@@ -78,7 +81,7 @@ function baseReport(overrides: Parameters<typeof assembleReportData>[2] & { full
   const profile = mockProfile();
   const source = mockSource();
   const { fullReport, ...options } = overrides;
-  return assembleReportData(profile, source, { ...options, fullReport: fullReport ?? false });
+  return assembleReportData(profile, source, { ...options, fullReport: fullReport ?? false, now: REPORT_NOW });
 }
 
 test("buildReportHtml free snapshot includes sparkline and Plus CTA", () => {
@@ -118,11 +121,11 @@ test("buildReportHtml eat-out template highlights audit section", () => {
   const source: ReportSourceBundle = {
     ...mockSource(),
     allMeals: [
-      mockMeal("t1", "2026-06-21", { mealSource: "takeaway", mealName: "Burger" }),
+      mockMeal("t1", REPORT_DAY, { mealSource: "takeaway", mealName: "Burger" }),
     ],
   };
   const html = buildReportHtml(
-    assembleReportData(profile, source, { fullReport: true, template: "eat_out" }),
+    assembleReportData(profile, source, { fullReport: true, template: "eat_out", now: REPORT_NOW }),
   );
 
   assert.match(html, new RegExp(PDF_SECTION_MARKERS.eatOut));
@@ -141,8 +144,8 @@ test("buildReportHtml escapes user-provided strings", () => {
 test("assembleReportData is pure given a cached source bundle", () => {
   const profile = mockProfile();
   const source = mockSource();
-  const trend = assembleReportData(profile, source, { template: "trend" });
-  const gut = assembleReportData(profile, source, { template: "gut_health" });
+  const trend = assembleReportData(profile, source, { template: "trend", now: REPORT_NOW });
+  const gut = assembleReportData(profile, source, { template: "gut_health", now: REPORT_NOW });
 
   assert.notEqual(trend.template, gut.template);
   assert.equal(trend.metrics.comparison.current.score, gut.metrics.comparison.current.score);
