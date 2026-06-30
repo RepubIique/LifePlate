@@ -11,7 +11,7 @@ import type {
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKey, isMealSource, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKeyForUser, isMealSource, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -297,6 +297,7 @@ export async function mealRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { userId, userEmail } = request as AuthedRequest;
       const body = request.body;
+      const storageFlags = await loadUserImageStorageFlags(userId);
 
       const draft = body.draftId
         ? await getDraft(body.draftId, userId)
@@ -306,7 +307,6 @@ export async function mealRoutes(app: FastifyInstance) {
       );
 
       if (!imageUrl && draft && draftHasImage(draft)) {
-        const storageFlags = await loadUserImageStorageFlags(userId);
         if (shouldUploadMealToCloud(storageFlags)) {
           try {
             const { buffer, mimeType } = await getDraftImage(draft);
@@ -322,7 +322,10 @@ export async function mealRoutes(app: FastifyInstance) {
       if (body.loggedAt) {
         if (
           Number.isNaN(loggedAtDate.getTime()) ||
-          !isValidLogDateKey(dateKeyFromIso(loggedAtDate.toISOString()))
+          !isValidLogDateKeyForUser(
+            dateKeyFromIso(loggedAtDate.toISOString()),
+            storageFlags.isPaid,
+          )
         ) {
           return reply.code(400).send({ error: "Invalid loggedAt" });
         }
@@ -562,8 +565,9 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const dateKey = request.body?.dateKey?.trim() ?? "";
       const mealIds = request.body?.mealIds ?? [];
+      const { isPaid } = await loadUserImageStorageFlags(userId);
 
-      if (!isValidLogDateKey(dateKey)) {
+      if (!isValidLogDateKeyForUser(dateKey, isPaid)) {
         return reply.code(400).send({ error: "Invalid dateKey" });
       }
       if (!Array.isArray(mealIds) || mealIds.length === 0) {
@@ -871,6 +875,7 @@ export async function mealRoutes(app: FastifyInstance) {
       const { userId } = request as AuthedRequest;
       const { id } = request.params as { id: string };
       const body = request.body ?? {};
+      const { isPaid } = await loadUserImageStorageFlags(userId);
 
       if (
         body.mealSource !== undefined &&
@@ -903,7 +908,10 @@ export async function mealRoutes(app: FastifyInstance) {
 
         if (body.loggedAt !== undefined) {
           const parsed = new Date(body.loggedAt);
-          if (Number.isNaN(parsed.getTime()) || !isValidLogDateKey(dateKeyFromIso(parsed.toISOString()))) {
+          if (
+            Number.isNaN(parsed.getTime()) ||
+            !isValidLogDateKeyForUser(dateKeyFromIso(parsed.toISOString()), isPaid)
+          ) {
             await client.query("ROLLBACK");
             return reply.code(400).send({ error: "Invalid loggedAt" });
           }

@@ -1,4 +1,13 @@
-export const MAX_LOG_PAST_DAYS = 90;
+/** How far back free users may log meals or hydration. */
+export const FREE_MAX_LOG_PAST_DAYS = 10;
+/** How far back paid users may log meals or hydration. */
+export const PAID_MAX_LOG_PAST_DAYS = 100;
+/** @deprecated Use getMaxLogPastDays(isPaid) instead. */
+export const MAX_LOG_PAST_DAYS = PAID_MAX_LOG_PAST_DAYS;
+
+export function getMaxLogPastDays(isPaid: boolean): number {
+  return isPaid ? PAID_MAX_LOG_PAST_DAYS : FREE_MAX_LOG_PAST_DAYS;
+}
 
 function dateKeyFromDate(date: Date): string {
   const y = date.getFullYear();
@@ -15,13 +24,25 @@ export function dateKeyFromIso(iso: string): string {
   return dateKeyFromDate(new Date(iso));
 }
 
-export function isValidLogDateKey(dateKey: string, now = new Date()): boolean {
+export function isValidLogDateKey(
+  dateKey: string,
+  now = new Date(),
+  maxPastDays = FREE_MAX_LOG_PAST_DAYS,
+): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
   const today = todayDateKey(now);
   if (dateKey > today) return false;
   const min = new Date(now);
-  min.setDate(min.getDate() - MAX_LOG_PAST_DAYS);
+  min.setDate(min.getDate() - maxPastDays);
   return dateKey >= todayDateKey(min);
+}
+
+export function isValidLogDateKeyForUser(
+  dateKey: string,
+  isPaid: boolean,
+  now = new Date(),
+): boolean {
+  return isValidLogDateKey(dateKey, now, getMaxLogPastDays(isPaid));
 }
 
 export function defaultMealHour(mealType?: string | null): number {

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { isValidLogDateKey } from "@lifeplate/shared";
+import { isValidLogDateKeyForUser } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import {
@@ -7,6 +7,7 @@ import {
   fetchHydrationHistory,
   updateHydrationGlasses,
 } from "../services/nutritionDashboard.js";
+import { loadUserImageStorageFlags } from "../services/userFeatures.js";
 
 export async function nutritionRoutes(app: FastifyInstance) {
   app.get<{ Querystring: { date?: string } }>(
@@ -15,7 +16,8 @@ export async function nutritionRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { userId } = request as AuthedRequest;
       const dateKey = request.query.date?.trim();
-      if (dateKey && !isValidLogDateKey(dateKey)) {
+      const { isPaid } = await loadUserImageStorageFlags(userId);
+      if (dateKey && !isValidLogDateKeyForUser(dateKey, isPaid)) {
         return reply.status(400).send({ error: "Invalid date" });
       }
       return buildNutritionDashboard(userId, dateKey);
@@ -48,7 +50,8 @@ export async function nutritionRoutes(app: FastifyInstance) {
       }
 
       const dateKey = body.date?.trim();
-      if (dateKey && !isValidLogDateKey(dateKey)) {
+      const { isPaid } = await loadUserImageStorageFlags(userId);
+      if (dateKey && !isValidLogDateKeyForUser(dateKey, isPaid)) {
         return reply.status(400).send({ error: "Invalid date" });
       }
 

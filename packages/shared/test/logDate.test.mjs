@@ -34,9 +34,18 @@ test("dateKeyFromIso extracts local date from ISO string", () => {
 test("isValidLogDateKey rejects malformed, future, and too-old dates", () => {
   assert.equal(isValidLogDateKey("bad-date", NOW), false);
   assert.equal(isValidLogDateKey("2026-06-15", NOW), false);
-  assert.equal(isValidLogDateKey("2026-03-14", NOW), false);
+  assert.equal(isValidLogDateKey("2026-06-03", NOW), false);
   assert.equal(isValidLogDateKey("2026-06-14", NOW), true);
-  assert.equal(isValidLogDateKey("2026-03-16", NOW), true);
+  assert.equal(isValidLogDateKey("2026-06-04", NOW), true);
+});
+
+test("isValidLogDateKey allows paid users to log further back", async () => {
+  const { isValidLogDateKeyForUser } = await import("../dist/logDate.js");
+  assert.equal(isValidLogDateKeyForUser("2026-06-03", false, NOW), false);
+  assert.equal(isValidLogDateKeyForUser("2026-03-14", false, NOW), false);
+  assert.equal(isValidLogDateKeyForUser("2026-03-05", true, NOW), false);
+  assert.equal(isValidLogDateKeyForUser("2026-03-06", true, NOW), true);
+  assert.equal(isValidLogDateKeyForUser("2026-03-14", true, NOW), true);
 });
 
 test("loggedAtForDateKey keeps local date for meal types", () => {

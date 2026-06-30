@@ -678,10 +678,14 @@ export {
 } from "./nutrition/index.js";
 
 export {
+  FREE_MAX_LOG_PAST_DAYS,
+  PAID_MAX_LOG_PAST_DAYS,
   MAX_LOG_PAST_DAYS,
+  getMaxLogPastDays,
   todayDateKey,
   dateKeyFromIso,
   isValidLogDateKey,
+  isValidLogDateKeyForUser,
   loggedAtForDateKey,
   defaultMealHour,
   mergeLoggedAtDateKey,

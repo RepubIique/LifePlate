@@ -21,7 +21,7 @@ import {
   enumerateLogDateKeys,
   formatLogDateLabel,
   formatMonthLabel,
-  isValidLogDateKey,
+  isValidLogDateKeyForUser,
   monthEndKey,
   monthStartKey,
   offsetLogDateKey,
@@ -42,6 +42,7 @@ import {
   saveDailyInsight,
 } from "./dailyInsightCache.js";
 import { pool } from "../db.js";
+import { loadUserImageStorageFlags } from "./userFeatures.js";
 
 type MealRow = {
   meal_id: string;
@@ -356,8 +357,11 @@ export async function buildNutritionDashboard(
   userId: string,
   targetDateKey?: string,
 ): Promise<NutritionDashboardApiResponse> {
+  const { isPaid } = await loadUserImageStorageFlags(userId);
   const dateKey =
-    targetDateKey && isValidLogDateKey(targetDateKey) ? targetDateKey : todayDateKey();
+    targetDateKey && isValidLogDateKeyForUser(targetDateKey, isPaid)
+      ? targetDateKey
+      : todayDateKey();
   const previousKey = offsetLogDateKey(dateKey, -1);
   const thisWeekStart = offsetLogDateKey(dateKey, -6);
   const lastWeekStart = offsetLogDateKey(dateKey, -13);
@@ -550,8 +554,9 @@ export async function updateHydrationGlasses(
   glasses: number,
   logDate?: string,
 ): Promise<{ glasses: number; date: string }> {
+  const { isPaid } = await loadUserImageStorageFlags(userId);
   const dateKey = logDate ?? todayDateKey();
-  if (!isValidLogDateKey(dateKey)) {
+  if (!isValidLogDateKeyForUser(dateKey, isPaid)) {
     throw new Error("Invalid log date");
   }
   const clamped = Math.max(0, Math.min(24, Math.round(glasses)));

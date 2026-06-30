@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Button, Text } from "react-native-paper";
-import { MAX_LOG_PAST_DAYS, formatLogDateLabel, recentLogDateKeys } from "@lifeplate/shared";
+import { formatLogDateLabel, getMaxLogPastDays, recentLogDateKeys } from "@lifeplate/shared";
+import { useAuth } from "@/context/AuthContext";
 import { useAppColors } from "@/context/ThemeContext";
 import { createModalStyles } from "@/lib/modalStyles";
 import { useThemedStyles } from "@/lib/useThemedStyles";
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function LogDatePickerModal({ visible, selectedDateKey, onSelect, onClose }: Props) {
+  const { profile } = useAuth();
   const colors = useAppColors();
   const modalStyles = useMemo(() => createModalStyles(colors), [colors]);
   const styles = useThemedStyles((colors) =>
@@ -48,7 +50,8 @@ export function LogDatePickerModal({ visible, selectedDateKey, onSelect, onClose
     }),
   );
 
-  const options = recentLogDateKeys(MAX_LOG_PAST_DAYS);
+  const maxPastDays = getMaxLogPastDays(profile?.isPaid ?? false);
+  const options = recentLogDateKeys(maxPastDays);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
