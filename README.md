@@ -2,6 +2,8 @@
 
 Monorepo for the LifePlate meal-tracking app.
 
+**Agents:** start with [`AGENTS.md`](./AGENTS.md) before making changes.
+
 ## Packages
 
 - `apps/mobile` — Expo React Native app
