@@ -1,0 +1,19 @@
+---
+description: Mandatory onboarding before any code change in LifePlate
+alwaysApply: true
+---
+
+Before editing code or exploring the codebase:
+
+1. Read `/AGENTS.md` at the repo root
+2. Read `docs/architecture.md` for system overview
+3. Read the package `AGENTS.md` for every area you will touch:
+   - `apps/mobile/AGENTS.md`
+   - `apps/api/AGENTS.md`
+   - `packages/shared/AGENTS.md`
+4. Read `docs/database.md` if changing schema or migrations
+5. Read `docs/conventions.md` for patterns and tests
+
+Do not blindly traverse the codebase when these docs answer the question.
+
+When you change architecture, routes, or conventions, update the relevant doc in the same PR.
