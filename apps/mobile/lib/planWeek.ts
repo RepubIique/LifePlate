@@ -1,3 +1,4 @@
+import type { MealListSummary } from "@lifeplate/shared";
 import {
   enumerateLogDateKeys,
   offsetLogDateKey,
@@ -32,4 +33,18 @@ export function planHorizonDateKeys(now = new Date()): string[] {
   const horizonEnd = planHorizonEndKey(now);
   if (horizonEnd <= today) return [];
   return enumerateLogDateKeys(offsetLogDateKey(today, 1), horizonEnd);
+}
+
+/** Client-side filter — use with MealsContext instead of a separate plan API fetch. */
+export function selectPlannedMealsInHorizon(
+  meals: MealListSummary[],
+  now = new Date(),
+): MealListSummary[] {
+  const today = todayDateKey(now);
+  const from = offsetLogDateKey(today, 1);
+  const to = planHorizonEndKey(now);
+  return meals.filter(
+    (meal) =>
+      meal.status === "planned" && meal.logDate >= from && meal.logDate <= to,
+  );
 }

@@ -177,6 +177,8 @@ export async function fetchPlannedMeals(
   from: string,
   to: string,
 ): Promise<MealListSummary[]> {
+  // Prefer MealsContext + selectPlannedMealsInHorizon for tab UI (cached).
+  // This helper is for targeted refresh or tests only.
   const params = new URLSearchParams({
     status: "planned",
     from,

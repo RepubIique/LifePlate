@@ -6,10 +6,11 @@ import { formatLogDateLabel, todayDateKey } from "@lifeplate/shared";
 import { FormattedNotesText } from "@/components/meal/FormattedNotesText";
 import { PremiumCard } from "@/components/PremiumCard";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
-import { confirmPlannedMeal, deleteMeal, fetchMeal, updatePlannedMeal } from "@/lib/api";
+import { confirmPlannedMeal, deleteMeal, updatePlannedMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { leaveMealEditScreen, type MealEditReturnTo } from "@/lib/mealNavigation";
 import { useMeals } from "@/context/MealsContext";
+import { loadMealDetail } from "@/lib/loadMealDetail";
 import { useRefreshAfterMealChange } from "@/lib/refreshAfterMealChange";
 import { formatMealTypeLabel } from "@/lib/mealUtils";
 import { useThemedStyles } from "@/lib/useThemedStyles";
@@ -55,7 +56,7 @@ export default function PlannedMealScreen() {
       },
     }),
   );
-  const { invalidateMeals } = useMeals();
+  const { getMealById, patchMealLocally, removeMealLocally } = useMeals();
   const refreshAfterMealChange = useRefreshAfterMealChange();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,25 +66,40 @@ export default function PlannedMealScreen() {
   const [mealTypeLabel, setMealTypeLabel] = useState("");
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const meal = await fetchMeal(id);
-      if (meal.status !== "planned") {
-        router.replace({ pathname: "/meal/edit", params: { id, returnTo: returnTo ?? "plan" } });
-        return;
-      }
+  const applyMealFields = useCallback(
+    (meal: { mealName: string; notes?: string | null; logDate: string; mealType: string | null }) => {
       setMealName(meal.mealName);
       setNotes(meal.notes ?? "");
       setLogDate(meal.logDate);
       setMealTypeLabel(formatMealTypeLabel(meal.mealType));
+    },
+    [],
+  );
+
+  const load = useCallback(async () => {
+    if (!id) return;
+
+    const cachedSummary = getMealById(id);
+    if (cachedSummary?.status === "planned") {
+      applyMealFields(cachedSummary);
+      setLoading(false);
+    }
+
+    try {
+      const meal = await loadMealDetail(id);
+      if (meal.status !== "planned") {
+        router.replace({ pathname: "/meal/edit", params: { id, returnTo: returnTo ?? "plan" } });
+        return;
+      }
+      applyMealFields(meal);
     } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
+      if (!cachedSummary) {
+        setSnackbar(friendlyErrorMessage(e));
+      }
     } finally {
       setLoading(false);
     }
-  }, [id, returnTo]);
+  }, [applyMealFields, getMealById, id, returnTo]);
 
   useEffect(() => {
     void load();
@@ -96,7 +112,7 @@ export default function PlannedMealScreen() {
     setSaving(true);
     try {
       await confirmPlannedMeal(id);
-      invalidateMeals();
+      patchMealLocally(id, { status: "logged" });
       await refreshAfterMealChange();
       leaveMealEditScreen(returnTo as MealEditReturnTo);
     } catch (e) {
@@ -104,7 +120,7 @@ export default function PlannedMealScreen() {
     } finally {
       setSaving(false);
     }
-  }, [id, invalidateMeals, refreshAfterMealChange, returnTo]);
+  }, [id, patchMealLocally, refreshAfterMealChange, returnTo]);
 
   const handleLogActual = useCallback(() => {
     if (!id) return;
@@ -112,7 +128,7 @@ export default function PlannedMealScreen() {
       setSaving(true);
       try {
         await deleteMeal(id);
-        invalidateMeals();
+        removeMealLocally(id);
         router.replace("/(tabs)");
       } catch (e) {
         setSnackbar(friendlyErrorMessage(e));
@@ -120,13 +136,17 @@ export default function PlannedMealScreen() {
         setSaving(false);
       }
     })();
-  }, [id, invalidateMeals]);
+  }, [id, removeMealLocally]);
 
   const handleSave = useCallback(async () => {
     if (!id) return;
     setSaving(true);
     try {
       await updatePlannedMeal(id, {
+        mealName: mealName.trim(),
+        notes: notes.trim() || null,
+      });
+      patchMealLocally(id, {
         mealName: mealName.trim(),
         notes: notes.trim() || null,
       });
@@ -150,7 +170,7 @@ export default function PlannedMealScreen() {
             setSaving(true);
             try {
               await deleteMeal(id);
-              invalidateMeals();
+              removeMealLocally(id);
               leaveMealEditScreen(returnTo as MealEditReturnTo);
             } catch (e) {
               setSnackbar(friendlyErrorMessage(e));
@@ -161,7 +181,7 @@ export default function PlannedMealScreen() {
         },
       },
     ]);
-  }, [id, invalidateMeals, returnTo]);
+  }, [id, removeMealLocally, returnTo]);
 
   if (loading) {
     return (

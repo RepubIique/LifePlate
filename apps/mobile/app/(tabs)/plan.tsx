@@ -1,7 +1,15 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, View } from "react-native";
-import { buildPlanSuggestions, inferMealType, offsetLogDateKey, planHorizonEndKey, todayDateKey, type MealType, type PlanSuggestion } from "@lifeplate/shared";
+import {
+  buildPlanSuggestions,
+  inferMealType,
+  loggedAtForDateKey,
+  offsetLogDateKey,
+  todayDateKey,
+  type MealType,
+  type PlanSuggestion,
+} from "@lifeplate/shared";
 import { PlanDaySection } from "@/components/plan/PlanDaySection";
 import { PencilMealModal } from "@/components/plan/PencilMealModal";
 import { PlanSuggestionsCard } from "@/components/plan/PlanSuggestionsCard";
@@ -12,18 +20,32 @@ import { Screen } from "@/components/Screen";
 import { BottomSnackbar } from "@/components/ui/BottomSnackbar";
 import { useMeals } from "@/context/MealsContext";
 import { useNutritionDashboard } from "@/context/NutritionDashboardContext";
-import { createPlannedMeal, fetchPlannedMeals } from "@/lib/api";
+import { createPlannedMeal } from "@/lib/api";
 import { friendlyErrorMessage } from "@/lib/apiErrors";
 import { openPlannedMeal } from "@/lib/mealNavigation";
-import { PLAN_WEEK_OFFSETS, planWeekLabel, planWeekVisibleDateKeys } from "@/lib/planWeek";
+import {
+  PLAN_WEEK_OFFSETS,
+  planWeekLabel,
+  planWeekVisibleDateKeys,
+  selectPlannedMealsInHorizon,
+} from "@/lib/planWeek";
 
 export default function PlanScreen() {
-  const { invalidateMeals, refreshMeals } = useMeals();
-  const { dashboard, loadDashboard } = useNutritionDashboard();
+  const {
+    meals,
+    loading: mealsLoading,
+    refreshing: mealsRefreshing,
+    loadMeals,
+    refreshMeals,
+    restoreMealLocally,
+  } = useMeals();
+  const {
+    dashboard,
+    loadDashboard,
+    refreshDashboard,
+    loading: dashboardLoading,
+  } = useNutritionDashboard();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [plannedMeals, setPlannedMeals] = useState<Awaited<ReturnType<typeof fetchPlannedMeals>>>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [pencilOpen, setPencilOpen] = useState(false);
   const [pencilDateKey, setPencilDateKey] = useState(() => offsetLogDateKey(todayDateKey(), 1));
@@ -33,33 +55,22 @@ export default function PlanScreen() {
   const [saving, setSaving] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState<PlanSuggestion | null>(null);
 
+  const plannedMeals = useMemo(
+    () => selectPlannedMealsInHorizon(meals),
+    [meals],
+  );
+
   const visibleDateKeys = useMemo(
     () => planWeekVisibleDateKeys(weekOffset),
     [weekOffset],
   );
 
-  const loadPlanned = useCallback(async (options?: { refresh?: boolean }) => {
-    const today = todayDateKey();
-    const from = offsetLogDateKey(today, 1);
-    const to = planHorizonEndKey();
-    if (options?.refresh) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const meals = await fetchPlannedMeals(from, to);
-      setPlannedMeals(meals);
-    } catch (e) {
-      setSnackbar(friendlyErrorMessage(e));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      void loadPlanned();
+      // Reuses MealsContext + dashboard stale windows (5 min) and SecureStore hydration.
+      void loadMeals();
       void loadDashboard();
-    }, [loadPlanned, loadDashboard]),
+    }, [loadMeals, loadDashboard]),
   );
 
   const planSuggestions = useMemo(() => {
@@ -86,32 +97,47 @@ export default function PlanScreen() {
   const handlePencilSubmit = useCallback(async () => {
     setSaving(true);
     try {
-      await createPlannedMeal({
-        mealName: mealName.trim(),
+      const trimmedName = mealName.trim();
+      const { id } = await createPlannedMeal({
+        mealName: trimmedName,
         mealType,
         logDate: pencilDateKey,
         notes: notes.trim() || null,
       });
+      restoreMealLocally({
+        id,
+        mealName: trimmedName,
+        mealType,
+        imageUrl: "",
+        createdAt: loggedAtForDateKey(pencilDateKey, mealType),
+        logDate: pencilDateKey,
+        sortIndex: 0,
+        status: "planned",
+        notes: notes.trim() || null,
+      });
       setPencilOpen(false);
-      invalidateMeals();
-      await Promise.all([loadPlanned({ refresh: true }), refreshMeals()]);
       setSnackbar("Meal penciled in");
+      void refreshMeals();
     } catch (e) {
       setSnackbar(friendlyErrorMessage(e));
     } finally {
       setSaving(false);
     }
   }, [
-    invalidateMeals,
-    loadPlanned,
     mealName,
     mealType,
     notes,
     pencilDateKey,
     refreshMeals,
+    restoreMealLocally,
   ]);
 
-  const showSkeleton = loading && plannedMeals.length === 0;
+  const showSkeleton =
+    (mealsLoading || dashboardLoading) && plannedMeals.length === 0 && !dashboard;
+
+  const handleRefresh = useCallback(() => {
+    void Promise.all([refreshMeals(), refreshDashboard()]);
+  }, [refreshMeals, refreshDashboard]);
 
   return (
     <>
@@ -119,8 +145,8 @@ export default function PlanScreen() {
         scroll
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void loadPlanned({ refresh: true })}
+            refreshing={mealsRefreshing}
+            onRefresh={handleRefresh}
           />
         }
       >

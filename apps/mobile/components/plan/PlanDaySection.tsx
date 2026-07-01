@@ -70,16 +70,26 @@ export function PlanDaySection({ dateKey, meals, onMealPress, onPencilIn }: Prop
       </View>
 
       {hasMeals ? (
-        MEAL_SLOTS.flatMap((slot) =>
-          mealsInDaySlot(dayMeals, slot.key).map((meal) => (
+        <>
+          {MEAL_SLOTS.flatMap((slot) =>
+            mealsInDaySlot(dayMeals, slot.key).map((meal) => (
+              <TimelineMealCard
+                key={meal.id}
+                meal={meal}
+                dimmed
+                onPress={() => onMealPress(meal.id)}
+              />
+            )),
+          )}
+          {unmatchedDayMeals(dayMeals).map((meal) => (
             <TimelineMealCard
               key={meal.id}
               meal={meal}
               dimmed
               onPress={() => onMealPress(meal.id)}
             />
-          )),
-        )
+          ))}
+        </>
       ) : (
         <Text variant="bodySmall" style={styles.emptyHint}>
           Nothing penciled in yet.
