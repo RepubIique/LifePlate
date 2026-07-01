@@ -1,3 +1,6 @@
+/** How far ahead users may pencil in planned meals. */
+export const PLAN_MAX_FUTURE_DAYS = 14;
+
 /** How far back free users may log meals or hydration. */
 export const FREE_MAX_LOG_PAST_DAYS = 10;
 /** How far back paid users may log meals or hydration. */
@@ -43,6 +46,61 @@ export function isValidLogDateKeyForUser(
   now = new Date(),
 ): boolean {
   return isValidLogDateKey(dateKey, now, getMaxLogPastDays(isPaid));
+}
+
+/** Future calendar days allowed for planned meals (exclusive of today). */
+export function isValidPlanDateKey(
+  dateKey: string,
+  now = new Date(),
+  maxFutureDays = PLAN_MAX_FUTURE_DAYS,
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
+  const today = todayDateKey(now);
+  if (dateKey <= today) return false;
+  const max = offsetLogDateKey(today, maxFutureDays);
+  return dateKey <= max;
+}
+
+export function planHorizonEndKey(now = new Date()): string {
+  return offsetLogDateKey(todayDateKey(now), PLAN_MAX_FUTURE_DAYS);
+}
+
+/** Forward-looking date keys for plan pickers (tomorrow first). */
+export function upcomingPlanDateKeys(
+  count = PLAN_MAX_FUTURE_DAYS,
+  now = new Date(),
+): string[] {
+  const keys: string[] = [];
+  const end = planHorizonEndKey(now);
+  let cursor = offsetLogDateKey(todayDateKey(now), 1);
+  while (cursor <= end && keys.length < count) {
+    keys.push(cursor);
+    cursor = offsetLogDateKey(cursor, 1);
+  }
+  return keys;
+}
+
+/** Monday-start week containing `dateKey` (local calendar). */
+export function weekStartKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
+  const weekday = d.getDay();
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  d.setDate(d.getDate() + mondayOffset);
+  return dateKeyFromDate(d);
+}
+
+/** Seven consecutive days starting Monday of the week containing `anchorDateKey`. */
+export function planWeekDateKeys(anchorDateKey: string): string[] {
+  const start = weekStartKey(anchorDateKey);
+  return enumerateLogDateKeys(start, offsetLogDateKey(start, 6));
+}
+
+export function formatPlanDateLabel(dateKey: string, now = new Date()): string {
+  const today = todayDateKey(now);
+  const tomorrow = offsetLogDateKey(today, 1);
+  if (dateKey === tomorrow) return "Tomorrow";
+  return formatLogDateLabel(dateKey, now);
 }
 
 export function defaultMealHour(mealType?: string | null): number {

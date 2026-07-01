@@ -1,9 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import type {
   MealConfirmRequest,
+  MealConfirmPlannedRequest,
   MealListItem,
   MealListSummary,
   MealPatchResponse,
+  MealPlanRequest,
   MealRefineRequest,
   MealReanalyzeRequest,
   MealReorderRequest,
@@ -11,7 +13,7 @@ import type {
   MealTextLogRequest,
   MealUpdateRequest,
 } from "@lifeplate/shared";
-import { dateKeyFromIso, inferMealType, isValidLogDateKeyForUser, isMealSource, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
+import { dateKeyFromIso, inferMealType, isValidLogDateKeyForUser, isValidPlanDateKey, isMealSource, MAX_MEAL_REANALYZES, mealReanalyzeRemaining, normalizeMealNotes, roundOptionalMealMacro } from "@lifeplate/shared";
 import type { AuthedRequest } from "../auth.js";
 import { requireAuth } from "../auth.js";
 import { pool } from "../db.js";
@@ -51,6 +53,12 @@ import {
 } from "../services/mealShare.js";
 import { deleteStoredMealImage, uploadMealImage } from "../services/storage.js";
 import { resolveMealImageUrl, mealListImageUrl } from "../services/mealImageUrl.js";
+import {
+  confirmPlannedMeal,
+  createPlannedMeal,
+  MealPlanValidationError,
+  updatePlannedMeal,
+} from "../services/mealPlan.js";
 import {
   loadUserImageStorageFlags,
   normalizeMealCloudImageUrl,
@@ -291,6 +299,41 @@ export async function mealRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post<{ Body: MealPlanRequest }>(
+    "/api/meals/plan",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      try {
+        const result = await createPlannedMeal(userId, request.body ?? ({} as MealPlanRequest));
+        return result;
+      } catch (err) {
+        if (err instanceof MealPlanValidationError) {
+          return reply.code(400).send({ error: err.message });
+        }
+        throw err;
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: MealConfirmPlannedRequest }>(
+    "/api/meals/:id/confirm-planned",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { userId } = request as AuthedRequest;
+      const { id } = request.params;
+      try {
+        return await confirmPlannedMeal(userId, id, request.body?.loggedAt);
+      } catch (err) {
+        if (err instanceof MealPlanValidationError) {
+          const status = err.message === "Not found" ? 404 : 400;
+          return reply.code(status).send({ error: err.message });
+        }
+        throw err;
+      }
+    },
+  );
+
   app.post<{ Body: MealConfirmRequest }>(
     "/api/meals/confirm",
     { preHandler: requireAuth },
@@ -441,13 +484,40 @@ export async function mealRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Querystring: { view?: string } }>(
+  app.get<{ Querystring: { view?: string; status?: string; from?: string; to?: string } }>(
     "/api/meals",
     { preHandler: requireAuth },
     async (request) => {
       const { userId } = request as AuthedRequest;
       const view = request.query.view ?? "summary";
+      const statusFilter = request.query.status?.trim();
+      const fromDate = request.query.from?.trim();
+      const toDate = request.query.to?.trim();
       const { isPaid } = await loadUserImageStorageFlags(userId);
+
+      const conditions = ["m.user_id = $1"];
+      const params: unknown[] = [userId];
+      let paramIndex = 2;
+
+      if (statusFilter === "planned" || statusFilter === "logged") {
+        conditions.push(`m.status = $${paramIndex}`);
+        params.push(statusFilter);
+        paramIndex += 1;
+      }
+
+      if (fromDate) {
+        conditions.push(`m.log_date >= $${paramIndex}::date`);
+        params.push(fromDate);
+        paramIndex += 1;
+      }
+
+      if (toDate) {
+        conditions.push(`m.log_date <= $${paramIndex}::date`);
+        params.push(toDate);
+        paramIndex += 1;
+      }
+
+      const whereClause = conditions.join(" AND ");
 
       if (view === "full") {
         const { rows } = await pool.query<{
@@ -459,6 +529,7 @@ export async function mealRoutes(app: FastifyInstance) {
           log_date: string;
           sort_index: number;
           notes: string | null;
+          status: string;
           calories: number | null;
           protein: number | null;
           carbs: number | null;
@@ -472,15 +543,15 @@ export async function mealRoutes(app: FastifyInstance) {
           shared_by_name: string | null;
         }>(
           `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
-                  m.log_date::text AS log_date, m.sort_index, m.notes,
+                  m.log_date::text AS log_date, m.sort_index, m.notes, m.status,
                   m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
                   m.confidence, m.foods, m.shared_by_user_id, sharer.name AS shared_by_name
            FROM meals m
            LEFT JOIN users sharer ON sharer.id = m.shared_by_user_id
-           WHERE m.user_id = $1
+           WHERE ${whereClause}
            ORDER BY m.log_date DESC, m.sort_index ASC
            LIMIT 100`,
-          [userId],
+          params,
         );
 
         const meals: MealListItem[] = await Promise.all(
@@ -492,6 +563,7 @@ export async function mealRoutes(app: FastifyInstance) {
             createdAt: r.created_at.toISOString(),
             logDate: r.log_date,
             sortIndex: r.sort_index,
+            status: r.status as MealListItem["status"],
             notes: r.notes,
             calories: r.calories,
             protein: r.protein,
@@ -519,6 +591,7 @@ export async function mealRoutes(app: FastifyInstance) {
         log_date: string;
         sort_index: number;
         notes: string | null;
+        status: string;
         calories: number | null;
         protein: number | null;
         fibre: number | null;
@@ -526,14 +599,14 @@ export async function mealRoutes(app: FastifyInstance) {
         shared_by_name: string | null;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
-                m.log_date::text AS log_date, m.sort_index, m.notes,
+                m.log_date::text AS log_date, m.sort_index, m.notes, m.status,
                 m.calories, m.protein, m.fibre, m.shared_by_user_id, sharer.name AS shared_by_name
          FROM meals m
          LEFT JOIN users sharer ON sharer.id = m.shared_by_user_id
-         WHERE m.user_id = $1
+         WHERE ${whereClause}
          ORDER BY m.log_date DESC, m.sort_index ASC
          LIMIT 100`,
-        [userId],
+        params,
       );
 
       const meals: MealListSummary[] = await Promise.all(
@@ -545,6 +618,7 @@ export async function mealRoutes(app: FastifyInstance) {
           createdAt: r.created_at.toISOString(),
           logDate: r.log_date,
           sortIndex: r.sort_index,
+          status: r.status as MealListSummary["status"],
           notes: r.notes,
           calories: r.calories,
           protein: r.protein,
@@ -720,9 +794,10 @@ export async function mealRoutes(app: FastifyInstance) {
         reanalyze_count: number;
         shared_by_user_id: string | null;
         meal_source: string | null;
+        status: string;
       }>(
         `SELECT m.id, m.meal_type, m.meal_name, m.image_url, m.created_at,
-                m.log_date::text AS log_date, m.sort_index, m.notes,
+                m.log_date::text AS log_date, m.sort_index, m.notes, m.status,
                 m.calories, m.protein, m.carbs, m.fat, m.fibre, m.sugar, m.sodium,
                 m.confidence, m.foods, m.raw_ai_response, m.reanalyze_count,
                 m.shared_by_user_id, m.meal_source
@@ -746,6 +821,7 @@ export async function mealRoutes(app: FastifyInstance) {
         createdAt: r.created_at.toISOString(),
         logDate: r.log_date,
         sortIndex: r.sort_index,
+        status: r.status,
         notes: r.notes,
         calories: r.calories,
         protein: r.protein,
@@ -892,9 +968,10 @@ export async function mealRoutes(app: FastifyInstance) {
         const owned = await client.query<{
           id: string;
           log_date: string;
+          status: string;
           raw_ai_response: unknown;
         }>(
-          `SELECT id, log_date::text AS log_date, raw_ai_response
+          `SELECT id, log_date::text AS log_date, status, raw_ai_response
            FROM meals
            WHERE id = $1 AND user_id = $2`,
           [id, userId],
@@ -904,21 +981,25 @@ export async function mealRoutes(app: FastifyInstance) {
           return reply.code(404).send({ error: "Not found" });
         }
         const previousLogDate = owned.rows[0].log_date;
+        const mealStatus = owned.rows[0].status;
         let nextLogDate = previousLogDate;
 
         if (body.loggedAt !== undefined) {
           const parsed = new Date(body.loggedAt);
-          if (
-            Number.isNaN(parsed.getTime()) ||
-            !isValidLogDateKeyForUser(dateKeyFromIso(parsed.toISOString()), isPaid)
-          ) {
+          const logDate = dateKeyFromIso(parsed.toISOString());
+          const dateValid =
+            mealStatus === "planned"
+              ? isValidPlanDateKey(logDate) || isValidLogDateKeyForUser(logDate, isPaid)
+              : isValidLogDateKeyForUser(logDate, isPaid);
+          if (Number.isNaN(parsed.getTime()) || !dateValid) {
             await client.query("ROLLBACK");
             return reply.code(400).send({ error: "Invalid loggedAt" });
           }
-          const logDate = dateKeyFromIso(parsed.toISOString());
+          const statusClause =
+            mealStatus === "planned" ? "status = 'planned'" : "status = 'logged'";
           await client.query(
             `UPDATE meals SET sort_index = sort_index + 1
-             WHERE user_id = $1 AND log_date = $2::date AND id != $3`,
+             WHERE user_id = $1 AND log_date = $2::date AND id != $3 AND ${statusClause}`,
             [userId, logDate, id],
           );
           await client.query(

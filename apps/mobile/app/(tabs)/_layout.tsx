@@ -45,6 +45,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="plan"
+        options={{
+          title: "Plan",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="calendar-month-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="timeline"
         options={{
           title: "Timeline",

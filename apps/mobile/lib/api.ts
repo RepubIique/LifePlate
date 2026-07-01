@@ -6,9 +6,12 @@ import type {
   InsightsResponse,
   MealConfirmRequest,
   MealConfirmResponse,
+  MealConfirmPlannedRequest,
   MealListItem,
   MealListSummary,
   MealDetail,
+  MealPlanRequest,
+  MealPlanResponse,
   MealPhotoAttachResponse,
   MealRefineResponse,
   MealReanalyzeRequest,
@@ -168,6 +171,45 @@ export async function updateGoal(goal: string): Promise<ProfilePatchResponse> {
 export async function fetchMeals(): Promise<MealListSummary[]> {
   const data = await request<{ meals: MealListSummary[] }>("/api/meals");
   return data.meals;
+}
+
+export async function fetchPlannedMeals(
+  from: string,
+  to: string,
+): Promise<MealListSummary[]> {
+  const params = new URLSearchParams({
+    status: "planned",
+    from,
+    to,
+  });
+  const data = await request<{ meals: MealListSummary[] }>(
+    `/api/meals?${params.toString()}`,
+  );
+  return data.meals;
+}
+
+export async function createPlannedMeal(body: MealPlanRequest): Promise<MealPlanResponse> {
+  return request<MealPlanResponse>("/api/meals/plan", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function confirmPlannedMeal(
+  id: string,
+  body?: MealConfirmPlannedRequest,
+): Promise<{ id: string }> {
+  return request<{ id: string }>(`/api/meals/${id}/confirm-planned`, {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export async function updatePlannedMeal(
+  id: string,
+  body: MealUpdateRequest,
+): Promise<void> {
+  await updateMeal(id, body);
 }
 
 export async function fetchMealsFull(): Promise<MealListItem[]> {

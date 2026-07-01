@@ -515,6 +515,8 @@ export function normalizeMealNotes(value: string | null | undefined): string | n
   return trimmed.slice(0, MAX_MEAL_NOTES_LENGTH);
 }
 
+export type MealStatus = "logged" | "planned";
+
 export interface MealListSummary {
   id: string;
   mealType: string | null;
@@ -525,6 +527,8 @@ export interface MealListSummary {
   logDate: string;
   /** Within-day timeline order; 0 = top slot. */
   sortIndex: number;
+  /** Planned meals are penciled in; logged meals count toward stats. */
+  status?: MealStatus;
   calories?: number | null;
   protein?: number | null;
   fibre?: number | null;
@@ -534,6 +538,22 @@ export interface MealListSummary {
   /** Present when this meal was shared by another user. */
   sharedByUserId?: string | null;
   sharedByName?: string | null;
+}
+
+export interface MealPlanRequest {
+  mealName: string;
+  mealType?: MealType;
+  logDate: string;
+  notes?: string | null;
+}
+
+export interface MealPlanResponse {
+  id: string;
+}
+
+export interface MealConfirmPlannedRequest {
+  /** ISO timestamp when the meal was eaten; defaults to now. */
+  loggedAt?: string;
 }
 
 export interface MealListItem extends MealListSummary {
@@ -549,6 +569,7 @@ export interface MealListItem extends MealListSummary {
 }
 
 export interface MealDetail extends MealListItem {
+  status?: MealStatus;
   rawAiResponse?: unknown;
   portionMeta?: MealPortionMeta;
   reanalyzeCount: number;
@@ -625,6 +646,7 @@ export type {
   ExtendedNutritionTargets,
   FoodClassification,
   NutritionGaps,
+  PlanSuggestion,
   PlantUnit,
 } from "./nutrition/index.js";
 
@@ -659,6 +681,7 @@ export {
   buildEnergyMetrics,
   buildGutHealthSummary,
   buildFoodRecommendations,
+  buildPlanSuggestions,
   buildCoachSummary,
   buildPlateMessage,
   buildLifeplateInsightTemplate,
@@ -681,11 +704,18 @@ export {
   FREE_MAX_LOG_PAST_DAYS,
   PAID_MAX_LOG_PAST_DAYS,
   MAX_LOG_PAST_DAYS,
+  PLAN_MAX_FUTURE_DAYS,
   getMaxLogPastDays,
   todayDateKey,
   dateKeyFromIso,
   isValidLogDateKey,
   isValidLogDateKeyForUser,
+  isValidPlanDateKey,
+  planHorizonEndKey,
+  upcomingPlanDateKeys,
+  weekStartKey,
+  planWeekDateKeys,
+  formatPlanDateLabel,
   loggedAtForDateKey,
   defaultMealHour,
   mergeLoggedAtDateKey,

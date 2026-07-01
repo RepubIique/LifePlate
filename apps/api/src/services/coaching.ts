@@ -49,7 +49,8 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
 
   const { rows: todayCountRows } = await pool.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM meals m
-     WHERE m.user_id = $1 AND m.log_date = $2::date`,
+     WHERE m.user_id = $1 AND m.log_date = $2::date
+       AND (m.status IS NULL OR m.status = 'logged')`,
     [userId, today],
   );
 
@@ -60,28 +61,32 @@ export async function buildCoachingContext(userId: string): Promise<CoachingCont
   }>(
     `SELECT m.id AS meal_id, m.protein, m.foods
      FROM meals m
-     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+     WHERE m.user_id = $1 AND m.log_date >= $2::date
+       AND (m.status IS NULL OR m.status = 'logged')`,
     [userId, weekStart],
   );
 
   const { rows: todayProteinRows } = await pool.query<{ total: string }>(
     `SELECT COALESCE(SUM(m.protein), 0)::text AS total
      FROM meals m
-     WHERE m.user_id = $1 AND m.log_date = $2::date`,
+     WHERE m.user_id = $1 AND m.log_date = $2::date
+       AND (m.status IS NULL OR m.status = 'logged')`,
     [userId, today],
   );
   const todayProteinTotal = Number(todayProteinRows[0]?.total ?? 0);
 
   const { rows: weekCountRows } = await pool.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM meals m
-     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+     WHERE m.user_id = $1 AND m.log_date >= $2::date
+       AND (m.status IS NULL OR m.status = 'logged')`,
     [userId, weekStart],
   );
 
   const { rows: weekProteinRows } = await pool.query<{ avg: string }>(
     `SELECT COALESCE(AVG(m.protein), 0)::text AS avg
      FROM meals m
-     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+     WHERE m.user_id = $1 AND m.log_date >= $2::date
+       AND (m.status IS NULL OR m.status = 'logged')`,
     [userId, weekStart],
   );
 

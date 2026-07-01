@@ -74,6 +74,10 @@ export default function RootLayout() {
               name="meal/edit"
               options={{ presentation: "modal", headerShown: true, title: "Edit meal" }}
             />
+            <Stack.Screen
+              name="meal/plan"
+              options={{ presentation: "modal", headerShown: true, title: "Planned meal" }}
+            />
           </Stack>
           <AlphaFeedbackBubble />
           <AlphaWelcomeModal />

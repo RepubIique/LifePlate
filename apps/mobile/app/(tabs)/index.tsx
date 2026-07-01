@@ -33,7 +33,7 @@ import { getLastPhotoSource, type PhotoSource } from "@/lib/uploadPrefs";
 import { uploadStageLabel, useMealPhotoUpload } from "@/lib/useMealPhotoUpload";
 import { useDayDashboard } from "@/lib/useDayDashboard";
 import { refreshDashboardCoaching } from "@/lib/nutritionDashboardView";
-import { openMealEdit } from "@/lib/mealNavigation";
+import { openMealEdit, openPlannedMeal } from "@/lib/mealNavigation";
 import { useGamificationCelebrations } from "@/lib/useGamificationCelebrations";
 import { useLoggingAccess } from "@/lib/useLoggingAccess";
 import { spacing } from "@/src/theme/lifeplate";
@@ -71,9 +71,17 @@ export default function HomeScreen() {
     () => meals.filter((m) => mealLogDateKey(m) === logDateKey),
     [meals, logDateKey],
   );
-  const dayMealsRevision = useMemo(
-    () => dayMeals.map((m) => `${m.id}:${m.calories ?? 0}:${m.protein ?? 0}`).join("|"),
+  const loggedDayMeals = useMemo(
+    () => dayMeals.filter((m) => m.status !== "planned"),
     [dayMeals],
+  );
+  const plannedDayMeals = useMemo(
+    () => dayMeals.filter((m) => m.status === "planned"),
+    [dayMeals],
+  );
+  const dayMealsRevision = useMemo(
+    () => loggedDayMeals.map((m) => `${m.id}:${m.calories ?? 0}:${m.protein ?? 0}`).join("|"),
+    [loggedDayMeals],
   );
 
   const {
@@ -94,12 +102,12 @@ export default function HomeScreen() {
   const dayMealTypes = useMemo(
     () => [
       ...new Set(
-        dayMeals
+        loggedDayMeals
           .map((m) => m.mealType?.trim().toLowerCase())
           .filter((type): type is string => !!type),
       ),
     ],
-    [dayMeals],
+    [loggedDayMeals],
   );
 
   const activeDashboard = isViewingToday ? dashboard : dayDashboard;
@@ -112,7 +120,7 @@ export default function HomeScreen() {
         activeDashboard,
         profile?.nutritionTargets ?? null,
         dayMealTypes,
-        dayMeals.length,
+        loggedDayMeals.length,
       ),
     };
   }, [
@@ -346,7 +354,7 @@ export default function HomeScreen() {
 
       <View style={styles.dashboard}>
         <MealSlotsTracker
-          meals={dayMeals}
+          meals={loggedDayMeals}
           title={slotsTitle}
           onLogSuggested={
             loggingLocked ? undefined : () => pickAndAnalyze(preferredSource !== "library", logDateKey)
@@ -384,12 +392,14 @@ export default function HomeScreen() {
 
       <HomeDayMealsSection
         title={mealsTitle}
-        meals={dayMeals}
+        meals={loggedDayMeals}
+        plannedMeals={isViewingToday ? plannedDayMeals : []}
         loading={mealsLoading}
         showSkeleton={showMealsSkeleton}
         isViewingToday={isViewingToday}
         dateLabel={formatLogDateLabel(logDateKey)}
         onMealPress={(mealId) => openMealEdit(mealId, "home")}
+        onPlannedMealPress={(mealId) => openPlannedMeal(mealId, "home")}
         onLogSuggested={
           isViewingToday && !loggingLocked
             ? () => pickAndAnalyze(preferredSource !== "library", logDateKey)

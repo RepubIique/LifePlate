@@ -19,6 +19,10 @@ import {
   previousMonthEndKey,
   enumerateLogDateKeys,
   formatMonthLabel,
+  isValidPlanDateKey,
+  planHorizonEndKey,
+  planWeekDateKeys,
+  upcomingPlanDateKeys,
 } from "../dist/logDate.js";
 
 const NOW = new Date("2026-06-14T12:00:00.000Z");
@@ -154,6 +158,33 @@ test("compareMealsTimeline orders by logDate then sortIndex", () => {
   const sorted = [...meals].sort(compareMealsTimeline);
   assert.deepEqual(sorted.map((meal) => meal.sortIndex), [0, 1, 0]);
   assert.equal(sorted[0].logDate, "2026-06-10");
+});
+
+test("isValidPlanDateKey accepts only future dates within horizon", () => {
+  assert.equal(isValidPlanDateKey("2026-06-14", NOW), false);
+  assert.equal(isValidPlanDateKey("2026-06-15", NOW), true);
+  assert.equal(isValidPlanDateKey("2026-06-28", NOW), true);
+  assert.equal(isValidPlanDateKey("2026-06-29", NOW), false);
+  assert.equal(planHorizonEndKey(NOW), "2026-06-28");
+});
+
+test("upcomingPlanDateKeys lists tomorrow through horizon", () => {
+  const keys = upcomingPlanDateKeys(14, NOW);
+  assert.deepEqual(keys[0], "2026-06-15");
+  assert.equal(keys.at(-1), "2026-06-28");
+  assert.equal(keys.length, 14);
+});
+
+test("planWeekDateKeys returns Monday through Sunday", () => {
+  assert.deepEqual(planWeekDateKeys("2026-06-14"), [
+    "2026-06-08",
+    "2026-06-09",
+    "2026-06-10",
+    "2026-06-11",
+    "2026-06-12",
+    "2026-06-13",
+    "2026-06-14",
+  ]);
 });
 
 test("month helpers derive calendar month boundaries", () => {

@@ -167,12 +167,15 @@ export async function getFriendProfile(
     pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count
        FROM meals
-       WHERE user_id = $1 AND log_date >= $2::date`,
+       WHERE user_id = $1 AND log_date >= $2::date
+         AND (status IS NULL OR status = 'logged')`,
       [friendId, weekStart],
     ),
     pool.query<{ logged: boolean }>(
       `SELECT EXISTS(
-         SELECT 1 FROM meals WHERE user_id = $1 AND log_date = $2::date
+         SELECT 1 FROM meals
+         WHERE user_id = $1 AND log_date = $2::date
+           AND (status IS NULL OR status = 'logged')
        ) AS logged`,
       [friendId, today],
     ),
