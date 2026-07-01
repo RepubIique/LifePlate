@@ -1,6 +1,6 @@
 # Mobile testing on device
 
-How to get LifePlate onto your phone after frontend changes land on `main`.
+Push directly to `main` — no PRs needed while iterating quickly. EAS preview builds trigger automatically when mobile or shared code changes.
 
 ## Overview
 
@@ -15,7 +15,7 @@ flowchart LR
   Phone --> API[Render API]
 ```
 
-1. Push mobile (or shared) changes to `main`.
+1. Push to `main` (from Cursor on iOS, desktop, or anywhere).
 2. **CI** (`.github/workflows/ci.yml`) runs typecheck and unit tests.
 3. **EAS Preview Build** (`.github/workflows/eas-preview.yml`) triggers iOS + Android builds using the `preview` profile in `apps/mobile/eas.json`.
 4. Download and install from the [Expo builds dashboard](https://expo.dev) (project slug: `lifeplate`).

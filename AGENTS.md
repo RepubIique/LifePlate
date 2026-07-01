@@ -38,6 +38,8 @@ pnpm build:api
 
 Copy `.env.example` to `apps/api/.env` and `apps/mobile/.env` before running locally.
 
+**Git:** push directly to `main` while iterating quickly. CI runs on every push; EAS preview builds run when mobile or shared code changes.
+
 ## Product non-negotiables
 
 - Meal logging should feel fast — optimize for habit formation, not perfect nutrition accuracy

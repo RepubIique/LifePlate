@@ -101,11 +101,14 @@ See `.env.example` for the full list. Critical ones:
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL |
 | `EXPO_PUBLIC_SUPABASE_*` | Mobile | Auth client |
 
-## Git & PR hygiene
+## Git workflow
+
+Push directly to `main` while iterating quickly. CI and EAS preview builds run on each push — no PRs required for now.
 
 - Keep changes scoped to the requested task
 - Update `AGENTS.md` / `docs/` when architecture or conventions change
 - CI runs: `pnpm typecheck`, `pnpm test`, `pnpm build:api`
+- EAS preview builds run on `main` when `apps/mobile/` or `packages/shared/` changes
 
 ## Log dates & timeline
 
