@@ -47,7 +47,8 @@ export async function insightRoutes(app: FastifyInstance) {
       }>(
         `SELECT m.id AS meal_id, m.protein, m.foods, m.meal_name, m.meal_source
          FROM meals m
-         WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+         WHERE m.user_id = $1 AND m.log_date >= $2::date
+           AND (m.status IS NULL OR m.status = 'logged')`,
         [userId, weekStart],
       );
 
@@ -62,7 +63,8 @@ export async function insightRoutes(app: FastifyInstance) {
       const { rows: countRows } = await pool.query<{ count: string }>(
         `SELECT COUNT(DISTINCT m.id)::text AS count
          FROM meals m
-         WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+         WHERE m.user_id = $1 AND m.log_date >= $2::date
+           AND (m.status IS NULL OR m.status = 'logged')`,
         [userId, weekStart],
       );
       const mealsLogged = Number(countRows[0]?.count ?? 0);
@@ -74,6 +76,7 @@ export async function insightRoutes(app: FastifyInstance) {
         `SELECT m.log_date::text AS day, AVG(m.protein)::text AS avg_protein
          FROM meals m
          WHERE m.user_id = $1 AND m.log_date >= $2::date
+           AND (m.status IS NULL OR m.status = 'logged')
          GROUP BY m.log_date`,
         [userId, weekStart],
       );

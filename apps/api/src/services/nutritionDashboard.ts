@@ -42,6 +42,7 @@ import {
   saveDailyInsight,
 } from "./dailyInsightCache.js";
 import { pool } from "../db.js";
+import { LOGGED_MEALS_WHERE_SQL } from "./mealLogDate.js";
 import { loadUserImageStorageFlags } from "./userFeatures.js";
 
 type MealRow = {
@@ -157,7 +158,7 @@ async function fetchMealRowsSince(userId: string, sinceDateKey: string): Promise
     `SELECT m.id AS meal_id, m.meal_name, m.meal_type, m.created_at, m.log_date::text AS log_date,
             m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
-     WHERE m.user_id = $1 AND m.log_date >= $2::date`,
+     WHERE m.user_id = $1 AND m.log_date >= $2::date AND ${LOGGED_MEALS_WHERE_SQL}`,
     [userId, sinceDateKey],
   );
 
@@ -173,7 +174,7 @@ async function fetchMealRowsBetween(
     `SELECT m.id AS meal_id, m.meal_name, m.meal_type, m.created_at, m.log_date::text AS log_date,
             m.calories, m.protein, m.carbs, m.fat, m.fibre, m.foods
      FROM meals m
-     WHERE m.user_id = $1 AND m.log_date >= $2::date AND m.log_date <= $3::date`,
+     WHERE m.user_id = $1 AND m.log_date >= $2::date AND m.log_date <= $3::date AND ${LOGGED_MEALS_WHERE_SQL}`,
     [userId, startDateKey, endDateKey],
   );
 

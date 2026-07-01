@@ -146,6 +146,52 @@ function buildLegacyCoachSummary(
   return `You're doing well. ${needs[0]} and ${needs[1]} would make today excellent.`;
 }
 
+export type PlanSuggestion = {
+  pillar: "fibre" | "protein" | "plants" | "hydration";
+  message: string;
+  noteHint: string;
+  foods: string[];
+};
+
+export function buildPlanSuggestions(gaps: NutritionGaps): PlanSuggestion[] {
+  const suggestions: PlanSuggestion[] = [];
+
+  if (gaps.fibreG >= 5) {
+    suggestions.push({
+      pillar: "fibre",
+      message: "You're low on fibre this week — try adding beans or lentils to a planned meal.",
+      noteHint: "Include beans or lentils for more fibre",
+      foods: SUGGESTIONS.fibre.map((item) => item.name),
+    });
+  }
+  if (gaps.proteinG > 0 && gaps.proteinG >= 10) {
+    suggestions.push({
+      pillar: "protein",
+      message: "Protein is light this week — plan a meal with eggs, fish, or legumes.",
+      noteHint: "Add a protein boost (eggs, fish, or legumes)",
+      foods: SUGGESTIONS.protein.map((item) => item.name),
+    });
+  }
+  if (gaps.plantServes >= 2) {
+    suggestions.push({
+      pillar: "plants",
+      message: "Plant variety is low — pencil in a colourful side or extra veg.",
+      noteHint: "Add extra vegetables or a colourful side",
+      foods: SUGGESTIONS.plants.map((item) => item.name),
+    });
+  }
+  if (gaps.hydrationGlasses >= 2) {
+    suggestions.push({
+      pillar: "hydration",
+      message: "Hydration could use a lift — plan lighter meals with plenty of water.",
+      noteHint: "Pair with extra water through the day",
+      foods: SUGGESTIONS.hydration.map((item) => item.name),
+    });
+  }
+
+  return suggestions.slice(0, 2);
+}
+
 export function buildLifeplateInsightTemplate(
   totals: { fibre: number; protein: number; calories: number },
   targets: { dailyFibreG: number; dailyProteinG: number; dailyCalories: number },

@@ -11,8 +11,8 @@ async function queryDistinctMealDays(
   const runner = client ?? pool;
   const { rows } = await runner.query<{ log_date: string }>(
     `SELECT DISTINCT ${MEAL_LOG_DATE_KEY_SQL} AS log_date
-     FROM meals
-     WHERE user_id = $1
+     FROM meals m
+     WHERE m.user_id = $1 AND (m.status IS NULL OR m.status = 'logged')
      ORDER BY log_date`,
     [userId],
   );
@@ -43,7 +43,8 @@ export async function syncUserMealStats(
 async function countMeals(userId: string, client?: PoolClient): Promise<number> {
   const runner = client ?? pool;
   const { rows } = await runner.query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM meals WHERE user_id = $1`,
+    `SELECT COUNT(*)::text AS count FROM meals m
+     WHERE m.user_id = $1 AND (m.status IS NULL OR m.status = 'logged')`,
     [userId],
   );
   return Number(rows[0]?.count ?? 0);

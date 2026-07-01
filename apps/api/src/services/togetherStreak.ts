@@ -13,6 +13,7 @@ export async function queryMealLogDaysByUserIds(
        SELECT DISTINCT user_id, ${MEAL_LOG_DATE_KEY_SQL} AS log_date
        FROM meals
        WHERE user_id = ANY($1::uuid[])
+         AND (status IS NULL OR status = 'logged')
      ) days
      ORDER BY user_id, log_date`,
     [userIds],

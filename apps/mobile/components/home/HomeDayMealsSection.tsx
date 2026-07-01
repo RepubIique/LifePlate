@@ -16,11 +16,13 @@ import type { AppColors } from "@/src/theme/lifeplate";
 type Props = {
   title: string;
   meals: MealListSummary[];
+  plannedMeals?: MealListSummary[];
   loading: boolean;
   showSkeleton: boolean;
   isViewingToday: boolean;
   dateLabel: string;
   onMealPress: (mealId: string) => void;
+  onPlannedMealPress?: (mealId: string) => void;
   onLogSuggested?: () => void;
   onLogPhoto?: () => void;
   onLogText?: () => void;
@@ -75,17 +77,25 @@ function createStyles({ semantic, tints, ui }: AppColors) {
     list: {
       gap: 0,
     },
+    plannedHeader: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.xs,
+      opacity: 0.6,
+      letterSpacing: 0.1,
+    },
   });
 }
 
 export function HomeDayMealsSection({
   title,
   meals,
+  plannedMeals = [],
   loading,
   showSkeleton,
   isViewingToday,
   dateLabel,
   onMealPress,
+  onPlannedMealPress,
   onLogSuggested,
   onLogPhoto,
   onLogText,
@@ -202,6 +212,22 @@ export function HomeDayMealsSection({
               />
             ),
           )}
+        </View>
+      ) : null}
+
+      {plannedMeals.length > 0 ? (
+        <View style={styles.list}>
+          <Text variant="labelLarge" style={styles.plannedHeader}>
+            Penciled in
+          </Text>
+          {plannedMeals.map((meal) => (
+            <TimelineMealCard
+              key={meal.id}
+              meal={meal}
+              dimmed
+              onPress={() => onPlannedMealPress?.(meal.id)}
+            />
+          ))}
         </View>
       ) : null}
     </View>
