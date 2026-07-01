@@ -110,7 +110,7 @@ Root layout (`app/_layout.tsx`) wraps providers: Auth → Meals → Friends → 
 ## Deployment
 
 - **API**: Render (`render.yaml`, `.github/workflows/deploy-render.yml`)
-- **Mobile**: Expo EAS (not in this repo's CI)
+- **Mobile**: Expo EAS preview builds on `main` (`.github/workflows/eas-preview.yml`); see `docs/mobile-testing.md`
 - **Database**: PostgreSQL (local Docker via `docker-compose.yml`; production via `DATABASE_URL`)
 - Migrations: `RUN_MIGRATIONS=true` locally by default; production runs `pnpm db:migrate` separately
 

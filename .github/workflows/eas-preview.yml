@@ -1,0 +1,64 @@
+name: EAS Preview Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared/**"
+      - ".github/workflows/eas-preview.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS and Android preview
+        run: eas build --profile preview --platform all --non-interactive --no-wait
+
+      - name: Build dashboard
+        run: |
+          echo "Preview builds started for iOS and Android." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Open **expo.dev → Projects → lifeplate → Builds** to download and install." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Android:** download the APK and sideload on your phone." >> "$GITHUB_STEP_SUMMARY"
+          echo "- **iOS:** open the install link on a registered iPhone (internal distribution)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Setup and install details: \`docs/mobile-testing.md\`" >> "$GITHUB_STEP_SUMMARY"

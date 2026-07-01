@@ -74,6 +74,10 @@ cp ../../.env.example .env   # set EXPO_PUBLIC_* vars
 pnpm dev:mobile              # from repo root
 ```
 
+## Device testing
+
+Preview builds for iOS and Android run on push to `main` via EAS. See `docs/mobile-testing.md` for setup (Expo token, device registration, install steps).
+
 ## Adding a screen
 
 1. Create route under `app/`
